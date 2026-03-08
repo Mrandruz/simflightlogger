@@ -242,9 +242,9 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
             </div>
 
             {/* Charts Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-6)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-6)' }}>
                 <div className="card">
-                    <h3 className="card-title">Most Flown Airlines</h3>
+                    <h3 className="card-title">Top Airlines</h3>
                     <div style={{ height: 250 }}>
                         {airlineStats.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -264,18 +264,18 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                 </div>
 
                 <div className="card">
-                    <h3 className="card-title">Alliance Distribution</h3>
+                    <h3 className="card-title">Top Alliances</h3>
                     <div style={{ height: 250 }}>
                         {allianceStats.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={allianceStats} nameKey="name" dataKey="value" name="Flights" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2}>
+                                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}>
+                                    <Pie data={allianceStats} nameKey="name" dataKey="value" name="Flights" cx="50%" cy="45%" innerRadius={50} outerRadius={70} paddingAngle={2}>
                                         {allianceStats.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                                         ))}
                                     </Pie>
                                     <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} itemStyle={{ color: 'var(--color-text-primary)' }} />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : <p>Insufficient data</p>}
@@ -283,7 +283,7 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                 </div>
 
                 <div className="card">
-                    <h3 className="card-title">Most Flown Aircraft</h3>
+                    <h3 className="card-title">Top Aircraft</h3>
                     <div style={{ height: 250 }}>
                         {aircraftStats.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -303,16 +303,16 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                 </div>
 
                 <div className="card">
-                    <h3 className="card-title">Most Visited Airports</h3>
-                    <div style={{ height: 400 }}>
+                    <h3 className="card-title">Top Airports</h3>
+                    <div style={{ height: 250 }}>
                         {airportStats.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={airportStats} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <BarChart data={airportStats.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-primary)', fontSize: 13 }} width={60} />
                                     <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} itemStyle={{ color: 'var(--color-text-primary)' }} />
                                     <Bar dataKey="count" name="Flights" radius={[0, 4, 4, 0]} barSize={20}>
-                                        {airportStats.map((entry, index) => (
+                                        {airportStats.slice(0, 5).map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={colors[(index + 2) % colors.length]} />
                                         ))}
                                     </Bar>
@@ -322,164 +322,166 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                     </div>
                 </div>
 
-                {/* Interactive Global Map */}
-                <div className="card col-span-2" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: 'var(--space-6)', paddingBottom: 0 }}>
-                        <h3 className="card-title">Visited Airports Map</h3>
-                    </div>
-                    <div style={{ width: '100%', height: '450px', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            </div>
 
-                        {/* Reset button (visible only when zoomed) */}
-                        {mapZoom > 1 && (
-                            <button onClick={handleZoomReset} title="Global view" style={{
-                                position: 'absolute', top: '12px', right: '12px', zIndex: 10,
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 14px', borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)',
-                                color: 'var(--color-text-primary)', cursor: 'pointer',
-                                boxShadow: 'var(--shadow-sm)', fontSize: '0.8rem', fontWeight: 500,
-                                fontFamily: 'var(--font-family-sans)', transition: 'background-color 0.2s'
-                            }}>
-                                <RotateCcw size={14} /> Global View
-                            </button>
-                        )}
+            {/* Interactive Global Map */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: 'var(--space-6)', paddingBottom: 0 }}>
+                    <h3 className="card-title">Visited Airports Map</h3>
+                </div>
+                <div style={{ width: '100%', height: '450px', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
 
-                        {/* Hint text when at world view */}
-                        {mapZoom <= 1 && (
-                            <div style={{
-                                position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                                zIndex: 10, fontSize: '0.75rem', color: 'var(--color-text-hint)',
-                                backgroundColor: 'var(--color-surface)', padding: '4px 12px',
-                                borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)',
-                                boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap'
-                            }}>
-                                Click on a country or an airport to zoom in
-                            </div>
-                        )}
+                    {/* Reset button (visible only when zoomed) */}
+                    {mapZoom > 1 && (
+                        <button onClick={handleZoomReset} title="Global view" style={{
+                            position: 'absolute', top: '12px', right: '12px', zIndex: 10,
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '8px 14px', borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)',
+                            color: 'var(--color-text-primary)', cursor: 'pointer',
+                            boxShadow: 'var(--shadow-sm)', fontSize: '0.8rem', fontWeight: 500,
+                            fontFamily: 'var(--font-family-sans)', transition: 'background-color 0.2s'
+                        }}>
+                            <RotateCcw size={14} /> Global View
+                        </button>
+                    )}
 
-                        <ComposableMap projectionConfig={{ scale: 170, center: [0, 10] }} width={900} height={400}>
-                            {/* SVG Defs for animations */}
-                            <defs>
-                                <filter id="glow">
-                                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                    <feMerge>
-                                        <feMergeNode in="coloredBlur" />
-                                        <feMergeNode in="SourceGraphic" />
-                                    </feMerge>
-                                </filter>
-                            </defs>
-                            <ZoomableGroup zoom={mapZoom} center={mapCenter} maxZoom={12} onMoveEnd={({ coordinates, zoom }) => { setMapCenter(coordinates); setMapZoom(zoom); }}>
-                                <Geographies geography={geoUrl}>
-                                    {({ geographies }) => {
-                                        geographiesRef.current = geographies;
-                                        return geographies.map((geo) => (
-                                            <Geography
-                                                key={geo.rsmKey}
-                                                geography={geo}
-                                                onClick={() => handleCountryClick(geo)}
-                                                fill={selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : 'var(--color-divider)'}
-                                                stroke="var(--color-surface)"
-                                                strokeWidth={0.5}
-                                                style={{
-                                                    default: { outline: "none", cursor: "pointer" },
-                                                    hover: { fill: selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : '#c8cdd2', outline: "none", cursor: "pointer" },
-                                                    pressed: { outline: "none" },
-                                                }}
-                                            />
-                                        ));
-                                    }}
-                                </Geographies>
+                    {/* Hint text when at world view */}
+                    {mapZoom <= 1 && (
+                        <div style={{
+                            position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                            zIndex: 10, fontSize: '0.75rem', color: 'var(--color-text-hint)',
+                            backgroundColor: 'var(--color-surface)', padding: '4px 12px',
+                            borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)',
+                            boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap'
+                        }}>
+                            Click on a country or an airport to zoom in
+                        </div>
+                    )}
 
-                                {/* Animated dashed routes */}
-                                {mappedRoutes.map((route) => (
-                                    <Line
-                                        key={route.id}
-                                        from={route.from}
-                                        to={route.to}
-                                        stroke="var(--color-primary)"
-                                        strokeWidth={1.5}
-                                        strokeLinecap="round"
-                                        strokeDasharray="6 4"
-                                        className="animated-route"
-                                        style={{
-                                            opacity: 0.6
-                                        }}
-                                    />
-                                ))}
-
-                                {/* Pulsing markers + hover glow */}
-                                {mappedAirports.map(({ icao, name, coordinates }) => (
-                                    <Marker
-                                        key={icao}
-                                        coordinates={coordinates}
-                                        onMouseEnter={() => setHoveredAirport(icao)}
-                                        onMouseLeave={() => setHoveredAirport(null)}
-                                        onClick={() => handleMarkerClick(coordinates)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        {/* Pulse ring */}
-                                        <circle
-                                            r={10}
-                                            fill="var(--color-primary)"
-                                            opacity={0}
-                                            className="map-pulse-ring"
-                                        />
-                                        {/* Main dot */}
-                                        <circle
-                                            r={hoveredAirport === icao ? 6 : 4}
-                                            fill="var(--color-primary)"
-                                            stroke={hoveredAirport === icao ? '#fff' : 'var(--color-map-stroke)'}
-                                            strokeWidth={hoveredAirport === icao ? 2 : 1.5}
-                                            filter={hoveredAirport === icao ? 'url(#glow)' : 'none'}
-                                            style={{ transition: 'r 0.2s ease, stroke-width 0.2s ease' }}
-                                        />
-                                        {/* ICAO label (always visible) */}
-                                        <text
-                                            textAnchor="middle"
-                                            y={-14}
+                    <ComposableMap projectionConfig={{ scale: 170, center: [0, 10] }} width={900} height={400}>
+                        {/* SVG Defs for animations */}
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <ZoomableGroup zoom={mapZoom} center={mapCenter} maxZoom={12} onMoveEnd={({ coordinates, zoom }) => { setMapCenter(coordinates); setMapZoom(zoom); }}>
+                            <Geographies geography={geoUrl}>
+                                {({ geographies }) => {
+                                    geographiesRef.current = geographies;
+                                    return geographies.map((geo) => (
+                                        <Geography
+                                            key={geo.rsmKey}
+                                            geography={geo}
+                                            onClick={() => handleCountryClick(geo)}
+                                            fill={selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : 'var(--color-divider)'}
+                                            stroke="var(--color-surface)"
+                                            strokeWidth={0.5}
                                             style={{
-                                                fontFamily: "var(--font-family-sans)",
-                                                fill: hoveredAirport === icao ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                                                fontSize: hoveredAirport === icao ? '12px' : '11px',
-                                                fontWeight: 700,
-                                                textShadow: "1px 1px 0 var(--color-map-shadow), -1px -1px 0 var(--color-map-shadow), 1px -1px 0 var(--color-map-shadow), -1px 1px 0 var(--color-map-shadow)",
-                                                transition: 'font-size 0.2s ease, fill 0.2s ease'
-                                            }}>
-                                            {icao}
-                                        </text>
-                                        {/* Airport name tooltip on hover */}
-                                        {hoveredAirport === icao && (
-                                            <g>
-                                                <rect
-                                                    x={-name.length * 3.2}
-                                                    y={10}
-                                                    width={name.length * 6.4}
-                                                    height={20}
-                                                    rx={4}
-                                                    fill="var(--color-primary)"
-                                                    opacity={0.9}
-                                                />
-                                                <text
-                                                    textAnchor="middle"
-                                                    y={24}
-                                                    style={{
-                                                        fontFamily: "var(--font-family-sans)",
-                                                        fill: "#fff",
-                                                        fontSize: "10px",
-                                                        fontWeight: 500,
-                                                    }}>
-                                                    {name}
-                                                </text>
-                                            </g>
-                                        )}
-                                    </Marker>
-                                ))}
-                            </ZoomableGroup>
-                        </ComposableMap>
-                    </div>
+                                                default: { outline: "none", cursor: "pointer" },
+                                                hover: { fill: selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : '#c8cdd2', outline: "none", cursor: "pointer" },
+                                                pressed: { outline: "none" },
+                                            }}
+                                        />
+                                    ));
+                                }}
+                            </Geographies>
 
-                    {/* Map animation styles */}
-                    <style>{`
+                            {/* Animated dashed routes */}
+                            {mappedRoutes.map((route) => (
+                                <Line
+                                    key={route.id}
+                                    from={route.from}
+                                    to={route.to}
+                                    stroke="var(--color-primary)"
+                                    strokeWidth={1.5}
+                                    strokeLinecap="round"
+                                    strokeDasharray="6 4"
+                                    className="animated-route"
+                                    style={{
+                                        opacity: 0.6
+                                    }}
+                                />
+                            ))}
+
+                            {/* Pulsing markers + hover glow */}
+                            {mappedAirports.map(({ icao, name, coordinates }) => (
+                                <Marker
+                                    key={icao}
+                                    coordinates={coordinates}
+                                    onMouseEnter={() => setHoveredAirport(icao)}
+                                    onMouseLeave={() => setHoveredAirport(null)}
+                                    onClick={() => handleMarkerClick(coordinates)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    {/* Pulse ring */}
+                                    <circle
+                                        r={10}
+                                        fill="var(--color-primary)"
+                                        opacity={0}
+                                        className="map-pulse-ring"
+                                    />
+                                    {/* Main dot */}
+                                    <circle
+                                        r={hoveredAirport === icao ? 6 : 4}
+                                        fill="var(--color-primary)"
+                                        stroke={hoveredAirport === icao ? '#fff' : 'var(--color-map-stroke)'}
+                                        strokeWidth={hoveredAirport === icao ? 2 : 1.5}
+                                        filter={hoveredAirport === icao ? 'url(#glow)' : 'none'}
+                                        style={{ transition: 'r 0.2s ease, stroke-width 0.2s ease' }}
+                                    />
+                                    {/* ICAO label (always visible) */}
+                                    <text
+                                        textAnchor="middle"
+                                        y={-14}
+                                        style={{
+                                            fontFamily: "var(--font-family-sans)",
+                                            fill: hoveredAirport === icao ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                                            fontSize: hoveredAirport === icao ? '12px' : '11px',
+                                            fontWeight: 700,
+                                            textShadow: "1px 1px 0 var(--color-map-shadow), -1px -1px 0 var(--color-map-shadow), 1px -1px 0 var(--color-map-shadow), -1px 1px 0 var(--color-map-shadow)",
+                                            transition: 'font-size 0.2s ease, fill 0.2s ease'
+                                        }}>
+                                        {icao}
+                                    </text>
+                                    {/* Airport name tooltip on hover */}
+                                    {hoveredAirport === icao && (
+                                        <g>
+                                            <rect
+                                                x={-name.length * 3.2}
+                                                y={10}
+                                                width={name.length * 6.4}
+                                                height={20}
+                                                rx={4}
+                                                fill="var(--color-primary)"
+                                                opacity={0.9}
+                                            />
+                                            <text
+                                                textAnchor="middle"
+                                                y={24}
+                                                style={{
+                                                    fontFamily: "var(--font-family-sans)",
+                                                    fill: "#fff",
+                                                    fontSize: "10px",
+                                                    fontWeight: 500,
+                                                }}>
+                                                {name}
+                                            </text>
+                                        </g>
+                                    )}
+                                </Marker>
+                            ))}
+                        </ZoomableGroup>
+                    </ComposableMap>
+                </div>
+
+                {/* Map animation styles */}
+                <style>{`
                         @keyframes pulse-ring {
                             0% { r: 4; opacity: 0.6; }
                             100% { r: 16; opacity: 0; }
@@ -494,7 +496,6 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                             animation: dash-flow 1.5s linear infinite;
                         }
                     `}</style>
-                </div>
             </div>
 
             {/* List */}
