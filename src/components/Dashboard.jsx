@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { Plane, MapPin, Clock, Trash2, TrendingUp, Edit2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { Plane, MapPin, Clock, Trash2, TrendingUp, Edit2, ChevronDown, ChevronUp, RotateCcw, Filter, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, AreaChart, Area } from 'recharts';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
 import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
@@ -7,6 +7,7 @@ import airports from 'airport-data';
 import customAirports from '../customAirports';
 import PilotProfileCard from './PilotProfileCard';
 import SuggestedRoutes from './SuggestedRoutes';
+import MetarCards from './MetarCards';
 
 const findAirport = (icao) => {
     return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
@@ -17,6 +18,30 @@ const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 export default function Dashboard({ flights, onDelete, onEdit }) {
     const [isTableOpen, setIsTableOpen] = useState(true);
+    const [activeFilter, setActiveFilter] = useState(null); // { type: 'icao' | 'airline' | 'aircraft' | 'alliance', value: string }
+    const recentAirportsByAlliance = useMemo(() => {
+        const sortedFlights = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const result = [];
+        const seenAlliances = new Set();
+
+        for (const f of sortedFlights) {
+            if (!f.alliance || seenAlliances.has(f.alliance)) continue;
+
+            const icao = f.arrival ? f.arrival.toUpperCase() : f.departure ? f.departure.toUpperCase() : null;
+            if (icao) {
+                const airportData = findAirport(icao);
+                const city = airportData ? (airportData.city || airportData.name.split(',')[0] || airportData.name) : 'Unknown City';
+                result.push({
+                    icao,
+                    city,
+                    alliance: f.alliance
+                });
+                seenAlliances.add(f.alliance);
+            }
+            if (result.length >= 3) break;
+        }
+        return result;
+    }, [flights]);
     const [hoveredAirport, setHoveredAirport] = useState(null);
     const [mapZoom, setMapZoom] = useState(1);
     const [mapCenter, setMapCenter] = useState([0, 10]);
@@ -165,6 +190,36 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
         return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
+    const handleFilterClick = (type, value) => {
+        setActiveFilter({ type, value });
+        setIsTableOpen(true); // Ensure table is open when a filter is applied
+    };
+
+    const clearFilter = () => {
+        setActiveFilter(null);
+    };
+
+    const filteredFlights = useMemo(() => {
+        let filtered = [...flights];
+        if (activeFilter) {
+            filtered = filtered.filter(f => {
+                switch (activeFilter.type) {
+                    case 'icao':
+                        return f.departure === activeFilter.value || f.arrival === activeFilter.value;
+                    case 'airline':
+                        return f.airline === activeFilter.value;
+                    case 'aircraft':
+                        return f.aircraft === activeFilter.value;
+                    case 'alliance':
+                        return f.alliance === activeFilter.value;
+                    default:
+                        return true;
+                }
+            });
+        }
+        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [flights, activeFilter]);
+
     const colors = ['#1ed760', '#00ab6c', '#24CC9A', '#7bdcb5', '#C1DBBD', '#00d084'];
     const pieColors = ['#1ed760', '#7bdcb5', '#00ab6c', '#C1DBBD', '#24CC9A'];
 
@@ -183,6 +238,9 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
 
             {/* Pilot Profile Module */}
             <PilotProfileCard flights={flights} />
+
+            {/* METAR Cards */}
+            {recentAirportsByAlliance.length > 0 && <MetarCards airports={recentAirportsByAlliance} />}
 
             {/* KPIs */}
             <div className="kpi-grid">
@@ -500,8 +558,34 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
 
             {/* List */}
             <div className="card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsTableOpen(!isTableOpen)}>
-                    <h3 className="card-title" style={{ marginBottom: 0 }}>Flight Log</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', flexWrap: 'wrap', gap: 'var(--space-4)' }} onClick={() => setIsTableOpen(!isTableOpen)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                        <h3 className="card-title" style={{ marginBottom: 0 }}>Flight Log</h3>
+                        {activeFilter && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                backgroundColor: 'rgba(30, 215, 96, 0.15)',
+                                border: '1px solid var(--color-primary)',
+                                padding: '4px 12px', borderRadius: 'var(--radius-full)',
+                                color: 'var(--color-primary)', fontSize: '0.85rem', fontWeight: 600
+                            }} onClick={(e) => e.stopPropagation()}>
+                                <Filter size={14} />
+                                <span style={{ textTransform: 'uppercase' }}>{activeFilter.type}:</span> {activeFilter.value}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); clearFilter(); }}
+                                    style={{
+                                        background: 'none', border: 'none', color: 'var(--color-primary)',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                        padding: '2px', marginLeft: '4px', borderRadius: '50%'
+                                    }}
+                                    className="filter-clear-btn"
+                                    title="Clear Filter"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <button
                         style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}
                     >
@@ -523,15 +607,52 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...flights].sort((a, b) => new Date(b.date) - new Date(a.date)).map(f => (
+                                {filteredFlights.length > 0 ? filteredFlights.map(f => (
                                     <tr key={f.id}>
                                         <td>{formatDate(f.date)}</td>
                                         <td>
-                                            <div style={{ fontWeight: 500 }}>{f.airline}</div>
-                                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>{f.aircraft} • {f.alliance}</div>
+                                            <div
+                                                className="clickable-filter-text"
+                                                style={{ fontWeight: 500 }}
+                                                onClick={() => handleFilterClick('airline', f.airline)}
+                                                title={`Filter by ${f.airline}`}
+                                            >
+                                                {f.airline}
+                                            </div>
+                                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                <span
+                                                    className="clickable-filter-text"
+                                                    onClick={() => handleFilterClick('aircraft', f.aircraft)}
+                                                    title={`Filter by ${f.aircraft}`}
+                                                >
+                                                    {f.aircraft}
+                                                </span>
+                                                &bull;
+                                                <span
+                                                    className="clickable-filter-text"
+                                                    onClick={() => handleFilterClick('alliance', f.alliance)}
+                                                    title={`Filter by ${f.alliance}`}
+                                                >
+                                                    {f.alliance}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
-                                            <span className="badge data-mono">{f.departure}</span> &rarr; <span className="badge data-mono">{f.arrival}</span>
+                                            <span
+                                                className="badge data-mono clickable-filter-badge"
+                                                onClick={() => handleFilterClick('icao', f.departure)}
+                                                title={`Filter by ${f.departure}`}
+                                            >
+                                                {f.departure}
+                                            </span>
+                                            &rarr;
+                                            <span
+                                                className="badge data-mono clickable-filter-badge"
+                                                onClick={() => handleFilterClick('icao', f.arrival)}
+                                                title={`Filter by ${f.arrival}`}
+                                            >
+                                                {f.arrival}
+                                            </span>
                                         </td>
                                         <td className="data-mono">{f.miles} nm</td>
                                         <td className="data-mono">{f.flightTime} h</td>
@@ -552,7 +673,13 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                )) : (
+                                    <tr>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-hint)' }}>
+                                            No flights match the current filter.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

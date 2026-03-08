@@ -201,11 +201,42 @@ h6 {
   border-color: var(--color-primary-light);
 }
 
-/* Hybrid Typography Class */
+/* Custom visual utilities */
 .data-mono {
   font-family: var(--font-family-mono);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.5px;
+}
+
+/* Clickable Filters in Table */
+.clickable-filter-text {
+  cursor: pointer;
+  transition: color 0.15s ease-in-out;
+}
+
+.clickable-filter-text:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.clickable-filter-badge {
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.clickable-filter-badge:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.filter-clear-btn {
+  transition: all 0.15s ease-in-out;
+}
+
+.filter-clear-btn:hover {
+  background-color: rgba(30, 215, 96, 0.2);
+  color: #fff;
 }
 
 /* Entrance animation keyframes */
@@ -383,31 +414,39 @@ h6 {
 
 .flights-table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.flights-table th,
+.flights-table td {
+  padding: var(--space-3);
   text-align: left;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .flights-table th {
-  background-color: var(--color-background);
-  padding: 12px 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  background-color: var(--color-surface-hover);
 }
 
-.flights-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-divider);
-  color: var(--color-text-primary);
+.flights-table tbody tr {
+  transition: background-color 0.2s;
 }
 
-.flights-table tr:last-child td {
-  border-bottom: none;
+.flights-table tbody tr:hover {
+  background-color: var(--color-surface-hover);
 }
 
-.flights-table tr:hover td {
-  background-color: var(--color-background);
+.flights-table td:last-child,
+.flights-table th:last-child {
+  text-align: right;
 }
 
 /* Custom visual utilities */

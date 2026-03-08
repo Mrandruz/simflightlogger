@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/metar",
+      "destination": "https://aviationweather.gov/api/data/metar"
+    }
+  ]
+}
