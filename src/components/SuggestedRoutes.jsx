@@ -100,11 +100,11 @@ export default function SuggestedRoutes({ flights }) {
                 <span className="suggested-route-emoji">🌍</span>
                 <div className="suggested-route-text">
                     <span className="suggested-route-message">
-                        How about flying from <strong>{suggestion.fromCode}</strong> ({suggestion.fromCity}) to{' '}
-                        <strong>{suggestion.toCode}</strong> ({suggestion.toCity}, {suggestion.toCountry})?
+                        How about flying from <strong className="data-mono">{suggestion.fromCode}</strong> ({suggestion.fromCity}) to{' '}
+                        <strong className="data-mono">{suggestion.toCode}</strong> ({suggestion.toCity}, {suggestion.toCountry})?
                     </span>
                     <span className="suggested-route-meta">
-                        {suggestion.distance.toLocaleString()} nm • {suggestion.alliance}
+                        <span className="data-mono">{suggestion.distance.toLocaleString()}</span> nm • {suggestion.alliance}
                     </span>
                 </div>
             </div>

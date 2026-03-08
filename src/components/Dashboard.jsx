@@ -522,7 +522,7 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...flights].reverse().map(f => (
+                                {[...flights].sort((a, b) => new Date(b.date) - new Date(a.date)).map(f => (
                                     <tr key={f.id}>
                                         <td>{formatDate(f.date)}</td>
                                         <td>
@@ -530,10 +530,10 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                                             <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>{f.aircraft} • {f.alliance}</div>
                                         </td>
                                         <td>
-                                            <span className="badge">{f.departure}</span> &rarr; <span className="badge">{f.arrival}</span>
+                                            <span className="badge data-mono">{f.departure}</span> &rarr; <span className="badge data-mono">{f.arrival}</span>
                                         </td>
-                                        <td>{f.miles} nm</td>
-                                        <td>{f.flightTime} h</td>
+                                        <td className="data-mono">{f.miles} nm</td>
+                                        <td className="data-mono">{f.flightTime} h</td>
                                         <td style={{ textAlign: 'right' }}>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onEdit(f); }}
