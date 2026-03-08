@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from './firebase';
-import Header from './components/Header';
-import FlightForm from './components/FlightForm';
+
+import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import Logbook from './components/Logbook';
+import Briefing from './components/Briefing';
+import NewFlight from './components/NewFlight';
 import FlightEditModal from './components/FlightEditModal';
 import LoginScreen from './components/LoginScreen';
 
@@ -23,8 +27,8 @@ export default function App() {
     });
 
     const [editingFlight, setEditingFlight] = useState(null);
+    const navigate = useNavigate();
 
-    // Helper: get user-specific flights collection
     const getUserFlightsCollection = () => {
         if (!user) return null;
         return collection(db, 'users', user.uid, 'flights');
@@ -35,7 +39,6 @@ export default function App() {
         return doc(db, 'users', user.uid, 'flights', flightId);
     };
 
-    // Listen to auth state changes
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             setUser(firebaseUser);
@@ -44,7 +47,6 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    // Load flights from Firestore when user is authenticated
     useEffect(() => {
         if (!user) {
             setFlights([]);
@@ -72,7 +74,6 @@ export default function App() {
         fetchFlights();
     }, [user]);
 
-    // Save theme to local storage and update body
     useEffect(() => {
         localStorage.setItem('simFlightTheme', isDarkMode ? 'dark' : 'light');
         if (isDarkMode) {
@@ -116,12 +117,10 @@ export default function App() {
                 const importedFlights = JSON.parse(e.target.result);
                 if (Array.isArray(importedFlights)) {
                     if (window.confirm("Warning: importing will OVERWRITE all flights currently on your dashboard. Do you want to proceed?")) {
-                        // Delete all existing flights
                         const snapshot = await getDocs(userFlightsCol);
                         const deletePromises = snapshot.docs.map(d => deleteDoc(getUserFlightDoc(d.id)));
                         await Promise.all(deletePromises);
 
-                        // Add all imported flights
                         const newFlights = [];
                         for (const flight of importedFlights) {
                             const { id, ...flightData } = flight;
@@ -149,6 +148,10 @@ export default function App() {
             const { id, ...flightData } = flight;
             const docRef = await addDoc(userFlightsCol, flightData);
             setFlights(prev => [{ ...flightData, id: docRef.id }, ...prev]);
+
+            // Note: Navigation removed. The NewFlight component handles showing a Toast
+            // instead of immediately redirecting, providing better user feedback.
+
         } catch (error) {
             console.error('Error adding flight:', error);
             alert('Error saving flight. Please try again.');
@@ -188,7 +191,6 @@ export default function App() {
         setEditingFlight(flight);
     };
 
-    // Auth loading
     if (authLoading) {
         return (
             <div className={`app-container ${isDarkMode ? 'dark' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -200,12 +202,10 @@ export default function App() {
         );
     }
 
-    // Not logged in — show login screen
     if (!user) {
         return <LoginScreen />;
     }
 
-    // Data loading
     if (loading) {
         return (
             <div className={`app-container ${isDarkMode ? 'dark' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -218,16 +218,28 @@ export default function App() {
     }
 
     return (
-        <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
-            <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} onExport={handleExport} onImport={handleImport} user={user} onLogout={handleLogout} />
-            <main className="main-content">
-                <aside>
-                    <FlightForm onAddFlight={handleAddFlight} />
-                </aside>
-                <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', minWidth: 0 }}>
-                    <Dashboard flights={flights} onDelete={handleDeleteFlight} onEdit={handleEditFlight} />
-                </section>
-            </main>
+        <>
+            <Routes>
+                <Route
+                    element={
+                        <Layout
+                            isDarkMode={isDarkMode}
+                            toggleTheme={toggleTheme}
+                            onExport={handleExport}
+                            onImport={handleImport}
+                            user={user}
+                            onLogout={handleLogout}
+                            flights={flights}
+                        />
+                    }
+                >
+                    <Route path="/" element={<Dashboard flights={flights} />} />
+                    <Route path="/logbook" element={<Logbook flights={flights} onDelete={handleDeleteFlight} onEdit={handleEditFlight} />} />
+                    <Route path="/briefing" element={<Briefing flights={flights} />} />
+                    <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} />} />
+                </Route>
+            </Routes>
+
             {editingFlight && (
                 <FlightEditModal
                     flight={editingFlight}
@@ -235,6 +247,6 @@ export default function App() {
                     onCancel={() => setEditingFlight(null)}
                 />
             )}
-        </div>
+        </>
     );
 }

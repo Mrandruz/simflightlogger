@@ -131,31 +131,146 @@ body {
 .app-container {
   min-height: 100vh;
   display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 72px;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  margin-bottom: var(--space-8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar-header h2 {
+  font-size: 1.25rem;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  align-items: center;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sidebar-link .tooltip {
+  position: absolute;
+  left: 100%;
+  margin-left: var(--space-3);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform: translateX(-10px);
+  pointer-events: none;
+  z-index: 101;
+}
+
+.sidebar-link:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.sidebar-link:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  transform: translateY(-2px);
+}
+
+.sidebar-link.active {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.sidebar-link.active .tooltip {
+  color: var(--color-primary);
+  border-color: var(--color-primary-light);
+}
+
+.sidebar-divider {
+  height: 1px;
+  width: 32px;
+  background-color: var(--color-divider);
+  margin: var(--space-2) 0;
+}
+
+/* Main Content Wrapper */
+.main-wrapper {
+  flex: 1;
+  margin-left: 72px;
+  /* offset for narrow sidebar */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: calc(100% - 72px);
 }
 
 .main-content {
   flex: 1;
   padding: var(--space-6) var(--space-4);
   max-width: 1400px;
+  /* Return to original non-full width */
   width: 100%;
   margin: 0 auto;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-6);
 }
 
-@media (min-width: 1024px) {
-  .main-content {
-    grid-template-columns: 350px 1fr;
-    align-items: flex-start;
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
   }
+
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* We would need a hamburger menu here later, but for now we follow the simple request */
 }
 
-@media (min-width: 768px) {
-  .col-span-2 {
-    grid-column: span 2;
-  }
-}
+
 
 /* Utility Classes */
 h1,
@@ -615,4 +730,52 @@ h6 {
   margin-top: var(--space-4);
   font-size: 0.8rem;
   color: var(--color-text-hint);
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(9, 10, 11, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
