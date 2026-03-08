@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays } from 'lucide-react';
+import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays, ChevronRight } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
 
@@ -460,57 +460,74 @@ export default function PilotProfileCard({ flights }) {
                     {/* Decorative background element */}
                     <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(20, 106, 255, 0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'calc(var(--space-3) + 11px)', position: 'relative', zIndex: 1 }}>
-                        <div style={{ padding: '5px', background: 'var(--color-surface)', borderRadius: '8px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
-                            <Trophy size={16} className="text-primary" />
+                    <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'stretch', position: 'relative', zIndex: 1 }}>
+                        <div className="achievement-card" style={{
+                            flex: '0 0 65px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            background: 'rgba(20, 106, 255, 0.08)',
+                            border: '1px solid rgba(20, 106, 255, 0.2)',
+                            padding: 'var(--space-3) 0',
+                            borderRadius: '12px'
+                        }}>
+                            <div className="achievement-icon-wrapper" style={{
+                                background: 'linear-gradient(135deg, var(--color-primary), #00d2ff)',
+                                color: 'white',
+                                boxShadow: '0 4px 10px rgba(20, 106, 255, 0.3)'
+                            }}>
+                                <Trophy size={18} />
+                            </div>
+                            <ChevronRight size={18} style={{ color: 'var(--color-primary)', opacity: 0.8 }} />
                         </div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>Pilot Achievements</div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)', position: 'relative', zIndex: 1 }}>
 
-                        <AchievementBadge
-                            id="worldTraveler"
-                            title="World Traveler"
-                            description="Visit 50 different countries"
-                            icon={Globe}
-                            data={stats.achievements.worldTraveler}
-                        />
-                        <AchievementBadge
-                            id="longHaulAce"
-                            title="Long Haul Ace"
-                            description="Complete 20 flights over 5000nm"
-                            icon={PlaneIcon}
-                            data={stats.achievements.longHaulAce}
-                        />
-                        <AchievementBadge
-                            id="airlineLoyal"
-                            title="Airline Loyal"
-                            description="Fly 50 times total with the same airline"
-                            icon={Users}
-                            data={stats.achievements.airlineLoyal}
-                        />
-                        <AchievementBadge
-                            id="tireless"
-                            title="Tireless"
-                            description="Complete 3 flights in a single day"
-                            icon={Zap}
-                            data={stats.achievements.tireless}
-                        />
-                        <AchievementBadge
-                            id="typeRatingMaster"
-                            title="Type Rating Master"
-                            description="Fly 50 times with the same aircraft type"
-                            icon={Award}
-                            data={stats.achievements.typeRatingMaster}
-                        />
-                        <AchievementBadge
-                            id="dailyStreak"
-                            title="7-Day Streak"
-                            description="Log at least one flight a day for 7 consecutive days (unlocks 2x XP multiplier)"
-                            icon={CalendarDays}
-                            data={stats.achievements.dailyStreak}
-                        />
+                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)' }}>
 
+                            <AchievementBadge
+                                id="worldTraveler"
+                                title="World Traveler"
+                                description="Visit 50 different countries"
+                                icon={Globe}
+                                data={stats.achievements.worldTraveler}
+                            />
+                            <AchievementBadge
+                                id="longHaulAce"
+                                title="Long Haul Ace"
+                                description="Complete 20 flights over 5000nm"
+                                icon={PlaneIcon}
+                                data={stats.achievements.longHaulAce}
+                            />
+                            <AchievementBadge
+                                id="airlineLoyal"
+                                title="Airline Loyal"
+                                description="Fly 50 times total with the same airline"
+                                icon={Users}
+                                data={stats.achievements.airlineLoyal}
+                            />
+                            <AchievementBadge
+                                id="tireless"
+                                title="Tireless"
+                                description="Complete 3 flights in a single day"
+                                icon={Zap}
+                                data={stats.achievements.tireless}
+                            />
+                            <AchievementBadge
+                                id="typeRatingMaster"
+                                title="Type Rating Master"
+                                description="Fly 50 times with the same aircraft type"
+                                icon={Award}
+                                data={stats.achievements.typeRatingMaster}
+                            />
+                            <AchievementBadge
+                                id="dailyStreak"
+                                title="7-Day Streak"
+                                description="Log at least one flight per day for 7 consecutive days"
+                                icon={CalendarDays}
+                                data={stats.achievements.dailyStreak}
+                            />
+                        </div>
                     </div>
                 </div>
 
