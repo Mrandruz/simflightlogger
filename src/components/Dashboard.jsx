@@ -6,6 +6,7 @@ import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
 import PilotProfileCard from './PilotProfileCard';
+import SuggestedRoutes from './SuggestedRoutes';
 
 const findAirport = (icao) => {
     return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
@@ -209,6 +210,9 @@ export default function Dashboard({ flights, onDelete, onEdit }) {
                     <span className="kpi-value text-warning">{kpis.totalHours}</span>
                 </div>
             </div>
+
+            {/* Suggested Routes */}
+            <SuggestedRoutes flights={flights} />
 
             {/* Timeline AreaChart */}
             <div className="card">

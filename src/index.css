@@ -164,15 +164,68 @@ h6 {
   box-shadow: var(--shadow-sm);
   padding: var(--space-6);
   border: 1px solid var(--color-border);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  /* Smoother transition */
+  transition: box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* Entrance animation */
+  animation: fadeSlideUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
-  /* Slight lift */
   border-color: var(--color-primary-light);
+}
+
+/* Entrance animation keyframes */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered delays for KPI cards */
+.kpi-grid .kpi-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.kpi-grid .kpi-card:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.kpi-grid .kpi-card:nth-child(3) {
+  animation-delay: 0.19s;
+}
+
+/* Staggered delays for chart/content cards */
+.main-content .card:nth-child(1) {
+  animation-delay: 0.08s;
+}
+
+.main-content .card:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.main-content .card:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.main-content .card:nth-child(4) {
+  animation-delay: 0.32s;
+}
+
+.main-content .card:nth-child(5) {
+  animation-delay: 0.40s;
+}
+
+.main-content .card:nth-child(6) {
+  animation-delay: 0.48s;
 }
 
 .card-title {
@@ -329,4 +382,152 @@ h6 {
 
 .text-success {
   color: var(--color-success);
+}
+
+/* Suggested Routes Banner */
+.suggested-route-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-surface));
+  border: 1px solid var(--color-border);
+  animation: fadeSlideUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation-delay: 0.25s;
+}
+
+[data-theme="dark"] .suggested-route-banner {
+  background: linear-gradient(135deg, rgba(77, 142, 255, 0.08), var(--color-surface));
+}
+
+.suggested-route-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.suggested-route-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.suggested-route-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suggested-route-message {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.suggested-route-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-hint);
+  font-weight: 500;
+}
+
+.suggested-route-shuffle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.suggested-route-shuffle:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: rotate(90deg);
+}
+
+/* Login Screen */
+.login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--color-background);
+  padding: var(--space-4);
+}
+
+.login-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-8) var(--space-6);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.login-header {
+  margin-bottom: var(--space-6);
+}
+
+.login-icon {
+  display: inline-flex;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-family: var(--font-family-display);
+  font-weight: 700;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.login-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.google-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: var(--font-family-sans);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.google-login-btn:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.login-note {
+  margin-top: var(--space-4);
+  font-size: 0.8rem;
+  color: var(--color-text-hint);
 }

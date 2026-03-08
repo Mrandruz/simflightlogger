@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { db, auth } from './firebase';
 import Header from './components/Header';
 import FlightForm from './components/FlightForm';
 import Dashboard from './components/Dashboard';
 import FlightEditModal from './components/FlightEditModal';
-
-const flightsCollection = collection(db, 'flights');
+import LoginScreen from './components/LoginScreen';
 
 export default function App() {
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const [flights, setFlights] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -22,16 +24,43 @@ export default function App() {
 
     const [editingFlight, setEditingFlight] = useState(null);
 
-    // Load flights from Firestore on mount
+    // Helper: get user-specific flights collection
+    const getUserFlightsCollection = () => {
+        if (!user) return null;
+        return collection(db, 'users', user.uid, 'flights');
+    };
+
+    const getUserFlightDoc = (flightId) => {
+        if (!user) return null;
+        return doc(db, 'users', user.uid, 'flights', flightId);
+    };
+
+    // Listen to auth state changes
     useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            setUser(firebaseUser);
+            setAuthLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // Load flights from Firestore when user is authenticated
+    useEffect(() => {
+        if (!user) {
+            setFlights([]);
+            setLoading(false);
+            return;
+        }
+
         const fetchFlights = async () => {
+            setLoading(true);
             try {
-                const snapshot = await getDocs(flightsCollection);
+                const userFlightsCol = collection(db, 'users', user.uid, 'flights');
+                const snapshot = await getDocs(userFlightsCol);
                 const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
                 setFlights(data);
             } catch (error) {
                 console.error('Error loading flights from Firestore:', error);
-                // Fallback to localStorage
                 const saved = localStorage.getItem('simFlights');
                 if (saved) {
                     try { setFlights(JSON.parse(saved)); } catch (e) { /* ignore */ }
@@ -41,7 +70,7 @@ export default function App() {
             }
         };
         fetchFlights();
-    }, []);
+    }, [user]);
 
     // Save theme to local storage and update body
     useEffect(() => {
@@ -57,6 +86,14 @@ export default function App() {
         setIsDarkMode(!isDarkMode);
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
+
     const handleExport = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(flights, null, 2));
         const downloadAnchorNode = document.createElement('a');
@@ -70,22 +107,25 @@ export default function App() {
     const handleImport = (event) => {
         const file = event.target.files[0];
         if (!file) return;
+        const userFlightsCol = getUserFlightsCollection();
+        if (!userFlightsCol) return;
+
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const importedFlights = JSON.parse(e.target.result);
                 if (Array.isArray(importedFlights)) {
                     if (window.confirm("Warning: importing will OVERWRITE all flights currently on your dashboard. Do you want to proceed?")) {
-                        // Delete all existing flights from Firestore
-                        const snapshot = await getDocs(flightsCollection);
-                        const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'flights', d.id)));
+                        // Delete all existing flights
+                        const snapshot = await getDocs(userFlightsCol);
+                        const deletePromises = snapshot.docs.map(d => deleteDoc(getUserFlightDoc(d.id)));
                         await Promise.all(deletePromises);
 
-                        // Add all imported flights to Firestore
+                        // Add all imported flights
                         const newFlights = [];
                         for (const flight of importedFlights) {
-                            const { id, ...flightData } = flight; // remove old id
-                            const docRef = await addDoc(flightsCollection, flightData);
+                            const { id, ...flightData } = flight;
+                            const docRef = await addDoc(userFlightsCol, flightData);
                             newFlights.push({ ...flightData, id: docRef.id });
                         }
                         setFlights(newFlights);
@@ -103,9 +143,11 @@ export default function App() {
     };
 
     const handleAddFlight = async (flight) => {
+        const userFlightsCol = getUserFlightsCollection();
+        if (!userFlightsCol) return;
         try {
-            const { id, ...flightData } = flight; // remove client-generated id
-            const docRef = await addDoc(flightsCollection, flightData);
+            const { id, ...flightData } = flight;
+            const docRef = await addDoc(userFlightsCol, flightData);
             setFlights(prev => [{ ...flightData, id: docRef.id }, ...prev]);
         } catch (error) {
             console.error('Error adding flight:', error);
@@ -114,9 +156,11 @@ export default function App() {
     };
 
     const handleUpdateFlight = async (updatedFlight) => {
+        const flightDocRef = getUserFlightDoc(updatedFlight.id);
+        if (!flightDocRef) return;
         try {
             const { id, ...flightData } = updatedFlight;
-            await updateDoc(doc(db, 'flights', id), flightData);
+            await updateDoc(flightDocRef, flightData);
             setFlights(prev => prev.map(f => f.id === id ? updatedFlight : f));
             setEditingFlight(null);
         } catch (error) {
@@ -129,8 +173,10 @@ export default function App() {
         if (!window.confirm('Are you sure you want to delete this flight? This action cannot be undone.')) {
             return;
         }
+        const flightDocRef = getUserFlightDoc(id);
+        if (!flightDocRef) return;
         try {
-            await deleteDoc(doc(db, 'flights', id));
+            await deleteDoc(flightDocRef);
             setFlights(prev => prev.filter(f => f.id !== id));
         } catch (error) {
             console.error('Error deleting flight:', error);
@@ -142,6 +188,24 @@ export default function App() {
         setEditingFlight(flight);
     };
 
+    // Auth loading
+    if (authLoading) {
+        return (
+            <div className={`app-container ${isDarkMode ? 'dark' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+                <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '12px' }}>✈️</div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Not logged in — show login screen
+    if (!user) {
+        return <LoginScreen />;
+    }
+
+    // Data loading
     if (loading) {
         return (
             <div className={`app-container ${isDarkMode ? 'dark' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -155,7 +219,7 @@ export default function App() {
 
     return (
         <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
-            <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} onExport={handleExport} onImport={handleImport} />
+            <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} onExport={handleExport} onImport={handleImport} user={user} onLogout={handleLogout} />
             <main className="main-content">
                 <aside>
                     <FlightForm onAddFlight={handleAddFlight} />
