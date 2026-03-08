@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { Trash2, Edit2, RotateCcw, Filter, X, Eye } from 'lucide-react';
+import { Trash2, Edit2, RotateCcw, Filter, X, Eye, Zap } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
 import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
 import airports from 'airport-data';
@@ -244,6 +244,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 <th>Route</th>
                                 <th>Miles</th>
                                 <th>Time</th>
+                                <th>XP</th>
                                 <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
@@ -266,6 +267,11 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                     </td>
                                     <td className="data-mono">{f.miles} nm</td>
                                     <td className="data-mono">{f.flightTime} h</td>
+                                    <td>
+                                        <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                                            {Math.floor(((f.miles || 0) / 10) + ((f.flightTime || 0) * 50))}
+                                        </span>
+                                    </td>
                                     <td style={{ textAlign: 'right' }}>
                                         <button onClick={(e) => { e.stopPropagation(); setSelectedFlightDetails(f); }} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} title="View details"><Eye size={18} /></button>
                                         <button onClick={(e) => { e.stopPropagation(); onEdit(f); }} style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} title="Edit"><Edit2 size={18} /></button>
@@ -274,7 +280,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-hint)' }}>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-hint)' }}>
                                         No flights match the current filter.
                                     </td>
                                 </tr>

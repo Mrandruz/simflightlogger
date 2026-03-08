@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
 
@@ -44,7 +44,8 @@ export default function PilotProfileCard({ flights }) {
         let totalFuel = 0;
         let totalXp = 0;
         const airportCounts = {};
-        const allianceCounts = {};
+        const airlineCounts = {};
+        const aircraftCounts = {};
         const dateCounts = {};
         const countriesSet = new Set();
         let longestFlight = { miles: 0, departure: '', arrival: '' };
@@ -52,42 +53,84 @@ export default function PilotProfileCard({ flights }) {
         // For "Long Haul Ace" progression
         let longHaulCount = 0;
 
-        // For "Alliance Loyal" progression (consecutive and total)
-        let maxConsecutiveAlliance = 0;
-        let currentConsecutiveAllianceCount = 0;
-        let lastAlliance = null;
+        // For "Airline Loyal" progression (consecutive and total)
+        let maxConsecutiveAirline = 0;
+        let currentConsecutiveAirlineCount = 0;
+        let lastAirline = null;
 
-        // Sort flights chronologically to correctly check consecutive logic
+        // Sort flights chronologically to correctly check consecutive logic and streaks
         const sortedFlights = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // For "Daily Streak"
+        let currentStreak = 0;
+        let maxStreak = 0;
+        let lastFlightDateMs = null;
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
         sortedFlights.forEach(f => {
             const fTime = f.flightTime || 0;
             const fMiles = f.miles || 0;
             const fDate = f.date ? f.date.substring(0, 10) : null;
 
+            // Track Aircraft for Type Rating Master
+            if (f.aircraft) {
+                aircraftCounts[f.aircraft] = (aircraftCounts[f.aircraft] || 0) + 1;
+            }
+
+            // Calculate sequence for daily streak based on unique days
+            if (fDate) {
+                const flightDateObj = new Date(fDate);
+                // normalized to midnight
+                const flightDateMs = new Date(flightDateObj.getFullYear(), flightDateObj.getMonth(), flightDateObj.getDate()).getTime();
+
+                if (lastFlightDateMs === null) {
+                    currentStreak = 1;
+                } else {
+                    const diffDays = Math.round((flightDateMs - lastFlightDateMs) / ONE_DAY_MS);
+                    if (diffDays === 1) {
+                        currentStreak++;
+                    } else if (diffDays > 1) {
+                        currentStreak = 1; // reset streak
+                    }
+                    // if diffDays === 0, it's the same day, streak continues but doesn't increment
+                }
+
+                if (currentStreak > maxStreak) {
+                    maxStreak = currentStreak;
+                }
+                lastFlightDateMs = flightDateMs;
+            }
+
             totalHours += fTime;
             totalMiles += fMiles;
-            totalXp += Math.floor((fMiles / 10) + (fTime * 50));
+
+            // Base XP
+            let flightXp = Math.floor((fMiles / 10) + (fTime * 50));
+            // xp Multiplier if streak >= 7 (applied after the 7 streak is established by evaluating if currentStreak at the time of flight was >= 7)
+            if (currentStreak >= 7) {
+                flightXp *= 2;
+            }
+            totalXp += flightXp;
 
             const fuelRate = FUEL_CONSUMPTION_PER_NM[f.aircraft] || FUEL_CONSUMPTION_PER_NM['Altro'];
             totalFuel += fMiles * fuelRate;
 
-            if (f.alliance) {
-                allianceCounts[f.alliance] = (allianceCounts[f.alliance] || 0) + 1;
+            if (f.airline) {
+                airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1;
 
-                if (f.alliance === lastAlliance) {
-                    currentConsecutiveAllianceCount++;
+                if (f.airline === lastAirline) {
+                    currentConsecutiveAirlineCount++;
                 } else {
-                    currentConsecutiveAllianceCount = 1;
-                    lastAlliance = f.alliance;
+                    currentConsecutiveAirlineCount = 1;
+                    lastAirline = f.airline;
                 }
 
-                if (currentConsecutiveAllianceCount > maxConsecutiveAlliance) {
-                    maxConsecutiveAlliance = currentConsecutiveAllianceCount;
+                if (currentConsecutiveAirlineCount > maxConsecutiveAirline) {
+                    maxConsecutiveAirline = currentConsecutiveAirlineCount;
                 }
             } else {
-                currentConsecutiveAllianceCount = 0;
-                lastAlliance = null;
+                currentConsecutiveAirlineCount = 0;
+                lastAirline = null;
             }
 
             if (fDate) {
@@ -162,19 +205,43 @@ export default function PilotProfileCard({ flights }) {
         const hasLongHaulAce = longHaulCount >= longHaulGoal;
         const longHaulProgress = Math.min(100, (longHaulCount / longHaulGoal) * 100);
 
-        // Alliance Loyal (5 consecutive OR 100 total)
-        const maxTotalAnyAlliance = Object.values(allianceCounts).reduce((max, val) => Math.max(max, val), 0);
-        const hasAllianceLoyal = maxConsecutiveAlliance >= 5 || maxTotalAnyAlliance >= 100;
-        // Progress bar logic: use whichever percentage is closer to its goal
-        const consecutivePct = Math.min(100, (maxConsecutiveAlliance / 5) * 100);
-        const totalPct = Math.min(100, (maxTotalAnyAlliance / 100) * 100);
-        const allianceLoyalProgress = Math.max(consecutivePct, totalPct);
+        // Airline Loyal (50 total)
+        let topAirline = 'None';
+        let maxTotalAnyAirline = 0;
+        for (const [airline, count] of Object.entries(airlineCounts)) {
+            if (count > maxTotalAnyAirline) {
+                maxTotalAnyAirline = count;
+                topAirline = airline;
+            }
+        }
+        const hasAirlineLoyal = maxTotalAnyAirline >= 50;
+        const airlineLoyalGoal = 50;
+        const airlineLoyalProgress = Math.min(100, (maxTotalAnyAirline / airlineLoyalGoal) * 100);
+        const airlineLoyalCurrent = maxTotalAnyAirline;
 
         // Tireless (3 flights in the same day)
         const maxFlightsInDay = Object.values(dateCounts).reduce((max, val) => Math.max(max, val), 0);
         const tirelessGoal = 3;
         const hasTireless = maxFlightsInDay >= tirelessGoal;
         const tirelessProgress = Math.min(100, (maxFlightsInDay / tirelessGoal) * 100);
+
+        // Type Rating Master (50 total with same aircraft)
+        let topAircraft = 'None';
+        let maxTotalAnyAircraft = 0;
+        for (const [aircraft, count] of Object.entries(aircraftCounts)) {
+            if (count > maxTotalAnyAircraft) {
+                maxTotalAnyAircraft = count;
+                topAircraft = aircraft;
+            }
+        }
+        const typeRatingGoal = 50;
+        const hasTypeRatingMaster = maxTotalAnyAircraft >= typeRatingGoal;
+        const typeRatingProgress = Math.min(100, (maxTotalAnyAircraft / typeRatingGoal) * 100);
+
+        // Daily Streak (7 days consecutive)
+        const streakGoal = 7;
+        const hasDailyStreak = maxStreak >= streakGoal;
+        const streakProgress = Math.min(100, (maxStreak / streakGoal) * 100);
 
         return {
             totalHours,
@@ -193,67 +260,58 @@ export default function PilotProfileCard({ flights }) {
             achievements: {
                 worldTraveler: { unlocked: hasWorldTraveler, progress: worldTravelerProgress, current: countriesCount, goal: worldTravelerGoal },
                 longHaulAce: { unlocked: hasLongHaulAce, progress: longHaulProgress, current: longHaulCount, goal: longHaulGoal },
-                allianceLoyal: { unlocked: hasAllianceLoyal, progress: allianceLoyalProgress, current: maxConsecutiveAlliance, goal: 5 },
-                tireless: { unlocked: hasTireless, progress: tirelessProgress, current: maxFlightsInDay, goal: tirelessGoal }
+                airlineLoyal: { unlocked: hasAirlineLoyal, progress: airlineLoyalProgress, current: airlineLoyalCurrent, goal: airlineLoyalGoal, extraInfo: airlineLoyalCurrent > 0 ? `Leading with: ${topAirline}` : null },
+                tireless: { unlocked: hasTireless, progress: tirelessProgress, current: maxFlightsInDay, goal: tirelessGoal },
+                typeRatingMaster: { unlocked: hasTypeRatingMaster, progress: typeRatingProgress, current: maxTotalAnyAircraft, goal: typeRatingGoal, extraInfo: maxTotalAnyAircraft > 0 ? `Leading with: ${topAircraft}` : null },
+                dailyStreak: { unlocked: hasDailyStreak, progress: streakProgress, current: maxStreak, goal: streakGoal }
             }
         };
     }, [flights]);
 
     // Reusable component for the achievements
     const AchievementBadge = ({ id, title, description, icon: Icon, data }) => {
-        const { unlocked, progress, current, goal } = data;
+        const { current, goal, extraInfo } = data;
+        let progress = data.progress;
+        if (progress > 100) progress = 100;
         const isCompleted = progress >= 100;
 
         return (
-            <div style={{
-                display: 'flex', flexDirection: 'column', gap: '8px',
-                padding: '12px', borderRadius: 'var(--radius-md)',
-                backgroundColor: isCompleted ? 'rgba(20, 106, 255, 0.08)' : 'rgba(255,255,255, 0.4)',
-                border: `1px solid ${isCompleted ? 'var(--color-primary-light)' : 'var(--color-border)'}`,
-                boxShadow: isCompleted ? '0 0 12px rgba(20, 106, 255, 0.15)' : 'none',
-                minWidth: '160px', flex: 1,
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden'
-            }} title={description}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                        padding: '6px', borderRadius: '50%',
-                        backgroundColor: isCompleted ? 'var(--color-primary)' : 'var(--color-surface-hover)',
-                        color: isCompleted ? '#ffffff' : 'var(--color-text-secondary)',
-                        boxShadow: isCompleted ? '0 2px 8px rgba(20, 106, 255, 0.4)' : 'none'
-                    }}>
+            <div className={`achievement-card ${isCompleted ? 'completed' : ''}`}>
+                <div className="achievement-tooltip">
+                    <div style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>{description}</div>
+                    {extraInfo && !isCompleted && (
+                        <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                            {extraInfo}
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 1, textAlign: 'center' }}>
+                    <div className="achievement-icon-wrapper">
                         <Icon size={16} />
                     </div>
-                    <div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: isCompleted ? 'var(--color-primary)' : 'var(--color-text-primary)' }}>{title}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
-                            {isCompleted ? 'Unlocked!' : `${current} / ${goal}`}
+                    <div style={{ width: '100%', zIndex: 1 }}>
+                        <div className="achievement-title">{title}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>
+                            {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>UNLOCKED!</span> : `${current} / ${goal}`}
                         </div>
                     </div>
                 </div>
 
-                {/* Achievement mini progress bar */}
-                <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--color-divider)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: '4px' }}>
-                    <div style={{
-                        height: '100%',
-                        backgroundColor: isCompleted ? 'var(--color-success)' : 'var(--color-primary)',
-                        width: `${progress}%`,
-                        transition: 'width 1s ease',
-                        borderRadius: 'var(--radius-full)'
-                    }}></div>
+                <div className="achievement-progress-bg" style={{ zIndex: 1 }}>
+                    <div className="achievement-progress-fill" style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
         );
     };
 
     return (
-        <div className="card" style={{ marginBottom: 'var(--space-6)', backgroundImage: 'linear-gradient(to right, var(--color-surface), rgba(26, 115, 232, 0.05))', border: '1px solid var(--color-primary-light)' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-6)', alignItems: 'stretch' }}>
+        <div className="card" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-4)', backgroundImage: 'linear-gradient(to right, var(--color-surface), rgba(26, 115, 232, 0.05))', border: '1px solid var(--color-primary-light)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'stretch' }}>
 
                 {/* Ranking Section */}
-                <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                         <img
                             src="/avatar.jpg"
                             alt="Andrea"
@@ -261,7 +319,7 @@ export default function PilotProfileCard({ flights }) {
                             onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Andrea&background=1a73e8&color=fff&size=80' }}
                         />
                         <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
                                 {getGreeting()} Andrea
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -272,20 +330,25 @@ export default function PilotProfileCard({ flights }) {
                                     {stats.currentRank.name}
                                 </h2>
                             </div>
-                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '4px' }}>
+                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
                                 <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.totalXp.toLocaleString()}</span> XP &bull; <span className="data-mono">{stats.totalHours.toFixed(1)}</span> h
+                                {stats.achievements.dailyStreak.unlocked && (
+                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        2x XP Active
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     <div style={{ marginTop: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.75rem' }}>
                             <span style={{ fontWeight: 500, color: 'var(--color-text-secondary)' }}>XP Progression</span>
                             <span style={{ fontWeight: 600 }} className="data-mono">{Math.round(stats.progress)}%</span>
                         </div>
 
                         {/* Progress Bar background */}
-                        <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--color-divider)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                        <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--color-divider)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
                             {/* Progress Fill */}
                             <div style={{
                                 height: '100%',
@@ -296,7 +359,7 @@ export default function PilotProfileCard({ flights }) {
                             }}></div>
                         </div>
 
-                        <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--color-text-hint)', textAlign: 'right' }}>
+                        <div style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--color-text-hint)', textAlign: 'right' }}>
                             {stats.nextRank
                                 ? `${stats.xpRemaining.toLocaleString()} XP remaining to ${stats.nextRank.name}`
                                 : 'You have reached the maximum rank!'}
@@ -308,11 +371,11 @@ export default function PilotProfileCard({ flights }) {
                 <div style={{ width: '1px', backgroundColor: 'var(--color-divider)', margin: 'var(--space-2) 0' }} className="hide-on-mobile"></div>
 
                 {/* Extra Stats Section - 2 columns x 3 rows */}
-                <div style={{ flex: '1 1 400px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)', alignContent: 'center' }}>
+                <div style={{ flex: '1 1 400px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', alignContent: 'center' }}>
 
                     {/* Column 1, Row 1: Hub Preferito */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <MapPin size={18} />
                         </div>
                         <div>
@@ -323,7 +386,7 @@ export default function PilotProfileCard({ flights }) {
 
                     {/* Column 2, Row 1: Paesi Visitati */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#8e44ad', backgroundColor: 'rgba(142, 68, 173, 0.1)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: '#8e44ad', backgroundColor: 'rgba(142, 68, 173, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <Globe size={18} />
                         </div>
                         <div>
@@ -334,7 +397,7 @@ export default function PilotProfileCard({ flights }) {
 
                     {/* Column 1, Row 2: Media Ore / Volo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <Clock size={18} />
                         </div>
                         <div>
@@ -345,7 +408,7 @@ export default function PilotProfileCard({ flights }) {
 
                     {/* Column 2, Row 2: Media Distanza / Volo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <PlaneIcon size={18} />
                         </div>
                         <div>
@@ -356,7 +419,7 @@ export default function PilotProfileCard({ flights }) {
 
                     {/* Column 1, Row 3: Fuel Stimato */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#e8710a', backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: '#e8710a', backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <Fuel size={18} />
                         </div>
                         <div>
@@ -367,7 +430,7 @@ export default function PilotProfileCard({ flights }) {
 
                     {/* Column 2, Row 3: Volo più Lungo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', padding: '8px', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ color: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
                             <Trophy size={18} />
                         </div>
                         <div>
@@ -384,9 +447,26 @@ export default function PilotProfileCard({ flights }) {
                 </div>
 
                 {/* Achievements Section */}
-                <div style={{ flex: '1 1 100%', marginTop: 'var(--space-2)', paddingTop: 'var(--space-4)', borderTop: '1px dashed var(--color-divider)' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>Recent Achievements</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-3)' }}>
+                <div style={{
+                    flex: '1 1 100%',
+                    marginTop: 'var(--space-2)',
+                    padding: 'var(--space-4)',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(145deg, rgba(20, 106, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+                    position: 'relative'
+                }}>
+                    {/* Decorative background element */}
+                    <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(20, 106, 255, 0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'calc(var(--space-3) + 11px)', position: 'relative', zIndex: 1 }}>
+                        <div style={{ padding: '5px', background: 'var(--color-surface)', borderRadius: '8px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+                            <Trophy size={16} className="text-primary" />
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>Pilot Achievements</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)', position: 'relative', zIndex: 1 }}>
 
                         <AchievementBadge
                             id="worldTraveler"
@@ -403,11 +483,11 @@ export default function PilotProfileCard({ flights }) {
                             data={stats.achievements.longHaulAce}
                         />
                         <AchievementBadge
-                            id="allianceLoyal"
-                            title="Alliance Loyal"
-                            description="Fly 5 consecutive times or 100 times total with the same alliance"
+                            id="airlineLoyal"
+                            title="Airline Loyal"
+                            description="Fly 50 times total with the same airline"
                             icon={Users}
-                            data={stats.achievements.allianceLoyal}
+                            data={stats.achievements.airlineLoyal}
                         />
                         <AchievementBadge
                             id="tireless"
@@ -415,6 +495,20 @@ export default function PilotProfileCard({ flights }) {
                             description="Complete 3 flights in a single day"
                             icon={Zap}
                             data={stats.achievements.tireless}
+                        />
+                        <AchievementBadge
+                            id="typeRatingMaster"
+                            title="Type Rating Master"
+                            description="Fly 50 times with the same aircraft type"
+                            icon={Award}
+                            data={stats.achievements.typeRatingMaster}
+                        />
+                        <AchievementBadge
+                            id="dailyStreak"
+                            title="7-Day Streak"
+                            description="Log at least one flight a day for 7 consecutive days (unlocks 2x XP multiplier)"
+                            icon={CalendarDays}
+                            data={stats.achievements.dailyStreak}
                         />
 
                     </div>
@@ -427,6 +521,153 @@ export default function PilotProfileCard({ flights }) {
                     .hide-on-mobile {
                         display: none;
                     }
+                }
+
+                .achievement-card {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 9px;
+                    padding: 9px 12px;
+                    border-radius: 12px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    position: relative;
+                    cursor: default;
+                }
+
+                .achievement-card:hover {
+                    transform: translateY(-3px) scale(1.02);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+                    border-color: var(--color-primary-light);
+                    z-index: 20;
+                }
+
+                .achievement-card.completed {
+                    background: linear-gradient(135deg, rgba(20, 106, 255, 0.1), var(--color-surface));
+                    border: 1px solid rgba(20, 106, 255, 0.3);
+                    box-shadow: 0 4px 16px rgba(20, 106, 255, 0.08);
+                }
+
+                .achievement-card.completed:hover {
+                    box-shadow: 0 10px 25px rgba(20, 106, 255, 0.2);
+                    border-color: rgba(20, 106, 255, 0.6);
+                }
+
+                .achievement-icon-wrapper {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: var(--color-surface-hover);
+                    color: var(--color-text-secondary);
+                    transition: all 0.4s ease;
+                }
+
+                .achievement-card.completed .achievement-icon-wrapper {
+                    background: linear-gradient(135deg, var(--color-primary), #00d2ff);
+                    color: white;
+                    box-shadow: 0 4px 10px rgba(20, 106, 255, 0.4);
+                }
+
+                .achievement-title {
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    color: var(--color-text-primary);
+                    transition: color 0.3s ease;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .achievement-card.completed .achievement-title {
+                    background: linear-gradient(135deg, var(--color-primary), #3b82f6);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                
+                :root[data-theme='dark'] .achievement-card.completed .achievement-title {
+                    background: linear-gradient(135deg, #ffffff, #a5b4fc);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+
+                .achievement-progress-bg {
+                    width: 100%;
+                    height: 6px;
+                    background-color: var(--color-divider);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-top: 4px;
+                }
+
+                .achievement-progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, var(--color-primary), #00d2ff);
+                    border-radius: 8px;
+                    transition: width 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    position: relative;
+                }
+                
+                .achievement-card.completed .achievement-progress-fill {
+                    background: var(--color-success);
+                }
+
+                .achievement-progress-fill::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    right: 0;
+                    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+                    animation: shimmer 2s infinite linear;
+                }
+
+                @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+
+                .achievement-tooltip {
+                    position: absolute;
+                    bottom: calc(100% + 15px);
+                    left: 50%;
+                    transform: translateX(-50%) translateY(10px) scale(0.95);
+                    opacity: 0;
+                    visibility: hidden;
+                    padding: 12px 16px;
+                    background: rgba(15, 23, 42, 0.95);
+                    backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    z-index: 100;
+                    width: max-content;
+                    max-width: 260px;
+                    text-align: center;
+                    pointer-events: none;
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    color: rgba(255,255,255,0.9);
+                }
+
+                .achievement-card:hover .achievement-tooltip {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateX(-50%) translateY(0) scale(1);
+                }
+
+                .achievement-tooltip::after {
+                    content: '';
+                    position: absolute;
+                    top: 100%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    border-left: 6px solid transparent;
+                    border-right: 6px solid transparent;
+                    border-top: 6px solid rgba(15, 23, 42, 0.95);
                 }
             `}</style>
         </div>

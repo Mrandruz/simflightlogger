@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plane as PlaneIcon, MapPin, Clock, Fuel, Calendar, Wind, Thermometer, Droplets, Gauge, AlertCircle } from 'lucide-react';
+import { X, Plane as PlaneIcon, MapPin, Clock, Fuel, Calendar, Wind, Thermometer, Droplets, Gauge, AlertCircle, Zap } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, Line } from "react-simple-maps";
 import { geoCentroid, geoDistance } from 'd3-geo';
 import airports from 'airport-data';
@@ -126,7 +126,9 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
             if (f.arrival === flight.arrival) timesFlownTo++;
         });
 
-        return { estimatedFuel, timesFlownFrom, timesFlownTo };
+        const flightXp = Math.floor(((flight.miles || 0) / 10) + ((flight.flightTime || 0) * 50));
+
+        return { estimatedFuel, timesFlownFrom, timesFlownTo, flightXp };
     }, [flight, allFlights]);
 
     return (
@@ -146,7 +148,7 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
                 </div>
 
                 {/* Main Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--space-3)' }}>
                     <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Calendar size={14} /> Date</div>
                         <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{new Date(flight.date).toLocaleDateString()}</div>
@@ -162,6 +164,10 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
                     <div style={{ backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(232, 113, 10, 0.2)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Fuel size={14} color="#e8710a" /> Est. Fuel</div>
                         <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#e8710a' }} className="data-mono">{stats.estimatedFuel} kg</div>
+                    </div>
+                    <div style={{ backgroundColor: 'rgba(20, 106, 255, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(20, 106, 255, 0.2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Zap size={14} color="var(--color-primary)" /> XP Earned</div>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--color-primary)' }} className="data-mono">{stats.flightXp}</div>
                     </div>
                 </div>
 
