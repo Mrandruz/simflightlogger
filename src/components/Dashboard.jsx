@@ -86,27 +86,30 @@ export default function Dashboard({ flights }) {
             {/* KPIs */}
             <div className="kpi-grid">
                 <div className="card kpi-card">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(20,106,255,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Total Flights</span>
-                        <div style={{ padding: '8px', backgroundColor: 'var(--color-primary-light)', borderRadius: '50%', color: 'var(--color-primary)' }}><Plane size={20} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-primary-light)', borderRadius: '50%', color: 'var(--color-primary)', display: 'flex' }}><Plane size={24} /></div>
                     </div>
-                    <span className="kpi-value">{kpis.totalFlights}</span>
+                    <span className="kpi-value" style={{ zIndex: 1, position: 'relative' }}>{kpis.totalFlights}</span>
                 </div>
 
                 <div className="card kpi-card">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(60,196,125,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Total Miles</span>
-                        <div style={{ padding: '8px', backgroundColor: 'var(--color-success-bg)', borderRadius: '50%', color: 'var(--color-success)' }}><MapPin size={20} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-success-bg)', borderRadius: '50%', color: 'var(--color-success)', display: 'flex' }}><MapPin size={24} /></div>
                     </div>
-                    <span className="kpi-value text-success">{kpis.totalMiles.toLocaleString()}</span>
+                    <span className="kpi-value text-success" style={{ zIndex: 1, position: 'relative' }}>{kpis.totalMiles.toLocaleString()}</span>
                 </div>
 
                 <div className="card kpi-card">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(234,135,93,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Flight Hours</span>
-                        <div style={{ padding: '8px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '50%', color: 'var(--color-warning)' }}><Clock size={20} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '50%', color: 'var(--color-warning)', display: 'flex' }}><Clock size={24} /></div>
                     </div>
-                    <span className="kpi-value text-warning">{kpis.totalHours}</span>
+                    <span className="kpi-value text-warning" style={{ zIndex: 1, position: 'relative', color: 'var(--color-warning)' }}>{kpis.totalHours}</span>
                 </div>
             </div>
 
