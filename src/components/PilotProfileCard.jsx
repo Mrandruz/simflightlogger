@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays, ChevronRight } from 'lucide-react';
+import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays, ChevronRight, Flame } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
 
@@ -12,7 +12,7 @@ const RANKS = [
     { name: 'Junior F.O.', minXp: 5000, icon: <Medal size={24} className="text-primary" /> },
     { name: 'First Officer', minXp: 15000, icon: <Award size={24} className="text-primary" /> },
     { name: 'Captain', minXp: 50000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
-    { name: 'Senior Captain', minXp: 150000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
+    { name: 'Senior Captain', minXp: 250000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
     { name: 'Chief Captain', minXp: Infinity, icon: <Award size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> }
 ];
 
@@ -65,58 +65,33 @@ export default function PilotProfileCard({ flights }) {
         let currentStreak = 0;
         let maxStreak = 0;
         let lastFlightDateMs = null;
+        let maxAirlineCount = 0;
+        let maxAircraftCount = 0;
+        let worldTravelerUnlockedDateMs = null;
+        let longHaulAceUnlockedDateMs = null;
+        let airlineLoyalUnlockedDateMs = null;
+        let typeRatingMasterUnlockedDateMs = null;
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
         sortedFlights.forEach(f => {
             const fTime = f.flightTime || 0;
             const fMiles = f.miles || 0;
             const fDate = f.date ? f.date.substring(0, 10) : null;
+            let flightDateMs = null;
 
             // Track Aircraft for Type Rating Master
             if (f.aircraft) {
                 aircraftCounts[f.aircraft] = (aircraftCounts[f.aircraft] || 0) + 1;
-            }
-
-            // Calculate sequence for daily streak based on unique days
-            if (fDate) {
-                const flightDateObj = new Date(fDate);
-                // normalized to midnight
-                const flightDateMs = new Date(flightDateObj.getFullYear(), flightDateObj.getMonth(), flightDateObj.getDate()).getTime();
-
-                if (lastFlightDateMs === null) {
-                    currentStreak = 1;
-                } else {
-                    const diffDays = Math.round((flightDateMs - lastFlightDateMs) / ONE_DAY_MS);
-                    if (diffDays === 1) {
-                        currentStreak++;
-                    } else if (diffDays > 1) {
-                        currentStreak = 1; // reset streak
-                    }
-                    // if diffDays === 0, it's the same day, streak continues but doesn't increment
+                if (aircraftCounts[f.aircraft] > maxAircraftCount) {
+                    maxAircraftCount = aircraftCounts[f.aircraft];
                 }
-
-                if (currentStreak > maxStreak) {
-                    maxStreak = currentStreak;
-                }
-                lastFlightDateMs = flightDateMs;
             }
-
-            totalHours += fTime;
-            totalMiles += fMiles;
-
-            // Base XP
-            let flightXp = Math.floor((fMiles / 10) + (fTime * 50));
-            // xp Multiplier if streak >= 7 (applied after the 7 streak is established by evaluating if currentStreak at the time of flight was >= 7)
-            if (currentStreak >= 7) {
-                flightXp *= 2;
-            }
-            totalXp += flightXp;
-
-            const fuelRate = FUEL_CONSUMPTION_PER_NM[f.aircraft] || FUEL_CONSUMPTION_PER_NM['Altro'];
-            totalFuel += fMiles * fuelRate;
 
             if (f.airline) {
                 airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1;
+                if (airlineCounts[f.airline] > maxAirlineCount) {
+                    maxAirlineCount = airlineCounts[f.airline];
+                }
 
                 if (f.airline === lastAirline) {
                     currentConsecutiveAirlineCount++;
@@ -133,7 +108,26 @@ export default function PilotProfileCard({ flights }) {
                 lastAirline = null;
             }
 
+            // Calculate sequence for daily streak based on unique days
             if (fDate) {
+                const flightDateObj = new Date(fDate);
+                flightDateMs = new Date(flightDateObj.getFullYear(), flightDateObj.getMonth(), flightDateObj.getDate()).getTime();
+
+                if (lastFlightDateMs === null) {
+                    currentStreak = 1;
+                } else {
+                    const diffDays = Math.round((flightDateMs - lastFlightDateMs) / ONE_DAY_MS);
+                    if (diffDays === 1) {
+                        currentStreak++;
+                    } else if (diffDays > 1) {
+                        currentStreak = 1; // reset streak
+                    }
+                }
+
+                if (currentStreak > maxStreak) {
+                    maxStreak = currentStreak;
+                }
+                lastFlightDateMs = flightDateMs;
                 dateCounts[fDate] = (dateCounts[fDate] || 0) + 1;
             }
 
@@ -151,6 +145,48 @@ export default function PilotProfileCard({ flights }) {
                 if (arrAirport?.country) countriesSet.add(arrAirport.country);
                 airportCounts[f.arrival] = (airportCounts[f.arrival] || 0) + 1;
             }
+
+            // XP Bonus 10x when ANY of the 4 major achievements unlocks
+            if (worldTravelerUnlockedDateMs === null && countriesSet.size >= 100 && flightDateMs) {
+                worldTravelerUnlockedDateMs = flightDateMs;
+            }
+            if (longHaulAceUnlockedDateMs === null && longHaulCount >= 120 && flightDateMs) {
+                longHaulAceUnlockedDateMs = flightDateMs;
+            }
+            if (airlineLoyalUnlockedDateMs === null && maxAirlineCount >= 70 && flightDateMs) {
+                airlineLoyalUnlockedDateMs = flightDateMs;
+            }
+            if (typeRatingMasterUnlockedDateMs === null && maxAircraftCount >= 120 && flightDateMs) {
+                typeRatingMasterUnlockedDateMs = flightDateMs;
+            }
+
+            totalHours += fTime;
+            totalMiles += fMiles;
+
+            // Check if current flight is within the 30-day bonus period of any tracked achievement
+            let inBonusPeriod = false;
+            const checkBonus = (unlockDateMs) => {
+                if (unlockDateMs !== null && flightDateMs && flightDateMs <= (unlockDateMs + 30 * ONE_DAY_MS)) {
+                    inBonusPeriod = true;
+                }
+            };
+            checkBonus(worldTravelerUnlockedDateMs);
+            checkBonus(longHaulAceUnlockedDateMs);
+            checkBonus(airlineLoyalUnlockedDateMs);
+            checkBonus(typeRatingMasterUnlockedDateMs);
+
+            // Base XP
+            let flightXp = Math.floor((fMiles / 10) + (fTime * 50));
+            // XP Multipliers
+            if (inBonusPeriod) {
+                flightXp *= 10;
+            } else if (currentStreak >= 7) {
+                flightXp *= 2;
+            }
+            totalXp += flightXp;
+
+            const fuelRate = FUEL_CONSUMPTION_PER_NM[f.aircraft] || FUEL_CONSUMPTION_PER_NM['Altro'];
+            totalFuel += fMiles * fuelRate;
 
             if (fMiles > longestFlight.miles) {
                 longestFlight = { miles: fMiles, departure: f.departure, arrival: f.arrival };
@@ -173,7 +209,7 @@ export default function PilotProfileCard({ flights }) {
         for (let i = RANKS.length - 1; i >= 0; i--) {
             if (totalXp >= RANKS[i].minXp && RANKS[i].minXp !== Infinity) {
                 currentRankIndex = i;
-                if (totalXp >= 150000) currentRankIndex = RANKS.length - 1;
+                if (totalXp >= 250000) currentRankIndex = RANKS.length - 1;
                 break;
             }
         }
@@ -194,14 +230,14 @@ export default function PilotProfileCard({ flights }) {
 
         // Progress Calculations for Achievements
 
-        // World Traveler (50 countries)
+        // World Traveler (100 countries)
         const countriesCount = countriesSet.size;
-        const worldTravelerGoal = 50;
+        const worldTravelerGoal = 100;
         const hasWorldTraveler = countriesCount >= worldTravelerGoal;
         const worldTravelerProgress = Math.min(100, (countriesCount / worldTravelerGoal) * 100);
 
-        // Long Haul Ace (20 flights > 5000nm)
-        const longHaulGoal = 20;
+        // Long Haul Ace (120 flights > 5000nm)
+        const longHaulGoal = 120;
         const hasLongHaulAce = longHaulCount >= longHaulGoal;
         const longHaulProgress = Math.min(100, (longHaulCount / longHaulGoal) * 100);
 
@@ -214,8 +250,8 @@ export default function PilotProfileCard({ flights }) {
                 topAirline = airline;
             }
         }
-        const hasAirlineLoyal = maxTotalAnyAirline >= 50;
-        const airlineLoyalGoal = 50;
+        const hasAirlineLoyal = maxTotalAnyAirline >= 70;
+        const airlineLoyalGoal = 70;
         const airlineLoyalProgress = Math.min(100, (maxTotalAnyAirline / airlineLoyalGoal) * 100);
         const airlineLoyalCurrent = maxTotalAnyAirline;
 
@@ -234,7 +270,7 @@ export default function PilotProfileCard({ flights }) {
                 topAircraft = aircraft;
             }
         }
-        const typeRatingGoal = 50;
+        const typeRatingGoal = 120;
         const hasTypeRatingMaster = maxTotalAnyAircraft >= typeRatingGoal;
         const typeRatingProgress = Math.min(100, (maxTotalAnyAircraft / typeRatingGoal) * 100);
 
@@ -242,6 +278,28 @@ export default function PilotProfileCard({ flights }) {
         const streakGoal = 7;
         const hasDailyStreak = maxStreak >= streakGoal;
         const streakProgress = Math.min(100, (maxStreak / streakGoal) * 100);
+
+        // Achievement 10x XP Active Status (Latest Expiry)
+        const todayMs = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+        let latestExpiryMs = null;
+        const checkExpiry = (unlockDateMs) => {
+            if (unlockDateMs !== null) {
+                const expiry = unlockDateMs + 30 * ONE_DAY_MS;
+                if (todayMs <= expiry) {
+                    if (latestExpiryMs === null || expiry > latestExpiryMs) {
+                        latestExpiryMs = expiry;
+                    }
+                }
+            }
+        };
+
+        checkExpiry(worldTravelerUnlockedDateMs);
+        checkExpiry(longHaulAceUnlockedDateMs);
+        checkExpiry(airlineLoyalUnlockedDateMs);
+        checkExpiry(typeRatingMasterUnlockedDateMs);
+
+        const isMasterBonusActive = latestExpiryMs !== null;
+        const activeBonusExpiryMs = latestExpiryMs;
 
         return {
             totalHours,
@@ -257,6 +315,8 @@ export default function PilotProfileCard({ flights }) {
             avgFuelPerNm: avgFuelPerNm.toFixed(1),
             countriesVisited: countriesCount,
             longestFlight,
+            isMasterBonusActive,
+            activeBonusExpiryMs,
             achievements: {
                 worldTraveler: { unlocked: hasWorldTraveler, progress: worldTravelerProgress, current: countriesCount, goal: worldTravelerGoal },
                 longHaulAce: { unlocked: hasLongHaulAce, progress: longHaulProgress, current: longHaulCount, goal: longHaulGoal },
@@ -332,7 +392,12 @@ export default function PilotProfileCard({ flights }) {
                             </div>
                             <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
                                 <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.totalXp.toLocaleString()}</span> XP &bull; <span className="data-mono">{stats.totalHours.toFixed(1)}</span> h
-                                {stats.achievements.dailyStreak.unlocked && (
+                                {stats.isMasterBonusActive ? (
+                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 600, color: '#ff6b35', backgroundColor: 'rgba(255, 107, 53, 0.15)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(255, 107, 53, 0.3)' }}>
+                                        <Flame size={12} />
+                                        10x XP Active
+                                    </span>
+                                ) : stats.achievements.dailyStreak.unlocked && (
                                     <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
                                         2x XP Active
                                     </span>
@@ -364,6 +429,30 @@ export default function PilotProfileCard({ flights }) {
                                 ? `${stats.xpRemaining.toLocaleString()} XP remaining to ${stats.nextRank.name}`
                                 : 'You have reached the maximum rank!'}
                         </div>
+
+                        {/* Streak bonus expiration notice */}
+                        {stats.isMasterBonusActive ? (() => {
+                            const expiryDate = new Date(stats.activeBonusExpiryMs);
+                            const expiryStr = expiryDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                            return (
+                                <div style={{
+                                    marginTop: '6px',
+                                    padding: '5px 10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255,107,53,0.1)',
+                                    border: '1px solid rgba(255,107,53,0.3)',
+                                    fontSize: '0.7rem',
+                                    color: '#ff6b35',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontWeight: 500
+                                }}>
+                                    <Flame size={11} />
+                                    10x XP achievement bonus active — expires {expiryStr} (end of day)
+                                </div>
+                            );
+                        })() : null}
                     </div>
                 </div>
 
@@ -488,21 +577,21 @@ export default function PilotProfileCard({ flights }) {
                             <AchievementBadge
                                 id="worldTraveler"
                                 title="World Traveler"
-                                description="Visit 50 different countries"
+                                description="Visit 100 different countries"
                                 icon={Globe}
                                 data={stats.achievements.worldTraveler}
                             />
                             <AchievementBadge
                                 id="longHaulAce"
                                 title="Long Haul Ace"
-                                description="Complete 20 flights over 5000nm"
+                                description="Complete 120 flights over 5000nm"
                                 icon={PlaneIcon}
                                 data={stats.achievements.longHaulAce}
                             />
                             <AchievementBadge
                                 id="airlineLoyal"
                                 title="Airline Loyal"
-                                description="Fly 50 times total with the same airline"
+                                description="Fly 70 times total with the same airline"
                                 icon={Users}
                                 data={stats.achievements.airlineLoyal}
                             />
@@ -516,7 +605,7 @@ export default function PilotProfileCard({ flights }) {
                             <AchievementBadge
                                 id="typeRatingMaster"
                                 title="Type Rating Master"
-                                description="Fly 50 times with the same aircraft type"
+                                description="Fly 120 times with the same aircraft type"
                                 icon={Award}
                                 data={stats.achievements.typeRatingMaster}
                             />
