@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
 import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
 import airports from 'airport-data';
@@ -351,8 +351,23 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-hint)' }}>
-                                        No flights match the current filter.
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+                                            <Plane size={48} style={{ color: 'var(--color-text-hint)', opacity: 0.3 }} />
+                                            <h4 style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '1.2rem' }}>No Flights Found</h4>
+                                            <p style={{ margin: 0, color: 'var(--color-text-hint)', fontSize: '0.9rem', maxWidth: '300px' }}>
+                                                None of your flights match the currently active filters. Try removing some filters to see your logbook.
+                                            </p>
+                                            {Object.keys(activeFilters).length > 0 && (
+                                                <button
+                                                    onClick={clearFilter}
+                                                    className="btn btn-primary"
+                                                    style={{ marginTop: 'var(--space-2)' }}
+                                                >
+                                                    Clear All Filters
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )}

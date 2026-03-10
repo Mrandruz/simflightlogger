@@ -53,12 +53,19 @@ const MiniMetar = ({ icao, title }) => {
         <div style={{ flex: 1, backgroundColor: 'var(--color-surface)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>{title} ({icao})</span>
-                {loading ? <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)' }}>Loading...</span> :
+                {loading ? <span className="skeleton" style={{ display: 'inline-block', width: '40px', height: '12px', borderRadius: '2px' }}></span> :
                     metar ? <span style={{ fontSize: '0.7rem', color: 'var(--color-success)' }}>Live</span> :
                         <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}><AlertCircle size={10} /></span>}
             </div>
 
-            {metar ? (
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)' }}>
+                    <div className="skeleton" style={{ height: '40px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '40px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '40px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '40px', borderRadius: '4px' }}></div>
+                </div>
+            ) : metar ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                         <Wind size={16} style={{ color: 'var(--color-primary)', marginBottom: '4px' }} />
@@ -133,114 +140,198 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
 
     return (
         <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '800px', width: '90%', padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="modal-content" style={{ maxWidth: '850px', width: '90%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: '12px' }}>
 
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-primary)' }}>Flight Log</h2>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                            <span className="badge data-mono">{flight.departure}</span> &rarr; <span className="badge data-mono">{flight.arrival}</span>
-                            &bull; <span>{flight.airline}</span> &bull; <span>{flight.aircraft}</span>
+                {/* Boarding Pass Header styling */}
+                <div style={{ backgroundColor: 'var(--color-primary)', color: 'white', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img
+                            src={`https://logo.clearbit.com/${flight.airline.replace(/\s+/g, '').toLowerCase()}.com`}
+                            alt={flight.airline}
+                            style={{ height: '24px', maxWidth: '120px', objectFit: 'contain', backgroundColor: 'white', padding: '2px 6px', borderRadius: '4px' }}
+                            onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, letterSpacing: '2px' }}>BOARDING PASS</h2>
+                    </div>
+                    <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '6px', borderRadius: '50%', display: 'flex' }}><X size={20} /></button>
+                </div>
+
+                {/* Boarding Pass Ticket Body */}
+                <div style={{ display: 'flex', backgroundColor: 'var(--color-surface)', position: 'relative', borderBottom: '1px solid var(--color-divider)' }}>
+                    {/* Left Main Section */}
+                    <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Passenger Name</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>SIM PILOT</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Carrier</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{flight.airline}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '3.2rem', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1 }} className="data-mono">{flight.departure}</div>
+                                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>{depAp ? (depAp.city || depAp.name) : 'Origin'}</div>
+                            </div>
+                            <div style={{ margin: '0 20px', color: 'var(--color-text-hint)' }}>
+                                <PlaneIcon size={40} />
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'right' }}>
+                                <div style={{ fontSize: '3.2rem', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1 }} className="data-mono">{flight.arrival}</div>
+                                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>{arrAp ? (arrAp.city || arrAp.name) : 'Destination'}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '8px' }}>
+                            <div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }} className="data-mono">{new Date(flight.date).toLocaleDateString()}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Flight Time</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }} className="data-mono">{flight.flightTime}h</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Aircraft</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={flight.aircraft}>{flight.aircraft}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Class / Seat</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>FIRST &bull; 01A</div>
+                            </div>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '8px', borderRadius: '50%', backgroundColor: 'var(--color-surface-hover)' }}><X size={24} /></button>
+
+                    {/* Tear-off dash */}
+                    <div style={{ width: '0', borderLeft: '3px dashed var(--color-divider)', position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: '-18px', left: '-15px', width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--color-bg)' }}></div>
+                        <div style={{ position: 'absolute', bottom: '-18px', left: '-15px', width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--color-bg)' }}></div>
+                    </div>
+
+                    {/* Right Stub Section */}
+                    <div style={{ width: '220px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'var(--color-surface-hover)' }}>
+                        <div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>From</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1.1 }} className="data-mono">{flight.departure}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>To</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1.1 }} className="data-mono">{flight.arrival}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 600 }} className="data-mono">{new Date(flight.date).toLocaleDateString()}</div>
+                        </div>
+
+                        {/* Fake Barcode */}
+                        <div style={{ marginTop: 'auto', display: 'flex', height: '44px', gap: '2px', overflow: 'hidden', opacity: 0.6 }}>
+                            {Array.from({ length: 40 }).map((_, i) => (
+                                <div key={i} style={{ width: `${Math.floor(Math.random() * 4) + 1}px`, backgroundColor: 'var(--color-text-primary)' }}></div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Main Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--space-3)' }}>
-                    <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Calendar size={14} /> Date</div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{new Date(flight.date).toLocaleDateString()}</div>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><MapPin size={14} /> Distance</div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{flight.miles} nm</div>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Clock size={14} /> Flight Time</div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{flight.flightTime} h</div>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(232, 113, 10, 0.2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Fuel size={14} color="#e8710a" /> Est. Fuel</div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#e8710a' }} className="data-mono">{stats.estimatedFuel} kg</div>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(20, 106, 255, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(20, 106, 255, 0.2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Zap size={14} color="var(--color-primary)" /> XP Earned</div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--color-primary)' }} className="data-mono">{stats.flightXp}</div>
-                    </div>
-                </div>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: 'var(--color-surface)' }}>
 
-                {/* Map Section */}
-                <div style={{ width: '100%', height: '240px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', border: '1px solid var(--color-border)' }}>
-                    {hasMapData ? (
-                        <ComposableMap projection="geoMercator" projectionConfig={{ scale: mapScale, center: mapCenter }} width={800} height={240}>
-                            <defs>
-                                <filter id="glow-modal">
-                                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
-                                    <feMerge>
-                                        <feMergeNode in="coloredBlur" />
-                                        <feMergeNode in="SourceGraphic" />
-                                    </feMerge>
-                                </filter>
-                            </defs>
-                            <Geographies geography={geoUrl}>
-                                {({ geographies }) => geographies.map((geo) => (
-                                    <Geography key={geo.rsmKey} geography={geo} fill="var(--color-divider)" stroke="var(--color-surface)" strokeWidth={0.5} style={{ default: { outline: "none" } }} />
-                                ))}
-                            </Geographies>
+                    {/* Main Stats Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--space-3)' }}>
+                        <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Calendar size={14} /> Date</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{new Date(flight.date).toLocaleDateString()}</div>
+                        </div>
+                        <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><MapPin size={14} /> Distance</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{flight.miles} nm</div>
+                        </div>
+                        <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Clock size={14} /> Flight Time</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{flight.flightTime} h</div>
+                        </div>
+                        <div style={{ backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(232, 113, 10, 0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Fuel size={14} color="#e8710a" /> Est. Fuel</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#e8710a' }} className="data-mono">{stats.estimatedFuel} kg</div>
+                        </div>
+                        <div style={{ backgroundColor: 'rgba(20, 106, 255, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(20, 106, 255, 0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Zap size={14} color="var(--color-primary)" /> XP Earned</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--color-primary)' }} className="data-mono">{stats.flightXp}</div>
+                        </div>
+                    </div>
 
-                            <Line
-                                from={[depAp.longitude, depAp.latitude]}
-                                to={[arrAp.longitude, arrAp.latitude]}
-                                stroke="var(--color-primary)"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                className="modal-animated-route"
-                            />
+                    {/* Map Section */}
+                    <div style={{ width: '100%', height: '240px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', border: '1px solid var(--color-border)' }}>
+                        {hasMapData ? (
+                            <ComposableMap projection="geoMercator" projectionConfig={{ scale: mapScale, center: mapCenter }} width={800} height={240}>
+                                <defs>
+                                    <filter id="glow-modal">
+                                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                                        <feMerge>
+                                            <feMergeNode in="coloredBlur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+                                <Geographies geography={geoUrl}>
+                                    {({ geographies }) => geographies.map((geo) => (
+                                        <Geography key={geo.rsmKey} geography={geo} fill="var(--color-divider)" stroke="var(--color-surface)" strokeWidth={0.5} style={{ default: { outline: "none" } }} />
+                                    ))}
+                                </Geographies>
 
-                            <Marker coordinates={[depAp.longitude, depAp.latitude]}>
-                                <circle r={5} fill="var(--color-primary)" stroke="#fff" strokeWidth={1.5} filter={'url(#glow-modal)'} />
-                                <text textAnchor="middle" y={-12} style={{ fontFamily: "var(--font-family-sans)", fill: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 600, textShadow: "1px 1px 0 var(--color-surface), -1px -1px 0 var(--color-surface)" }}>
-                                    {depAp.icao}
-                                </text>
-                            </Marker>
+                                <Line
+                                    from={[depAp.longitude, depAp.latitude]}
+                                    to={[arrAp.longitude, arrAp.latitude]}
+                                    stroke="var(--color-primary)"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    className="modal-animated-route"
+                                />
 
-                            <Marker coordinates={[arrAp.longitude, arrAp.latitude]}>
-                                <circle r={5} fill="var(--color-primary)" stroke="#fff" strokeWidth={1.5} filter={'url(#glow-modal)'} />
-                                <text textAnchor="middle" y={-12} style={{ fontFamily: "var(--font-family-sans)", fill: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 600, textShadow: "1px 1px 0 var(--color-surface), -1px -1px 0 var(--color-surface)" }}>
-                                    {arrAp.icao}
-                                </text>
-                            </Marker>
-                        </ComposableMap>
-                    ) : (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-hint)' }}>Map data not available for these airports</div>
-                    )}
+                                <Marker coordinates={[depAp.longitude, depAp.latitude]}>
+                                    <circle r={5} fill="var(--color-primary)" stroke="#fff" strokeWidth={1.5} filter={'url(#glow-modal)'} />
+                                    <text textAnchor="middle" y={-12} style={{ fontFamily: "var(--font-family-sans)", fill: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 600, textShadow: "1px 1px 0 var(--color-surface), -1px -1px 0 var(--color-surface)" }}>
+                                        {depAp.icao}
+                                    </text>
+                                </Marker>
 
-                    <style>{`
+                                <Marker coordinates={[arrAp.longitude, arrAp.latitude]}>
+                                    <circle r={5} fill="var(--color-primary)" stroke="#fff" strokeWidth={1.5} filter={'url(#glow-modal)'} />
+                                    <text textAnchor="middle" y={-12} style={{ fontFamily: "var(--font-family-sans)", fill: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 600, textShadow: "1px 1px 0 var(--color-surface), -1px -1px 0 var(--color-surface)" }}>
+                                        {arrAp.icao}
+                                    </text>
+                                </Marker>
+                            </ComposableMap>
+                        ) : (
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-hint)' }}>Map data not available for these airports</div>
+                        )}
+
+                        <style>{`
                         @keyframes dash-flow-modal { to { stroke-dashoffset: -20; } }
                         .modal-animated-route {
                             stroke-dasharray: 6 4;
                             animation: dash-flow-modal 1s linear infinite;
                         }
                     `}</style>
-                </div>
-
-                {/* Airport Stats & METAR */}
-                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>You flew out of <strong style={{ color: 'var(--color-text-primary)' }}>{flight.departure}</strong> <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.timesFlownFrom}</span> time(s)</div>
-                        <MiniMetar icao={flight.departure} title="Dep Weather" />
                     </div>
 
-                    <div style={{ width: '1px', backgroundColor: 'var(--color-divider)' }}></div>
+                    {/* Airport Stats & METAR */}
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>You flew out of <strong style={{ color: 'var(--color-text-primary)' }}>{flight.departure}</strong> <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.timesFlownFrom}</span> time(s)</div>
+                            <MiniMetar icao={flight.departure} title="Dep Weather" />
+                        </div>
 
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>You flew into <strong style={{ color: 'var(--color-text-primary)' }}>{flight.arrival}</strong> <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.timesFlownTo}</span> time(s)</div>
-                        <MiniMetar icao={flight.arrival} title="Arr Weather" />
+                        <div style={{ width: '1px', backgroundColor: 'var(--color-divider)' }}></div>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>You flew into <strong style={{ color: 'var(--color-text-primary)' }}>{flight.arrival}</strong> <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.timesFlownTo}</span> time(s)</div>
+                            <MiniMetar icao={flight.arrival} title="Arr Weather" />
+                        </div>
                     </div>
-                </div>
 
+                </div>
             </div>
         </div>
     );
