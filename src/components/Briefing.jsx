@@ -247,9 +247,9 @@ export default function Briefing({ flights }) {
                 }
 
                 // categorize
-                const shortHaul = allianceRoutes.filter(r => r.distance >= 200 && r.distance <= 800).slice(0, 3);
-                const mediumHaul = allianceRoutes.filter(r => r.distance > 800 && r.distance <= 2500).slice(0, 3);
-                const longHaul = allianceRoutes.filter(r => r.distance > 2500).slice(0, 3);
+                const shortHaul = allianceRoutes.filter(r => r.distance >= 200 && r.distance <= 800).sort(() => 0.5 - Math.random()).slice(0, 3);
+                const mediumHaul = allianceRoutes.filter(r => r.distance > 800 && r.distance <= 2500).sort(() => 0.5 - Math.random()).slice(0, 3);
+                const longHaul = allianceRoutes.filter(r => r.distance > 2500).sort(() => 0.5 - Math.random()).slice(0, 3);
 
                 suggestions[alliance] = {
                     departure: airport,
