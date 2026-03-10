@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regole per la collezione users
+    match /users/{userId} {
+      // Gli utenti possono leggere e scrivere solo nei propri documenti
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regole per la collezione flights (sotto-collezione di users)
+    match /users/{userId}/flights/{flightId} {
+      // Gli utenti possono leggere e scrivere solo nei propri voli
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

@@ -5,6 +5,32 @@ const MetarCard = ({ airportInfo }) => {
     const { icao, city, alliance } = airportInfo;
     const [metar, setMetar] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [localTime, setLocalTime] = useState('');
+
+    // update local time every minute based on timezone name if available
+    useEffect(() => {
+        const update = () => {
+            const now = new Date();
+            if (airportInfo.tz) {
+                try {
+                    const fmt = new Intl.DateTimeFormat('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: airportInfo.tz });
+                    setLocalTime(fmt.format(now));
+                } catch (e) {
+                    setLocalTime(now.toISOString().substr(11,5));
+                }
+            } else if (airportInfo.timezone !== undefined) {
+                // fallback using offset hours
+                const offset = airportInfo.timezone; // hours from UTC
+                const local = new Date(now.getTime() + offset * 3600000);
+                setLocalTime(local.toISOString().substr(11,5));
+            } else {
+                setLocalTime(now.toISOString().substr(11,5));
+            }
+        };
+        update();
+        const id = setInterval(update, 60000);
+        return () => clearInterval(id);
+    }, [airportInfo.tz, airportInfo.timezone]);
 
     useEffect(() => {
         let isMounted = true;
@@ -40,6 +66,7 @@ const MetarCard = ({ airportInfo }) => {
                 <div>
                     <h4 style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-family-sans)', fontWeight: 700, color: 'var(--color-text-primary)' }}>
                         {icao} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginLeft: '4px' }}>{city}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', marginLeft: '8px' }}>Local {localTime}</span>
                     </h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{alliance}</span>
                 </div>

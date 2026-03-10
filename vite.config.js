@@ -10,6 +10,16 @@ export default defineConfig({
         target: 'https://aviationweather.gov/api/data/metar',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/metar/, '')
+      },
+      '/api/taf': {
+        target: 'https://aviationweather.gov/api/data/taf',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/taf/, '')
+      },
+      '/api/aviationstack': {
+        target: 'https://api.aviationstack.com/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/aviationstack/, '')
       }
     }
   }
