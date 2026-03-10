@@ -11,6 +11,7 @@ import Briefing from './components/Briefing';
 import NewFlight from './components/NewFlight';
 import FlightEditModal from './components/FlightEditModal';
 import LoginScreen from './components/LoginScreen';
+import ConfirmModal from './components/ConfirmModal';
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -27,6 +28,7 @@ export default function App() {
     });
 
     const [editingFlight, setEditingFlight] = useState(null);
+    const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, type: null, payload: null });
     const navigate = useNavigate();
 
     const getUserFlightsCollection = () => {
@@ -116,19 +118,11 @@ export default function App() {
             try {
                 const importedFlights = JSON.parse(e.target.result);
                 if (Array.isArray(importedFlights)) {
-                    if (window.confirm("Warning: importing will OVERWRITE all flights currently on your dashboard. Do you want to proceed?")) {
-                        const snapshot = await getDocs(userFlightsCol);
-                        const deletePromises = snapshot.docs.map(d => deleteDoc(getUserFlightDoc(d.id)));
-                        await Promise.all(deletePromises);
-
-                        const newFlights = [];
-                        for (const flight of importedFlights) {
-                            const { id, ...flightData } = flight;
-                            const docRef = await addDoc(userFlightsCol, flightData);
-                            newFlights.push({ ...flightData, id: docRef.id });
-                        }
-                        setFlights(newFlights);
-                    }
+                    setConfirmModalState({
+                        isOpen: true,
+                        type: 'import',
+                        payload: { importedFlights, userFlightsCol },
+                    });
                 } else {
                     alert("The file does not contain a valid flights format.");
                 }
@@ -139,6 +133,29 @@ export default function App() {
         };
         reader.readAsText(file);
         event.target.value = '';
+    };
+
+    const confirmImport = async () => {
+        const { importedFlights, userFlightsCol } = confirmModalState.payload;
+        try {
+            setLoading(true);
+            const snapshot = await getDocs(userFlightsCol);
+            const deletePromises = snapshot.docs.map(d => deleteDoc(getUserFlightDoc(d.id)));
+            await Promise.all(deletePromises);
+
+            const newFlights = [];
+            for (const flight of importedFlights) {
+                const { id, ...flightData } = flight;
+                const docRef = await addDoc(userFlightsCol, flightData);
+                newFlights.push({ ...flightData, id: docRef.id });
+            }
+            setFlights(newFlights);
+        } catch (error) {
+            console.error('Import process error:', error);
+            alert('Failed to import flights.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleAddFlight = async (flight) => {
@@ -173,9 +190,15 @@ export default function App() {
     };
 
     const handleDeleteFlight = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this flight? This action cannot be undone.')) {
-            return;
-        }
+        setConfirmModalState({
+            isOpen: true,
+            type: 'delete',
+            payload: { id },
+        });
+    };
+
+    const confirmDelete = async () => {
+        const { id } = confirmModalState.payload;
         const flightDocRef = getUserFlightDoc(id);
         if (!flightDocRef) return;
         try {
@@ -247,6 +270,21 @@ export default function App() {
                     onCancel={() => setEditingFlight(null)}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={confirmModalState.isOpen}
+                onClose={() => setConfirmModalState({ isOpen: false, type: null, payload: null })}
+                onConfirm={() => {
+                    if (confirmModalState.type === 'delete') confirmDelete();
+                    if (confirmModalState.type === 'import') confirmImport();
+                }}
+                title={confirmModalState.type === 'delete' ? "Delete Flight" : "Import Database"}
+                message={confirmModalState.type === 'delete'
+                    ? "Are you sure you want to completely remove this flight from your logbook? This action cannot be undone."
+                    : "Warning: importing a JSON file will OVERWRITE all flights currently on your dashboard. Do you want to proceed?"}
+                confirmText={confirmModalState.type === 'delete' ? "Delete" : "Overwrite & Import"}
+                confirmStyle={confirmModalState.type === 'delete' ? 'danger' : 'warning'}
+            />
         </>
     );
 }

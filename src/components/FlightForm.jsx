@@ -1,10 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { PlusCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { PlusCircle, Search, AlertCircle } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
 
 const findAirport = (icao) => {
     return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
+};
+
+// Component for mapping aircraft to realistic cruising speeds (in knots)
+const AIRCRAFT_SPEED_KTS = {
+    'Airbus A319': 450,
+    'Airbus A320': 450,
+    'Airbus A321': 450,
+    'Airbus A330': 470,
+    'Airbus A350': 490,
+    'Airbus A380': 490,
+    'Boeing 777': 490,
+    'Boeing 787': 490,
+    'Altro': 400
+};
+
+const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
+    const [query, setQuery] = useState(value || '');
+    const [results, setResults] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const wrapperRef = useRef(null);
+    const isValid = query.length === 0 || !!findAirport(query.toUpperCase());
+
+    useEffect(() => {
+        setQuery(value || '');
+    }, [value]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
+    const handleSearch = (e) => {
+        const val = e.target.value.toUpperCase();
+        setQuery(val);
+        // We still bubble the raw value up so the form state holds it (even if invalid)
+        onChange({ target: { name, value: val } });
+
+        if (val.length >= 2) {
+            const allAirports = [...customAirports, ...airports];
+            const filtered = allAirports.filter(a =>
+                a.icao.includes(val) ||
+                (a.iata && a.iata.includes(val)) ||
+                (a.city && a.city.toUpperCase().includes(val)) ||
+                (a.name && a.name.toUpperCase().includes(val))
+            ).slice(0, 10); // show top 10
+            setResults(filtered);
+            setShowDropdown(true);
+        } else {
+            setResults([]);
+            setShowDropdown(false);
+        }
+    };
+
+    const handleSelect = (airport) => {
+        setQuery(airport.icao);
+        onChange({ target: { name, value: airport.icao } });
+        setShowDropdown(false);
+    };
+
+    return (
+        <div className="form-group" style={{ flex: 1, minWidth: 0, position: 'relative' }} ref={wrapperRef}>
+            <label className="form-label" style={{ whiteSpace: 'nowrap', display: 'flex', justifyContent: 'space-between' }}>
+                {label}
+                {query.length > 0 && !isValid && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={10} /> Invalid ICAO</span>}
+            </label>
+            <div style={{ position: 'relative' }}>
+                <input
+                    required
+                    type="text"
+                    name={name}
+                    value={query}
+                    onChange={handleSearch}
+                    onFocus={() => {
+                        if (results.length > 0) setShowDropdown(true);
+                    }}
+                    className="form-input"
+                    placeholder={placeholder}
+                    style={{
+                        textTransform: 'uppercase',
+                        borderColor: (query.length > 0 && !isValid) ? 'var(--color-danger)' : undefined
+                    }}
+                />
+                <Search size={16} style={{ position: 'absolute', right: '12px', top: '12px', color: 'var(--color-text-hint)', pointerEvents: 'none' }} />
+            </div>
+
+            {showDropdown && results.length > 0 && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+                    marginTop: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', maxHeight: '200px', overflowY: 'auto'
+                }}>
+                    {results.map(ap => (
+                        <div
+                            key={ap.icao}
+                            onClick={() => handleSelect(ap)}
+                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-divider)', display: 'flex', flexDirection: 'column' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{ap.icao} {ap.iata ? `(${ap.iata})` : ''}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {ap.name} {ap.city ? `- ${ap.city}` : ''}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function FlightForm({ onAddFlight, initialData, onCancel }) {
@@ -21,9 +135,25 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
     const [state, setState] = useState(formData);
     const isEditing = !!initialData;
 
-    // Calculate distance automatically
+    // Historical airlines for datalist
+    const [historicalAirlines, setHistoricalAirlines] = useState([]);
+
     useEffect(() => {
-        if (state.departure.length === 4 && state.arrival.length === 4) {
+        try {
+            const saved = localStorage.getItem('sim-flights');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                const airlines = [...new Set(parsed.map(f => f.airline))].filter(Boolean);
+                setHistoricalAirlines(airlines);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, []);
+
+    // Calculate distance and flight time automatically
+    useEffect(() => {
+        if (state.departure.length >= 3 && state.arrival.length >= 3) { // Autocomplete handles finding it
             const dep = findAirport(state.departure.toUpperCase());
             const arr = findAirport(state.arrival.toUpperCase());
 
@@ -39,10 +169,20 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                 const distance = Math.round(R * c);
 
-                setState(prev => ({ ...prev, miles: distance.toString() }));
+                let updates = { miles: distance.toString() };
+
+                // Estimate flight time if we have distance and aircraft
+                if (state.aircraft && !isEditing) {
+                    const speed = AIRCRAFT_SPEED_KTS[state.aircraft] || AIRCRAFT_SPEED_KTS['Altro'];
+                    // Add 0.5 hours (30 min) for climb/descent/taxi
+                    const estimatedHours = (distance / speed) + 0.5;
+                    updates.flightTime = (Math.round(estimatedHours * 10) / 10).toString(); // Round to 1 decimal place
+                }
+
+                setState(prev => ({ ...prev, ...updates }));
             }
         }
-    }, [state.departure, state.arrival]);
+    }, [state.departure, state.arrival, state.aircraft, isEditing]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -89,8 +229,27 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
                     </div>
                     <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                         <label className="form-label">Airline</label>
-                        <input required type="text" name="airline" value={state.airline} onChange={handleChange} className="form-input" placeholder="e.g. Alitalia, Ryanair" />
+                        <input required type="text" name="airline" list="airlinesConfig" value={state.airline} onChange={handleChange} className="form-input" placeholder="e.g. Alitalia, Ryanair" />
+                        <datalist id="airlinesConfig">
+                            {historicalAirlines.map(ap => <option key={ap} value={ap} />)}
+                        </datalist>
                     </div>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Aircraft Type</label>
+                    <select required name="aircraft" value={state.aircraft} onChange={handleChange} className="form-input">
+                        <option value="">Select an aircraft...</option>
+                        <option value="Airbus A319">Airbus A319 (Est. 450kts)</option>
+                        <option value="Airbus A320">Airbus A320 (Est. 450kts)</option>
+                        <option value="Airbus A321">Airbus A321 (Est. 450kts)</option>
+                        <option value="Airbus A330">Airbus A330 (Est. 470kts)</option>
+                        <option value="Airbus A350">Airbus A350 (Est. 490kts)</option>
+                        <option value="Airbus A380">Airbus A380 (Est. 490kts)</option>
+                        <option value="Boeing 777">Boeing 777 (Est. 490kts)</option>
+                        <option value="Boeing 787">Boeing 787 (Est. 490kts)</option>
+                        <option value="Altro">Other (Not listed)</option>
+                    </select>
                 </div>
 
                 <div className="form-group">
@@ -104,31 +263,21 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
                     </select>
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Aircraft Type</label>
-                    <select required name="aircraft" value={state.aircraft} onChange={handleChange} className="form-input">
-                        <option value="">Select an aircraft...</option>
-                        <option value="Airbus A319">Airbus A319</option>
-                        <option value="Airbus A320">Airbus A320</option>
-                        <option value="Airbus A321">Airbus A321</option>
-                        <option value="Airbus A330">Airbus A330</option>
-                        <option value="Airbus A350">Airbus A350</option>
-                        <option value="Airbus A380">Airbus A380</option>
-                        <option value="Boeing 777">Boeing 777</option>
-                        <option value="Boeing 787">Boeing 787</option>
-                        <option value="Altro">Other (Not listed)</option>
-                    </select>
-                </div>
-
                 <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-                    <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                        <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Departure (ICAO)</label>
-                        <input required type="text" name="departure" value={state.departure} onChange={handleChange} className="form-input" placeholder="LIRF" maxLength={4} style={{ textTransform: 'uppercase' }} />
-                    </div>
-                    <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                        <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Arrival (ICAO)</label>
-                        <input required type="text" name="arrival" value={state.arrival} onChange={handleChange} className="form-input" placeholder="LIMC" maxLength={4} style={{ textTransform: 'uppercase' }} />
-                    </div>
+                    <AirportAutocomplete
+                        label="Departure (ICAO/City)"
+                        name="departure"
+                        value={state.departure}
+                        onChange={handleChange}
+                        placeholder="e.g. LIRF or Rome"
+                    />
+                    <AirportAutocomplete
+                        label="Arrival (ICAO/City)"
+                        name="arrival"
+                        value={state.arrival}
+                        onChange={handleChange}
+                        placeholder="e.g. LIMC or Milan"
+                    />
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
