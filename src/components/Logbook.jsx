@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { Trash2, Edit2, RotateCcw, Filter, X, Eye, Zap } from 'lucide-react';
+import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
 import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
 import airports from 'airport-data';
@@ -13,13 +13,19 @@ const findAirport = (icao) => {
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 export default function Logbook({ flights, onDelete, onEdit }) {
-    const [activeFilter, setActiveFilter] = useState(null);
+    const [activeFilters, setActiveFilters] = useState({});
     const [hoveredAirport, setHoveredAirport] = useState(null);
     const [mapZoom, setMapZoom] = useState(1);
     const [mapCenter, setMapCenter] = useState([0, 10]);
     const [selectedCountry, setSelectedCountry] = useState(null);
     const [selectedFlightDetails, setSelectedFlightDetails] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const flightsPerPage = 15;
     const geographiesRef = useRef([]);
+
+    const uniqueAirlines = useMemo(() => [...new Set(flights.map(f => f.airline).filter(Boolean))].sort(), [flights]);
+    const uniqueAircraft = useMemo(() => [...new Set(flights.map(f => f.aircraft).filter(Boolean))].sort(), [flights]);
+    const uniqueAlliances = useMemo(() => [...new Set(flights.map(f => f.alliance).filter(Boolean))].sort(), [flights]);
 
     const handleCountryClick = useCallback((geo) => {
         const centroid = geoCentroid(geo);
@@ -45,28 +51,45 @@ export default function Logbook({ flights, onDelete, onEdit }) {
     }, []);
 
     const handleFilterClick = (type, value) => {
-        setActiveFilter({ type, value });
+        setActiveFilters(prev => {
+            const next = { ...prev };
+            if (!value) {
+                delete next[type];
+            } else {
+                next[type] = value;
+            }
+            return next;
+        });
+        setCurrentPage(1);
     };
 
     const clearFilter = () => {
-        setActiveFilter(null);
+        setActiveFilters({});
+        setCurrentPage(1);
     };
 
     const filteredFlights = useMemo(() => {
         let filtered = [...flights];
-        if (activeFilter) {
+        const activeKeys = Object.keys(activeFilters);
+
+        if (activeKeys.length > 0) {
             filtered = filtered.filter(f => {
-                switch (activeFilter.type) {
-                    case 'icao': return f.departure === activeFilter.value || f.arrival === activeFilter.value;
-                    case 'airline': return f.airline === activeFilter.value;
-                    case 'aircraft': return f.aircraft === activeFilter.value;
-                    case 'alliance': return f.alliance === activeFilter.value;
-                    default: return true;
-                }
+                return activeKeys.every(key => {
+                    if (key === 'icao') {
+                        return f.departure === activeFilters[key] || f.arrival === activeFilters[key];
+                    }
+                    return f[key] === activeFilters[key];
+                });
             });
         }
         return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [flights, activeFilter]);
+    }, [flights, activeFilters]);
+
+    const totalPages = Math.ceil(filteredFlights.length / flightsPerPage);
+    const paginatedFlights = useMemo(() => {
+        const startIndex = (currentPage - 1) * flightsPerPage;
+        return filteredFlights.slice(startIndex, startIndex + flightsPerPage);
+    }, [filteredFlights, currentPage]);
 
     const mappedAirports = useMemo(() => {
         const visitedCodes = new Set();
@@ -215,9 +238,53 @@ export default function Logbook({ flights, onDelete, onEdit }) {
             {/* List */}
             <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
                         <h3 className="card-title" style={{ marginBottom: 0 }}>Logbook</h3>
-                        {activeFilter && (
+
+                        {/* Explicit Filters */}
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <select
+                                className="form-input"
+                                style={{ padding: '6px 12px', width: 'auto', minWidth: '130px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                value={activeFilters.airline || ''}
+                                onChange={(e) => handleFilterClick('airline', e.target.value)}
+                            >
+                                <option value="">All Airlines</option>
+                                {uniqueAirlines.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+
+                            <select
+                                className="form-input"
+                                style={{ padding: '6px 12px', width: 'auto', minWidth: '130px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                value={activeFilters.aircraft || ''}
+                                onChange={(e) => handleFilterClick('aircraft', e.target.value)}
+                            >
+                                <option value="">All Aircraft</option>
+                                {uniqueAircraft.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+
+                            <select
+                                className="form-input"
+                                style={{ padding: '6px 12px', width: 'auto', minWidth: '130px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                value={activeFilters.alliance || ''}
+                                onChange={(e) => handleFilterClick('alliance', e.target.value)}
+                            >
+                                <option value="">All Alliances</option>
+                                {uniqueAlliances.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+
+                            {Object.keys(activeFilters).length > 0 && (
+                                <button
+                                    onClick={clearFilter}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                                >
+                                    <X size={14} /> Clear All
+                                </button>
+                            )}
+                        </div>
+
+                        {activeFilters.icao && (
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '8px',
                                 backgroundColor: 'rgba(30, 215, 96, 0.15)',
@@ -226,12 +293,16 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 color: 'var(--color-primary)', fontSize: '0.85rem', fontWeight: 600
                             }}>
                                 <Filter size={14} />
-                                <span style={{ textTransform: 'uppercase' }}>{activeFilter.type}:</span> {activeFilter.value}
-                                <button onClick={clearFilter} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px', marginLeft: '4px', borderRadius: '50%' }} className="filter-clear-btn" title="Clear Filter">
+                                <span>Airport:</span> {activeFilters.icao}
+                                <button onClick={() => handleFilterClick('icao', null)} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px', marginLeft: '4px', borderRadius: '50%' }} className="filter-clear-btn" title="Clear ICAO Filter">
                                     <X size={14} />
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                        {filteredFlights.length} flight{filteredFlights.length !== 1 ? 's' : ''} found
                     </div>
                 </div>
 
@@ -249,7 +320,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredFlights.length > 0 ? filteredFlights.map(f => (
+                            {paginatedFlights.length > 0 ? paginatedFlights.map(f => (
                                 <tr key={f.id}>
                                     <td>{formatDate(f.date)}</td>
                                     <td>
@@ -288,6 +359,32 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                         </tbody>
                     </table>
                 </div>
+
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-divider)' }}>
+                        <button
+                            className="btn"
+                            style={{ padding: '6px 12px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', color: currentPage === 1 ? 'var(--color-text-hint)' : 'var(--color-text-primary)' }}
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        >
+                            <ChevronLeft size={16} /> Previous
+                        </button>
+
+                        <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                            Page <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{currentPage}</span> of {totalPages}
+                        </div>
+
+                        <button
+                            className="btn"
+                            style={{ padding: '6px 12px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', color: currentPage === totalPages ? 'var(--color-text-hint)' : 'var(--color-text-primary)' }}
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        >
+                            Next <ChevronRight size={16} />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {selectedFlightDetails && (

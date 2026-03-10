@@ -480,10 +480,20 @@ const FlightSuggestionCard = ({ destination }) => {
                 </div>
             </div>
 
-            {/* Weather Metrics Grid */}
             {loading ? (
-                <div style={{ color: 'var(--color-text-hint)', textAlign: 'center', padding: 'var(--space-2)' }}>
-                    Loading weather...
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: 'var(--space-2)',
+                    padding: 'var(--space-2)',
+                    backgroundColor: 'var(--color-bg)',
+                    borderRadius: '3px',
+                    border: '1px solid var(--color-border)'
+                }}>
+                    <div className="skeleton" style={{ height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ height: '50px', borderRadius: '4px' }}></div>
                 </div>
             ) : metar ? (
                 <div style={{

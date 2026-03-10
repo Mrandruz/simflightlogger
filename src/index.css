@@ -14,14 +14,14 @@
   --color-border: #E6E8EB;
   --color-divider: #E6E8EB;
 
-  --color-success: #3CC47D;
-  --color-success-bg: #e8f8f0;
+  --color-success: #1ED760;
+  --color-success-bg: #DCFCE7;
 
-  --color-warning: #EA875D;
-  --color-warning-bg: #fef3ec;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
 
-  --color-danger: #EF5746;
-  --color-danger-bg: #fdecea;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEE2E2;
 
   /* Map specific */
   --color-map-shadow: #ffffff;
@@ -291,11 +291,9 @@ h6 {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 1);
   padding: var(--space-6);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  /* Glass border */
-  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
     transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
     border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -304,10 +302,10 @@ h6 {
 }
 
 [data-theme="dark"] .card {
-  background: rgba(22, 36, 51, 0.65);
-  /* Dark Glass base */
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(36, 48, 63, 0.85);
+  /* Lighter Dark Glass base for elevation */
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .card:hover {
@@ -470,6 +468,13 @@ h6 {
   border: none;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.4);
+}
+
 .btn-primary {
   background-color: var(--color-primary);
   color: white;
@@ -530,6 +535,8 @@ h6 {
 /* Tables */
 .table-container {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
 }
@@ -550,12 +557,17 @@ h6 {
 }
 
 .flights-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   font-weight: 500;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.5px;
   background-color: var(--color-surface-hover);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .flights-table tbody tr {
@@ -784,5 +796,33 @@ h6 {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Skeleton Loaders */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface-hover) 25%, var(--color-border) 50%, var(--color-surface-hover) 75%);
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+  border-radius: var(--radius-md);
+  color: transparent !important;
+}
+
+.skeleton>* {
+  visibility: hidden;
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeletonLoading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }

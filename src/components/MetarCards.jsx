@@ -16,15 +16,15 @@ const MetarCard = ({ airportInfo }) => {
                     const fmt = new Intl.DateTimeFormat('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: airportInfo.tz });
                     setLocalTime(fmt.format(now));
                 } catch (e) {
-                    setLocalTime(now.toISOString().substr(11,5));
+                    setLocalTime(now.toISOString().substr(11, 5));
                 }
             } else if (airportInfo.timezone !== undefined) {
                 // fallback using offset hours
                 const offset = airportInfo.timezone; // hours from UTC
                 const local = new Date(now.getTime() + offset * 3600000);
-                setLocalTime(local.toISOString().substr(11,5));
+                setLocalTime(local.toISOString().substr(11, 5));
             } else {
-                setLocalTime(now.toISOString().substr(11,5));
+                setLocalTime(now.toISOString().substr(11, 5));
             }
         };
         update();
@@ -70,10 +70,17 @@ const MetarCard = ({ airportInfo }) => {
                     </h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{alliance}</span>
                 </div>
-                {loading ? <span style={{ fontSize: '0.8rem', color: 'var(--color-text-hint)', marginTop: '4px' }}>Loading...</span> : <span style={{ fontSize: '0.8rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}><div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success)' }}></div> Live</span>}
+                {loading ? <span className="skeleton" style={{ display: 'inline-block', width: '50px', height: '14px', borderRadius: '2px', marginTop: '4px' }}></span> : <span style={{ fontSize: '0.8rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}><div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success)' }}></div> Live</span>}
             </div>
 
-            {metar ? (
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)', marginTop: 'auto' }}>
+                    <div className="skeleton" style={{ width: '100%', height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ width: '100%', height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ width: '100%', height: '50px', borderRadius: '4px' }}></div>
+                    <div className="skeleton" style={{ width: '100%', height: '50px', borderRadius: '4px' }}></div>
+                </div>
+            ) : metar ? (
                 <>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)', marginTop: 'auto' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
