@@ -120,7 +120,8 @@ export default function Briefing({ flights }) {
                 lat: airportData.latitude,
                 lon: airportData.longitude,
                 tz: airportData.tz,
-                timezone: airportData.timezone
+                timezone: airportData.timezone,
+                iata: airportData.iata || (icao.length === 4 && icao.startsWith('K') ? icao.substring(1) : '')
             };
         }
         return result;
@@ -159,7 +160,7 @@ export default function Briefing({ flights }) {
 
             for (const [alliance, airport] of Object.entries(lastArrivalByAlliance)) {
                 let allianceRoutes = [];
-                const iataCode = airport.icao.substring(1); // simple ICAO->IATA hack
+                const iataCode = airport.iata || (airport.icao.startsWith('K') ? airport.icao.substring(1) : airport.icao.substring(1));
                 try {
                     const response = await fetch(
                         `/api/aviationstack/routes?departure_airport_iata=${iataCode}&limit=100&access_key=${API_KEY}`
@@ -202,10 +203,12 @@ export default function Briefing({ flights }) {
                     console.warn('Aviationstack request failed', err);
                 }
 
-                if (allianceRoutes.length === 0) {
+                let hasLongHaul = allianceRoutes.some(r => r.distance > 2500);
+
+                if (!hasLongHaul || allianceRoutes.length < 5) {
                     // fallback to dataset
                     const lines = await fetchOpenFlightsFor(iataCode);
-                    allianceRoutes = lines
+                    const openFlightsRoutes = lines
                         .filter(r => r.source === iataCode)
                         .filter(r => getAllianceByAirline(r.airline) === alliance)
                         .map(r => {
@@ -232,6 +235,15 @@ export default function Briefing({ flights }) {
                             };
                         })
                         .filter(x => x);
+
+                    // Merge, avoiding duplicates
+                    const existingIcaos = new Set(allianceRoutes.map(r => r.icao));
+                    for (const route of openFlightsRoutes) {
+                        if (!existingIcaos.has(route.icao)) {
+                            allianceRoutes.push(route);
+                            existingIcaos.add(route.icao);
+                        }
+                    }
                 }
 
                 // categorize
