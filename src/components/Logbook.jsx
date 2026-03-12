@@ -26,6 +26,14 @@ export default function Logbook({ flights, onDelete, onEdit }) {
     const uniqueAirlines = useMemo(() => [...new Set(flights.map(f => f.airline).filter(Boolean))].sort(), [flights]);
     const uniqueAircraft = useMemo(() => [...new Set(flights.map(f => f.aircraft).filter(Boolean))].sort(), [flights]);
     const uniqueAlliances = useMemo(() => [...new Set(flights.map(f => f.alliance).filter(Boolean))].sort(), [flights]);
+    const uniqueICAOs = useMemo(() => {
+        const codes = new Set();
+        flights.forEach(f => {
+            if (f.departure) codes.add(f.departure.toUpperCase());
+            if (f.arrival) codes.add(f.arrival.toUpperCase());
+        });
+        return [...codes].sort();
+    }, [flights]);
 
     const handleCountryClick = useCallback((geo) => {
         const centroid = geoCentroid(geo);
@@ -272,6 +280,34 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 <option value="">All Alliances</option>
                                 {uniqueAlliances.map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
+
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    list="icao-list"
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Filter ICAO..."
+                                    style={{ padding: '6px 12px', width: '120px', fontSize: '0.85rem' }}
+                                    value={activeFilters.icao || ''}
+                                    onChange={(e) => handleFilterClick('icao', e.target.value.toUpperCase())}
+                                />
+                                <datalist id="icao-list">
+                                    {uniqueICAOs.map(icao => <option key={icao} value={icao} />)}
+                                </datalist>
+                                {activeFilters.icao && (
+                                    <button
+                                        onClick={() => handleFilterClick('icao', null)}
+                                        style={{
+                                            position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                                            background: 'none', border: 'none', color: 'var(--color-text-hint)',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px'
+                                        }}
+                                        title="Clear ICAO"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
 
                             {Object.keys(activeFilters).length > 0 && (
                                 <button
