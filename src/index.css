@@ -64,6 +64,11 @@
   /* Sidebar */
   --sidebar-width-collapsed: 72px;
   --sidebar-width-expanded: 240px;
+
+  /* Alliance Colors */
+  --color-alliance-star: #3A3A3A;
+  --color-alliance-skyteam: #146AFF;
+  --color-alliance-oneworld: #D66A5A;
 }
 
 [data-theme="dark"] {
@@ -93,6 +98,11 @@
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 8px 0 rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 16px 0 rgba(0, 0, 0, 0.4);
+
+  /* Alliance Colors - Dark Mode */
+  --color-alliance-star: #A2A9B1;
+  --color-alliance-skyteam: #4d8eff;
+  --color-alliance-oneworld: #ff7676;
 }
 
 [data-theme="dark"] .badge {
@@ -268,6 +278,39 @@ body {
 .sidebar-link.active .tooltip {
   color: var(--color-primary);
   border-color: var(--color-primary-light);
+}
+
+/* Generic Tooltip */
+.has-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip-box {
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.has-tooltip:hover .tooltip-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }
 
 .sidebar-divider {

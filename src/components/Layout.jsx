@@ -24,7 +24,7 @@ export default function Layout({
     const StatusBar = () => (
         <div className="status-bar">
             <div className="status-bar-section">
-                <span>v1.2.4 • Stable</span>
+                <span>v1.3.0 • Stable</span>
             </div>
 
             <div className="status-bar-section">

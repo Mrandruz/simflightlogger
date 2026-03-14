@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Calendar, Plane, Globe, Award, Star, Shield, Zap, TrendingUp, MapPin, RefreshCw, Plus } from 'lucide-react';
+import { Calendar, Plane, Globe, Award, Star, Shield, Zap, TrendingUp, MapPin, RefreshCw, Plus, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import airportsRaw from 'airport-data';
 import customAirportsRaw from '../customAirports';
@@ -88,11 +88,13 @@ export default function Schedule({ flights = [] }) {
             const distance = Number(f.distance) || 0;
             if (distance > 5000) res.longHaulCount++;
 
-            let alliance = null;
-            if (f.airline === 'ITA Airways') {
-                alliance = new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam';
-            } else {
-                alliance = ALLIANCE_MAP[f.airline];
+            let alliance = f.alliance;
+            if (!alliance) {
+                if (f.airline === 'ITA Airways') {
+                    alliance = new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam';
+                } else {
+                    alliance = ALLIANCE_MAP[f.airline];
+                }
             }
 
             if (alliance && res.allianceLastFlights.hasOwnProperty(alliance)) {
@@ -161,16 +163,10 @@ export default function Schedule({ flights = [] }) {
                     const m = Math.round((durationHrs - h) * 60);
                     const xp = Math.floor((best.distance / 10) + (durationHrs * 50));
 
-                    const airlines = Object.entries(ALLIANCE_MAP)
-                        .filter(([k, v]) => v === allianceName)
-                        .map(([k]) => k);
-                    const airline = airlines[Math.floor(Math.random() * airlines.length)] || allianceName;
-
                     return {
                         ...range,
                         dest: best,
                         origin: originAp,
-                        airline,
                         duration: `${h}h ${m}m`,
                         xp,
                         achievement: range.type === 'LONG' ? "Long Haul Ace ✈️" : 
@@ -198,9 +194,9 @@ export default function Schedule({ flights = [] }) {
     }, [flights, analysis]);
 
     const alliances = [
-        { name: 'Star Alliance', color: '#1a1a2e' },
-        { name: 'SkyTeam', color: '#003087' },
-        { name: 'Oneworld', color: '#c00' }
+        { name: 'Star Alliance', color: 'var(--color-alliance-star)' },
+        { name: 'SkyTeam', color: 'var(--color-alliance-skyteam)' },
+        { name: 'Oneworld', color: 'var(--color-alliance-oneworld)' }
     ];
 
     if (!flights || flights.length === 0) {
@@ -254,17 +250,18 @@ export default function Schedule({ flights = [] }) {
                                     <div key={s.type} className="flight-suggestion-card card">
                                         <div className="card-top">
                                             <span className="type-badge" style={{ backgroundColor: s.color }}>{s.label}</span>
-                                            <span className="airline-tag">{s.airline}</span>
                                         </div>
                                         <div className="route-container">
-                                            <div className="airport-info">
+                                            <div className="airport-info has-tooltip">
                                                 <span className="icao">{s.origin.icao}</span>
                                                 <span className="name">{s.origin.name}</span>
+                                                <div className="tooltip-box">{s.origin.name}</div>
                                             </div>
                                             <div className="route-arrow">→</div>
-                                            <div className="airport-info">
+                                            <div className="airport-info has-tooltip">
                                                 <span className="icao">{s.dest.icao}</span>
                                                 <span className="name">{s.dest.name}</span>
+                                                <div className="tooltip-box">{s.dest.name}</div>
                                             </div>
                                         </div>
                                         <div className="flight-meta-grid">
@@ -273,9 +270,14 @@ export default function Schedule({ flights = [] }) {
                                             <div className="meta-item xp"><Zap size={14} /><span>+{s.xp} XP</span></div>
                                         </div>
                                         {s.achievement && <div className="achievement-helper">Help: <strong>{s.achievement}</strong></div>}
-                                        <button onClick={() => navigate('/new-flight', { state: { prefillData: { departure: s.origin.icao, arrival: s.dest.icao, airline: '', miles: s.dest.distance, alliance: alliance.name } } })} className="btn btn-primary add-button">
-                                            <Plus size={16} /> Add to Logbook
-                                        </button>
+                                        <div className="card-actions">
+                                            <button onClick={() => navigate('/new-flight', { state: { prefillData: { departure: s.origin.icao, arrival: s.dest.icao, airline: '', miles: s.dest.distance, alliance: alliance.name } } })} className="btn btn-primary add-button">
+                                                <Plus size={16} /> Add to Logbook
+                                            </button>
+                                            <a href="https://dispatch.simbrief.com/options/new" target="_blank" rel="noopener noreferrer" className="btn simbrief-button">
+                                                <ExternalLink size={14} /> SimBrief
+                                            </a>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -291,7 +293,8 @@ export default function Schedule({ flights = [] }) {
                 })}
             </div>
 
-            <style>{`.schedule-page{animation:fadeIn .5s ease-out;max-width:1200px;margin:0 auto}.alliance-sections{display:flex;flex-direction:column;gap:var(--space-10);margin-top:var(--space-8)}.alliance-section{display:flex;flex-direction:column;gap:var(--space-6)}.alliance-header{display:flex;justify-content:space-between;align-items:center;padding:var(--space-2) var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}.alliance-title{font-size:1.5rem;font-weight:800;margin:0;letter-spacing:-.5px}.alliance-subtitle{font-size:.9rem;color:var(--color-text-secondary);margin:0}.header-badge{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--color-surface-hover);border-radius:var(--radius-full);font-size:.8rem;font-weight:600;color:var(--color-primary);border:1px solid var(--color-border)}.flight-cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--space-6)}.flight-suggestion-card{padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}.flight-suggestion-card:hover{transform:translateY(-4px);border-color:var(--color-primary);box-shadow:var(--shadow-lg)}.card-top{display:flex;justify-content:space-between;align-items:center}.type-badge{font-size:.65rem;font-weight:800;color:#fff;padding:3px 10px;border-radius:4px;letter-spacing:.5px}.airline-tag{font-size:.75rem;font-weight:600;color:var(--color-text-hint)}.route-container{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg)}.airport-info{display:flex;flex-direction:column;flex:1;min-width:0}.icao{font-family:var(--font-family-mono);font-weight:800;font-size:1.2rem;color:var(--color-text-primary)}.name{font-size:.7rem;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-arrow{color:var(--color-text-hint);font-weight:800}.flight-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.meta-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.75rem;font-weight:600;color:var(--color-text-secondary)}.meta-item.xp{color:var(--color-success);background:rgba(var(--color-success-rgb),.05);border-color:rgba(var(--color-success-rgb),.2)}.achievement-helper{font-size:.75rem;text-align:center;padding:6px;background:rgba(var(--color-primary-rgb),.05);color:var(--color-primary);border-radius:var(--radius-md);font-weight:500}.add-button{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;font-size:.9rem;font-weight:700}.alliance-footer{display:flex;justify-content:space-between;align-items:center;padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg)}.footer-info{font-size:.9rem;color:var(--color-text-secondary)}.regenerate-button{display:flex;align-items:center;gap:6px;padding:6px 16px;font-size:.8rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}@media (max-width:768px){.alliance-header{flex-direction:column;align-items:flex-start;gap:var(--space-3)}.header-badge{width:100%;justify-content:center}.flight-meta-grid{grid-template-columns:1fr}.alliance-footer{flex-direction:column;gap:var(--space-3);text-align:center}}`}</style>
+            <style>{`.schedule-page{animation:fadeIn .5s ease-out;max-width:1600px;margin:0 auto}.alliance-sections{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);margin-top:var(--space-8);align-items:start;width:100%}.alliance-section{display:flex;flex-direction:column;gap:var(--space-4);height:100%;min-width:0}.alliance-header{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border-left-width:6px;border-left-style:solid;min-width:0}.header-main{width:100%;min-width:0}.alliance-title{font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alliance-subtitle{font-size:.8rem;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--color-surface-hover);border-radius:var(--radius-full);font-size:.7rem;font-weight:600;color:var(--color-primary);border:1px solid var(--color-border);margin-top:8px}.flight-cards-grid{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}.flight-suggestion-card{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-width:0}.flight-suggestion-card:hover{transform:translateY(-2px);border-color:var(--color-primary);box-shadow:var(--shadow-md)}.card-top{display:flex;justify-content:space-between;align-items:center;min-width:0}.type-badge{font-size:.6rem;font-weight:800;color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.5px}.airline-tag{font-size:.7rem;font-weight:600;color:var(--color-text-hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-container{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);background:var(--color-surface-hover);border-radius:var(--radius-lg);min-width:0}.airport-info{display:flex;flex-direction:column;flex:1;min-width:0}.icao{font-family:var(--font-family-mono);font-weight:800;font-size:1.1rem;color:var(--color-text-primary)}.name{font-size:.65rem;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-arrow{color:var(--color-text-hint);font-weight:800;font-size:.9rem;flex-shrink:0}.flight-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:0}.meta-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.65rem;font-weight:600;color:var(--color-text-secondary);min-width:0}.meta-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.meta-item.xp{color:var(--color-success);background:rgba(var(--color-success-rgb),.05);border-color:rgba(var(--color-success-rgb),.2)}.achievement-helper{font-size:.7rem;text-align:center;padding:5px;background:rgba(var(--color-primary-rgb),.05);color:var(--color-primary);border-radius:var(--radius-md);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.add-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.85rem;font-weight:700;flex:2}.card-actions{display:flex;gap:var(--space-2);width:100%}.simbrief-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);text-decoration:none;transition:all .2s;flex:1}.simbrief-button:hover{color:var(--color-primary);border-color:var(--color-primary);background:rgba(var(--color-primary-rgb),.05)}
+.alliance-footer{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg);margin-top:auto;min-width:0}.footer-info{font-size:.8rem;color:var(--color-text-secondary);text-align:center}.regenerate-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s;width:100%}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}@media (max-width:1200px){.alliance-sections{grid-template-columns:1fr;gap:var(--space-10)}}`}</style>
         </div>
     );
 }
