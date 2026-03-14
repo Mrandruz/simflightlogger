@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Calendar, Plane, Globe, Award, Star, Shield, Zap, TrendingUp, MapPin, RefreshCw, Plus, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import airportsRaw from 'airport-data';
 import customAirportsRaw from '../customAirports';
 
@@ -55,12 +57,20 @@ const MAJOR_DESTINATIONS = [
     'OMDB', 'OERK', 'OTHH', 'OMAA', 'LLBG', 'ZBAA', 'ZSPD', 'ZGGG', 'VHHH', 'RCTP',
     'RJTT', 'RJAA', 'RKSI', 'WSSS', 'VTBS', 'RPLL', 'WIII', 'WMKK', 'VIDP', 'VABB',
     'YSSY', 'YMML', 'NZAA', 'FAOR', 'HECA', 'GMMN', 'HKJK',
-    'SBGR', 'SCEL', 'SAEZ', 'SKBO', 'SEQM', 'SPJC'
+    'SBGR', 'SCEL', 'SAEZ', 'SKBO', 'SEQM', 'SPJC',
+    // Added for more variety
+    'KMSP', 'KDTW', 'KPHL', 'KBWI', 'KSLC', 'KPDX', 'KMDW', 'KCLT', 'KCLE', 
+    'CYC', 'CYYC', 'CYEG', 'LFMN', 'LFSB', 'LSGG', 'EDDS', 'EDDH', 'EDDV',
+    'LIPE', 'LICC', 'LEPA', 'LEMG', 'LPPR', 'LIME', 'LIRQ', 'LEZL', 'LIML',
+    'OEJN', 'OKBK', 'OBBI', 'ZGSZ', 'ZUCK', 'VMMC', 'VVTS', 'VTCC', 'VHHH',
+    'RPVM', 'WABD', 'WAAA', 'WSAP', 'YBBN', 'YPPH', 'NZCH', 'NZQN',
+    'KATK', 'PHNL', 'PANC', 'PAFA', 'SBGL', 'SBRJ', 'SUMU', 'SPQU'
 ];
 
-export default function Schedule({ flights = [] }) {
+export default function Schedule({ flights = [], user }) {
     const navigate = useNavigate();
     const [suggestions, setSuggestions] = useState({});
+    const [loadingPersistence, setLoadingPersistence] = useState(true);
 
     const analysis = useMemo(() => {
         const res = {
@@ -107,7 +117,7 @@ export default function Schedule({ flights = [] }) {
         return res;
     }, [flights]);
 
-    const generateAllianceSuggestions = (allianceName) => {
+    const generateAllianceSuggestions = (allianceName, forceRandom = false) => {
         try {
             const lastFlight = analysis.allianceLastFlights[allianceName];
             if (!lastFlight || !lastFlight.arrival) return [];
@@ -145,6 +155,10 @@ export default function Schedule({ flights = [] }) {
                     if (candidates.length === 0) return null;
 
                     candidates.sort((a, b) => {
+                        if (forceRandom) {
+                            return Math.random() - 0.5;
+                        }
+
                         const aVisited = analysis.visitedAirports.has(a.icao);
                         const bVisited = analysis.visitedAirports.has(b.icao);
                         if (aVisited !== bVisited) return aVisited ? 1 : -1;
@@ -152,7 +166,9 @@ export default function Schedule({ flights = [] }) {
                         if (range.type === 'LONG' && analysis.longHaulCount < 120) {
                             return b.distance - a.distance;
                         }
-                        return Math.random() - 0.5;
+
+                        // Stable sort fallback instead of Math.random() for initial load/sync
+                        return a.distance - b.distance || a.icao.localeCompare(b.icao);
                     });
 
                     const best = candidates[0];
@@ -173,7 +189,7 @@ export default function Schedule({ flights = [] }) {
                                     (analysis.visitedAirports.has(best.icao) ? null : "World Traveler 🌍")
                     };
                 } catch (e) {
-                    console.error('Schedule: Range error', e);
+                    console.error(`Schedule: Range error (${range.type})`, e);
                     return null;
                 }
             }).filter(Boolean);
@@ -184,14 +200,98 @@ export default function Schedule({ flights = [] }) {
     };
 
     useEffect(() => {
-        if (flights && flights.length > 0 && Object.keys(suggestions).length === 0) {
-            const s = {};
-            ['Star Alliance', 'SkyTeam', 'Oneworld'].forEach(al => {
-                s[al] = generateAllianceSuggestions(al);
-            });
-            setSuggestions(s);
+        const fetchAndSyncSuggestions = async () => {
+            if (!user) return;
+            setLoadingPersistence(true);
+            
+            try {
+                // Fallback: Generate local suggestions FIRST so the user sees SOMETHING immediately
+                const localSuggestions = {};
+                ['Star Alliance', 'SkyTeam', 'Oneworld'].forEach(al => {
+                    localSuggestions[al] = generateAllianceSuggestions(al);
+                });
+                setSuggestions(localSuggestions);
+
+                // Then try to sync with Firestore
+                const scheduleRef = doc(db, 'users', user.uid, 'settings', 'schedule');
+                const scheduleSnap = await getDoc(scheduleRef);
+                
+                if (scheduleSnap.exists()) {
+                    const persistedData = scheduleSnap.data();
+                    const syncedSuggestions = { ...localSuggestions };
+                    let needsSyncUpdate = false;
+
+                    ['Star Alliance', 'SkyTeam', 'Oneworld'].forEach(al => {
+                        const lastFlight = analysis.allianceLastFlights[al];
+                        const currentBase = lastFlight?.arrival?.toUpperCase() || null;
+                        const persistedBase = persistedData[al]?.baseAirport;
+
+                        // If the persisted base matches current reality, use the persisted routes
+                        if (persistedBase && currentBase === persistedBase) {
+                            syncedSuggestions[al] = persistedData[al].suggestions;
+                        } else if (currentBase) {
+                            // Otherwise, the local ones we just generated are better, but we should update Firestore
+                            needsSyncUpdate = true;
+                            persistedData[al] = {
+                                baseAirport: currentBase,
+                                suggestions: localSuggestions[al]
+                            };
+                        }
+                    });
+
+                    if (needsSyncUpdate) {
+                        await setDoc(scheduleRef, persistedData, { merge: true });
+                    }
+                    setSuggestions(syncedSuggestions);
+                } else {
+                    // If no document exists, save the local ones we just generated
+                    const initialData = {};
+                    ['Star Alliance', 'SkyTeam', 'Oneworld'].forEach(al => {
+                        const lastFlight = analysis.allianceLastFlights[al];
+                        initialData[al] = {
+                            baseAirport: lastFlight?.arrival?.toUpperCase() || null,
+                            suggestions: localSuggestions[al]
+                        };
+                    });
+                    await setDoc(scheduleRef, initialData);
+                }
+            } catch (error) {
+                console.error('Schedule: Sync error', error);
+                // On error, we already called setSuggestions(localSuggestions) so the UI is not empty
+            } finally {
+                setLoadingPersistence(false);
+            }
+        };
+
+        if (flights && flights.length > 0) {
+            fetchAndSyncSuggestions();
+        } else {
+            setLoadingPersistence(false);
         }
-    }, [flights, analysis]);
+    }, [flights, analysis, user]);
+
+    const handleRegenerate = async (allianceName) => {
+        const newS = generateAllianceSuggestions(allianceName, true);
+        setSuggestions(prev => ({ ...prev, [allianceName]: newS }));
+        
+        if (user) {
+            try {
+                const scheduleRef = doc(db, 'users', user.uid, 'settings', 'schedule');
+                const lastFlight = analysis.allianceLastFlights[allianceName];
+                const currentBase = lastFlight?.arrival?.toUpperCase() || null;
+                
+                await setDoc(scheduleRef, {
+                    [allianceName]: {
+                        baseAirport: currentBase,
+                        suggestions: newS
+                    }
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error saving regenerated suggestions:', error);
+            }
+        }
+    };
+
 
     const alliances = [
         { name: 'Star Alliance', color: 'var(--color-alliance-star)' },
@@ -284,7 +384,7 @@ export default function Schedule({ flights = [] }) {
 
                             <div className="alliance-footer">
                                 <div className="footer-info">Complete all 3 flights to earn up to <strong>{totalXp} XP</strong></div>
-                                <button onClick={() => setSuggestions(prev => ({ ...prev, [alliance.name]: generateAllianceSuggestions(alliance.name) }))} className="btn regenerate-button">
+                                <button onClick={() => handleRegenerate(alliance.name)} className="btn regenerate-button">
                                     <RefreshCw size={14} /> Regenerate
                                 </button>
                             </div>
@@ -293,8 +393,17 @@ export default function Schedule({ flights = [] }) {
                 })}
             </div>
 
+            {loadingPersistence && (
+                <div className="persistence-loader">
+                    <RefreshCw size={16} className="spin" />
+                    <span>Syncing Schedule...</span>
+                </div>
+            )}
+
             <style>{`.schedule-page{animation:fadeIn .5s ease-out;max-width:1600px;margin:0 auto}.alliance-sections{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);margin-top:var(--space-8);align-items:start;width:100%}.alliance-section{display:flex;flex-direction:column;gap:var(--space-4);height:100%;min-width:0}.alliance-header{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border-left-width:6px;border-left-style:solid;min-width:0}.header-main{width:100%;min-width:0}.alliance-title{font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alliance-subtitle{font-size:.8rem;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--color-surface-hover);border-radius:var(--radius-full);font-size:.7rem;font-weight:600;color:var(--color-primary);border:1px solid var(--color-border);margin-top:8px}.flight-cards-grid{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}.flight-suggestion-card{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-width:0}.flight-suggestion-card:hover{transform:translateY(-2px);border-color:var(--color-primary);box-shadow:var(--shadow-md)}.card-top{display:flex;justify-content:space-between;align-items:center;min-width:0}.type-badge{font-size:.6rem;font-weight:800;color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.5px}.airline-tag{font-size:.7rem;font-weight:600;color:var(--color-text-hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-container{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);background:var(--color-surface-hover);border-radius:var(--radius-lg);min-width:0}.airport-info{display:flex;flex-direction:column;flex:1;min-width:0}.icao{font-family:var(--font-family-mono);font-weight:800;font-size:1.1rem;color:var(--color-text-primary)}.name{font-size:.65rem;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-arrow{color:var(--color-text-hint);font-weight:800;font-size:.9rem;flex-shrink:0}.flight-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:0}.meta-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.65rem;font-weight:600;color:var(--color-text-secondary);min-width:0}.meta-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.meta-item.xp{color:var(--color-success);background:rgba(var(--color-success-rgb),.05);border-color:rgba(var(--color-success-rgb),.2)}.achievement-helper{font-size:.7rem;text-align:center;padding:5px;background:rgba(var(--color-primary-rgb),.05);color:var(--color-primary);border-radius:var(--radius-md);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.add-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.85rem;font-weight:700;flex:2}.card-actions{display:flex;gap:var(--space-2);width:100%}.simbrief-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);text-decoration:none;transition:all .2s;flex:1}.simbrief-button:hover{color:var(--color-primary);border-color:var(--color-primary);background:rgba(var(--color-primary-rgb),.05)}
-.alliance-footer{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg);margin-top:auto;min-width:0}.footer-info{font-size:.8rem;color:var(--color-text-secondary);text-align:center}.regenerate-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s;width:100%}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}@media (max-width:1200px){.alliance-sections{grid-template-columns:1fr;gap:var(--space-10)}}`}</style>
+.alliance-footer{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg);margin-top:auto;min-width:0}.footer-info{font-size:.8rem;color:var(--color-text-secondary);text-align:center}.regenerate-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s;width:100%}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}
+.persistence-loader{position:fixed;bottom:var(--space-12);right:var(--space-6);background:var(--color-surface);border:1px solid var(--color-border);padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);display:flex;align-items:center;gap:var(--space-2);font-size:.75rem;font-weight:600;color:var(--color-text-secondary);box-shadow:var(--shadow-lg);z-index:100}.spin{animation:spin 1s linear infinite}@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media (max-width:1200px){.alliance-sections{grid-template-columns:1fr;gap:var(--space-10)}}`}</style>
         </div>
     );
 }

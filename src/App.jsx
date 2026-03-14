@@ -261,7 +261,7 @@ export default function App() {
                     <Route path="/logbook" element={<Logbook flights={flights} onDelete={handleDeleteFlight} onEdit={handleEditFlight} />} />
                     <Route path="/briefing" element={<Briefing flights={flights} />} />
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} />} />
-                    <Route path="/schedule" element={<Schedule flights={flights} />} />
+                    <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
                 </Route>
             </Routes>
 
