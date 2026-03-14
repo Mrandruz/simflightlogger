@@ -1,21 +1,7 @@
 import React from 'react';
-import { PlaneTakeoff, Moon, Sun, Download, Upload, LogOut } from 'lucide-react';
+import { PlaneTakeoff } from 'lucide-react';
 
 export default function Header({ isDarkMode, toggleTheme, onExport, onImport, user, onLogout }) {
-    const btnStyle = {
-        background: 'none',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-full)',
-        padding: '8px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--color-text-secondary)',
-        backgroundColor: 'var(--color-surface)',
-        transition: 'all 0.2s'
-    };
-
     return (
         <header style={{
             backgroundColor: 'var(--color-surface)',
@@ -47,43 +33,6 @@ export default function Header({ isDarkMode, toggleTheme, onExport, onImport, us
                     <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>
                         Your professional sim flight logbook
                     </p>
-                </div>
-
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <button onClick={onExport} style={btnStyle} title="Export Data Backup (JSON)">
-                        <Download size={20} />
-                    </button>
-
-                    <label style={btnStyle} title="Import Data Backup (JSON)">
-                        <Upload size={20} />
-                        <input type="file" accept=".json" style={{ display: 'none' }} onChange={onImport} />
-                    </label>
-
-                    <div style={{ width: '1px', backgroundColor: 'var(--color-divider)', margin: '4px 8px', alignSelf: 'stretch' }}></div>
-
-                    <button onClick={toggleTheme} style={btnStyle} title={isDarkMode ? "Switch to light theme" : "Switch to dark theme"}>
-                        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                    </button>
-
-                    {user && (
-                        <>
-                            <div style={{ width: '1px', backgroundColor: 'var(--color-divider)', margin: '4px 8px', alignSelf: 'stretch' }}></div>
-                            {user.photoURL && (
-                                <img
-                                    src={user.photoURL}
-                                    alt=""
-                                    style={{
-                                        width: 32, height: 32, borderRadius: '50%',
-                                        border: '2px solid var(--color-border)'
-                                    }}
-                                    referrerPolicy="no-referrer"
-                                />
-                            )}
-                            <button onClick={onLogout} style={btnStyle} title="Sign out">
-                                <LogOut size={20} />
-                            </button>
-                        </>
-                    )}
                 </div>
             </div>
         </header>

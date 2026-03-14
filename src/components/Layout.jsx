@@ -13,12 +13,27 @@ export default function Layout({
     onLogout,
     flights
 }) {
+    const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
+
+    const toggleSidebar = () => {
+        setIsSidebarExpanded(!isSidebarExpanded);
+    };
+
     return (
         <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
 
-            <Sidebar />
+            <Sidebar 
+                isExpanded={isSidebarExpanded} 
+                onToggle={toggleSidebar}
+                user={user}
+                onLogout={onLogout}
+                isDarkMode={isDarkMode}
+                toggleTheme={toggleTheme}
+                onExport={onExport}
+                onImport={onImport}
+            />
 
-            <div className="main-wrapper">
+            <div className={`main-wrapper ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
                 <Header
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}

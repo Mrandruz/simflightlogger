@@ -58,6 +58,10 @@
 
   /* Typography */
   --font-family-mono: 'JetBrains Mono', monospace;
+
+  /* Sidebar */
+  --sidebar-width-collapsed: 72px;
+  --sidebar-width-expanded: 240px;
 }
 
 [data-theme="dark"] {
@@ -135,40 +139,51 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 72px;
+  width: var(--sidebar-width-collapsed);
   background-color: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  align-items: center;
   padding: var(--space-6) 0;
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
   z-index: 100;
-  transition: transform 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+}
+
+.sidebar.expanded {
+  width: var(--sidebar-width-expanded);
+  padding: var(--space-6) var(--space-4);
+  align-items: flex-start;
 }
 
 .sidebar-header {
   margin-bottom: var(--space-8);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  transition: all 0.3s ease;
 }
 
-.sidebar-header h2 {
-  font-size: 1.25rem;
-  color: var(--color-primary);
-  margin: 0;
+.sidebar.expanded .sidebar-header {
+  align-items: flex-start;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
   width: 100%;
   align-items: center;
+}
+
+.sidebar.expanded .sidebar-nav {
+  align-items: flex-start;
 }
 
 .sidebar-link {
@@ -182,6 +197,28 @@ body {
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+.sidebar.expanded .sidebar-link {
+  width: 100%;
+  justify-content: flex-start;
+  padding-left: var(--space-3);
+}
+
+.sidebar-link span.link-text {
+  opacity: 0;
+  width: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.sidebar.expanded .sidebar-link span.link-text {
+  opacity: 1;
+  width: auto;
 }
 
 .sidebar-link .tooltip {
@@ -211,6 +248,10 @@ body {
   transform: translateX(0);
 }
 
+.sidebar.expanded .sidebar-link .tooltip {
+  display: none;
+}
+
 .sidebar-link:hover {
   background-color: var(--color-surface-hover);
   color: var(--color-text-primary);
@@ -231,18 +272,63 @@ body {
   height: 1px;
   width: 32px;
   background-color: var(--color-divider);
-  margin: var(--space-2) 0;
+  margin: var(--space-4) 0;
+  transition: width 0.3s ease;
+}
+
+.sidebar.expanded .sidebar-divider {
+  width: 100%;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.sidebar.expanded .sidebar-footer {
+  align-items: stretch;
+}
+
+.sidebar-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-hint);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.sidebar.expanded .sidebar-toggle-btn {
+  align-self: flex-end;
 }
 
 /* Main Content Wrapper */
 .main-wrapper {
   flex: 1;
-  margin-left: 72px;
-  /* offset for narrow sidebar */
+  margin-left: var(--sidebar-width-collapsed);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: calc(100% - 72px);
+  width: calc(100% - var(--sidebar-width-collapsed));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-wrapper.sidebar-expanded {
+  margin-left: var(--sidebar-width-expanded);
+  width: calc(100% - var(--sidebar-width-expanded));
 }
 
 .main-content {
@@ -257,9 +343,28 @@ body {
   gap: var(--space-6);
 }
 
+.sidebar-footer .user-section {
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+.sidebar.expanded .user-section {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+}
+
+.sidebar.expanded .user-section:hover {
+  border-color: var(--color-primary);
+}
+
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
+  }
+
+  .sidebar.expanded {
+     transform: translateX(0);
   }
 
   .main-wrapper {
@@ -267,7 +372,9 @@ body {
     width: 100%;
   }
 
-  /* We would need a hamburger menu here later, but for now we follow the simple request */
+  .hide-on-mobile {
+      display: none;
+  }
 }
 
 
