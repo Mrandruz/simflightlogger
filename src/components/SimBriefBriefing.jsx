@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriangle, Wind, Thermometer, Gauge, Droplets, Radio, ExternalLink, Map, Settings } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -76,6 +77,9 @@ const MiniMetar = ({ icao }) => {
 };
 
 const SimBriefBriefing = () => {
+    const context = useOutletContext();
+    const isDarkMode = context?.isDarkMode;
+    
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -133,13 +137,18 @@ const SimBriefBriefing = () => {
                 mapInstance.current = null;
             }
 
-            // Initialize map with a safe default center
+            // Choose neutral tiles based on theme (CartoDB Positron for light, Dark Matter for dark)
+            const tileUrl = isDarkMode 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            
+            const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+            // Initialize map
             const map = L.map(mapRef.current).setView([0, 0], 2);
             mapInstance.current = map;
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            L.tileLayer(tileUrl, { attribution }).addTo(map);
 
             // Origin marker (Green)
             const greenIcon = new L.Icon({
@@ -188,8 +197,11 @@ const SimBriefBriefing = () => {
             const finalLatLons = latLons.length > 0 ? latLons : markers;
 
             if (finalLatLons.length >= 2) {
+                // Use a neutral slate color for the route
+                const routeColor = isDarkMode ? '#94a3b8' : '#64748b';
+                
                 L.polyline(finalLatLons, {
-                    color: '#3b82f6', // Fallback to a clear blue
+                    color: routeColor,
                     weight: 4,
                     opacity: 0.8,
                     dashArray: '5, 8'
@@ -201,6 +213,16 @@ const SimBriefBriefing = () => {
             } else if (markers.length > 0) {
                 map.setView(markers[0], 5);
             }
+
+            // Cleanup on destroy
+            return () => {
+                if (mapInstance.current) {
+                    try {
+                       mapInstance.current.remove();
+                    } catch (e) {}
+                    mapInstance.current = null;
+                }
+            };
 
         } catch (e) {
             console.error('SimBrief: Error initializing map:', e);
@@ -215,7 +237,7 @@ const SimBriefBriefing = () => {
                 mapInstance.current = null;
             }
         };
-    }, [data]);
+    }, [data, isDarkMode]);
 
     if (loading) {
         return (

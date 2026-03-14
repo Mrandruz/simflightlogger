@@ -86,7 +86,7 @@ export default function Layout({
                     </div>
 
                     {/* Dynamic Page Content */}
-                    <Outlet context={{ flights, loading }} />
+                    <Outlet context={{ flights, loading, isDarkMode }} />
                 </main>
 
                 <StatusBar />
