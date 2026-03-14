@@ -11,23 +11,23 @@ const airports = Array.isArray(airportsRaw) ? airportsRaw : (airportsRaw?.defaul
 const customAirports = Array.isArray(customAirportsRaw) ? customAirportsRaw : (customAirportsRaw?.default || []);
 
 const ALLIANCE_MAP = {
-  'United Airlines': 'Star Alliance', 'Lufthansa': 'Star Alliance', 'Air Canada': 'Star Alliance',
-  'Singapore Airlines': 'Star Alliance', 'ANA': 'Star Alliance', 'Thai Airways': 'Star Alliance',
-  'Turkish Airlines': 'Star Alliance', 'Swiss': 'Star Alliance', 'Austrian Airlines': 'Star Alliance',
-  'Brussels Airlines': 'Star Alliance', 'TAP Air Portugal': 'Star Alliance', 'LOT Polish Airlines': 'Star Alliance',
-  'Scandinavian Airlines': 'Star Alliance', 'Air China': 'Star Alliance', 'Shenzhen Airlines': 'Star Alliance',
-  'Air India': 'Star Alliance', 'Copa Airlines': 'Star Alliance', 'Avianca': 'Star Alliance',
-  'South African Airways': 'Star Alliance', 'Ethiopian Airlines': 'Star Alliance', 'Egyptair': 'Star Alliance',
-  'Croatia Airlines': 'Star Alliance', 'Adria Airways': 'Star Alliance',
-  'Air France': 'SkyTeam', 'KLM': 'SkyTeam', 'Delta Air Lines': 'SkyTeam', 'Alitalia': 'SkyTeam',
-  'Korean Air': 'SkyTeam', 'China Southern': 'SkyTeam', 'China Eastern': 'SkyTeam',
-  'Aeromexico': 'SkyTeam', 'Czech Airlines': 'SkyTeam', 'Air Europa': 'SkyTeam', 'TAROM': 'SkyTeam',
-  'Vietnam Airlines': 'SkyTeam', 'Garuda Indonesia': 'SkyTeam', 'Middle East Airlines': 'SkyTeam',
-  'Kenya Airways': 'SkyTeam', 'Saudia': 'SkyTeam', 'Etihad': 'SkyTeam',
-  'American Airlines': 'Oneworld', 'British Airways': 'Oneworld', 'Iberia': 'Oneworld',
-  'Cathay Pacific': 'Oneworld', 'Qatar Airways': 'Oneworld', 'Japan Airlines': 'Oneworld',
-  'Finnair': 'Oneworld', 'Malaysia Airlines': 'Oneworld', 'Royal Jordanian': 'Oneworld',
-  'Royal Air Maroc': 'Oneworld', 'Alaska Airlines': 'Oneworld', 'SriLankan Airlines': 'Oneworld',
+    'United Airlines': 'Star Alliance', 'Lufthansa': 'Star Alliance', 'Air Canada': 'Star Alliance',
+    'Singapore Airlines': 'Star Alliance', 'ANA': 'Star Alliance', 'Thai Airways': 'Star Alliance',
+    'Turkish Airlines': 'Star Alliance', 'Swiss': 'Star Alliance', 'Austrian Airlines': 'Star Alliance',
+    'Brussels Airlines': 'Star Alliance', 'TAP Air Portugal': 'Star Alliance', 'LOT Polish Airlines': 'Star Alliance',
+    'Scandinavian Airlines': 'Star Alliance', 'Air China': 'Star Alliance', 'Shenzhen Airlines': 'Star Alliance',
+    'Air India': 'Star Alliance', 'Copa Airlines': 'Star Alliance', 'Avianca': 'Star Alliance',
+    'South African Airways': 'Star Alliance', 'Ethiopian Airlines': 'Star Alliance', 'Egyptair': 'Star Alliance',
+    'Croatia Airlines': 'Star Alliance', 'Adria Airways': 'Star Alliance',
+    'Air France': 'SkyTeam', 'KLM': 'SkyTeam', 'Delta Air Lines': 'SkyTeam', 'Alitalia': 'SkyTeam',
+    'Korean Air': 'SkyTeam', 'China Southern': 'SkyTeam', 'China Eastern': 'SkyTeam',
+    'Aeromexico': 'SkyTeam', 'Czech Airlines': 'SkyTeam', 'Air Europa': 'SkyTeam', 'TAROM': 'SkyTeam',
+    'Vietnam Airlines': 'SkyTeam', 'Garuda Indonesia': 'SkyTeam', 'Middle East Airlines': 'SkyTeam',
+    'Kenya Airways': 'SkyTeam', 'Saudia': 'SkyTeam', 'Etihad': 'SkyTeam',
+    'American Airlines': 'Oneworld', 'British Airways': 'Oneworld', 'Iberia': 'Oneworld',
+    'Cathay Pacific': 'Oneworld', 'Qatar Airways': 'Oneworld', 'Japan Airlines': 'Oneworld',
+    'Finnair': 'Oneworld', 'Malaysia Airlines': 'Oneworld', 'Royal Jordanian': 'Oneworld',
+    'Royal Air Maroc': 'Oneworld', 'Alaska Airlines': 'Oneworld', 'SriLankan Airlines': 'Oneworld',
 };
 
 const findAirport = (icao) => {
@@ -59,7 +59,7 @@ const MAJOR_DESTINATIONS = [
     'YSSY', 'YMML', 'NZAA', 'FAOR', 'HECA', 'GMMN', 'HKJK',
     'SBGR', 'SCEL', 'SAEZ', 'SKBO', 'SEQM', 'SPJC',
     // Added for more variety
-    'KMSP', 'KDTW', 'KPHL', 'KBWI', 'KSLC', 'KPDX', 'KMDW', 'KCLT', 'KCLE', 
+    'KMSP', 'KDTW', 'KPHL', 'KBWI', 'KSLC', 'KPDX', 'KMDW', 'KCLT', 'KCLE',
     'CYC', 'CYYC', 'CYEG', 'LFMN', 'LFSB', 'LSGG', 'EDDS', 'EDDH', 'EDDV',
     'LIPE', 'LICC', 'LEPA', 'LEMG', 'LPPR', 'LIME', 'LIRQ', 'LEZL', 'LIML',
     'OEJN', 'OKBK', 'OBBI', 'ZGSZ', 'ZUCK', 'VMMC', 'VVTS', 'VTCC', 'VHHH',
@@ -128,8 +128,8 @@ export default function Schedule({ flights = [], user }) {
 
             const ranges = [
                 { type: 'SHORT', min: 300, max: 1500, label: 'SHORT', color: '#10b981' },
-                { type: 'MEDIUM', min: 1500, max: 4000, label: 'MEDIUM', color: '#3b82f6' },
-                { type: 'LONG', min: 4500, max: 9000, label: 'LONG', color: '#f59e0b' }
+                { type: 'MEDIUM', min: 1500, max: 3000, label: 'MEDIUM', color: '#3b82f6' },
+                { type: 'LONG', min: 3000, max: 9000, label: 'LONG', color: '#f59e0b' }
             ];
 
             const allPossibleDests = MAJOR_DESTINATIONS
@@ -185,8 +185,8 @@ export default function Schedule({ flights = [], user }) {
                         origin: originAp,
                         duration: `${h}h ${m}m`,
                         xp,
-                        achievement: range.type === 'LONG' ? "Long Haul Ace ✈️" : 
-                                    (analysis.visitedAirports.has(best.icao) ? null : "World Traveler 🌍")
+                        achievement: range.type === 'LONG' ? "Long Haul Ace ✈️" :
+                            (analysis.visitedAirports.has(best.icao) ? null : "World Traveler 🌍")
                     };
                 } catch (e) {
                     console.error(`Schedule: Range error (${range.type})`, e);
@@ -203,7 +203,7 @@ export default function Schedule({ flights = [], user }) {
         const fetchAndSyncSuggestions = async () => {
             if (!user) return;
             setLoadingPersistence(true);
-            
+
             try {
                 // Fallback: Generate local suggestions FIRST so the user sees SOMETHING immediately
                 const localSuggestions = {};
@@ -215,7 +215,7 @@ export default function Schedule({ flights = [], user }) {
                 // Then try to sync with Firestore
                 const scheduleRef = doc(db, 'users', user.uid, 'settings', 'schedule');
                 const scheduleSnap = await getDoc(scheduleRef);
-                
+
                 if (scheduleSnap.exists()) {
                     const persistedData = scheduleSnap.data();
                     const syncedSuggestions = { ...localSuggestions };
@@ -273,13 +273,13 @@ export default function Schedule({ flights = [], user }) {
     const handleRegenerate = async (allianceName) => {
         const newS = generateAllianceSuggestions(allianceName, true);
         setSuggestions(prev => ({ ...prev, [allianceName]: newS }));
-        
+
         if (user) {
             try {
                 const scheduleRef = doc(db, 'users', user.uid, 'settings', 'schedule');
                 const lastFlight = analysis.allianceLastFlights[allianceName];
                 const currentBase = lastFlight?.arrival?.toUpperCase() || null;
-                
+
                 await setDoc(scheduleRef, {
                     [allianceName]: {
                         baseAirport: currentBase,
