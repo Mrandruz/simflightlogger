@@ -198,6 +198,7 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
             arrival: state.arrival.toUpperCase(),
             id: isEditing ? initialData.id : crypto.randomUUID(),
             date: state.date, // Use the user-selected date
+            createdAt: isEditing ? (initialData.createdAt || Date.now()) : Date.now(),
             miles: Number(state.miles),
             flightTime: Number(state.flightTime)
         });

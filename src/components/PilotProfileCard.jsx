@@ -59,7 +59,13 @@ export default function PilotProfileCard({ flights }) {
         let lastAirline = null;
 
         // Sort flights chronologically to correctly check consecutive logic and streaks
-        const sortedFlights = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+        // If same date, use createdAt timestamp or array index as tie-breaker (newer flights are prepended in App.jsx)
+        const sortedFlights = [...flights].sort((a, b) => {
+            const dateDiff = new Date(a.date) - new Date(b.date);
+            if (dateDiff !== 0) return dateDiff;
+            if (a.createdAt && b.createdAt) return a.createdAt - b.createdAt;
+            return flights.indexOf(b) - flights.indexOf(a);
+        });
 
         // For "Daily Streak"
         let currentStreak = 0;
@@ -301,6 +307,17 @@ export default function PilotProfileCard({ flights }) {
         const isMasterBonusActive = latestExpiryMs !== null;
         const activeBonusExpiryMs = latestExpiryMs;
 
+        // Latest Flight
+        let latestFlight = null;
+        if (sortedFlights.length > 0) {
+            const last = sortedFlights[sortedFlights.length - 1];
+            latestFlight = {
+                departure: last.departure,
+                arrival: last.arrival,
+                date: last.date
+            };
+        }
+
         return {
             totalHours,
             totalXp,
@@ -315,6 +332,7 @@ export default function PilotProfileCard({ flights }) {
             avgFuelPerNm: avgFuelPerNm.toFixed(1),
             countriesVisited: countriesCount,
             longestFlight,
+            latestFlight,
             isMasterBonusActive,
             activeBonusExpiryMs,
             achievements: {
@@ -459,76 +477,87 @@ export default function PilotProfileCard({ flights }) {
                 {/* Divider */}
                 <div style={{ width: '1px', backgroundColor: 'var(--color-divider)', margin: 'var(--space-2) 0' }} className="hide-on-mobile"></div>
 
-                {/* Extra Stats Section - 2 columns x 3 rows */}
+                {/* Extra Stats Section - 2 columns */}
                 <div style={{ flex: '1 1 400px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', alignContent: 'center' }}>
 
-                    {/* Column 1, Row 1: Hub Preferito */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <MapPin size={18} />
+                    {/* Column 1 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                        {/* Hub Preferito */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <MapPin size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Favorite Hub</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.favoriteAirport}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Favorite Hub</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">{stats.favoriteAirport}</div>
+
+                        {/* Latest Flight */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <PlaneIcon size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Latest Flight</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">
+                                    {stats.latestFlight
+                                        ? <>{stats.latestFlight.departure}→{stats.latestFlight.arrival} <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({new Date(stats.latestFlight.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})</span></>
+                                        : 'None'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Longest Flight */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <Trophy size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Longest Flight</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">
+                                    {stats.longestFlight.miles > 0
+                                        ? <>{stats.longestFlight.miles.toLocaleString()} nm <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({stats.longestFlight.departure}→{stats.longestFlight.arrival})</span></>
+                                        : 'N/A'
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Column 2, Row 1: Paesi Visitati */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#8e44ad', backgroundColor: 'rgba(142, 68, 173, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <Globe size={18} />
+                    {/* Column 2 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                        {/* Avg Hours / Flight */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <Clock size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Hours / Flight</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgTime} h</div>
+                            </div>
                         </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Countries Visited</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">{stats.countriesVisited}</div>
-                        </div>
-                    </div>
 
-                    {/* Column 1, Row 2: Media Ore / Volo */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <Clock size={18} />
+                        {/* Avg Distance / Flight */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <PlaneIcon size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Distance / Flight</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgMiles} nm</div>
+                            </div>
                         </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Hours / Flight</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgTime} h</div>
-                        </div>
-                    </div>
 
-                    {/* Column 2, Row 2: Media Distanza / Volo */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <PlaneIcon size={18} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Distance / Flight</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgMiles} nm</div>
-                        </div>
-                    </div>
-
-                    {/* Column 1, Row 3: Fuel Stimato */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#e8710a', backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <Fuel size={18} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Estimated Fuel</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">{stats.totalFuel.toLocaleString()} kg <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({stats.avgFuelPerNm} kg/nm)</span></div>
-                        </div>
-                    </div>
-
-                    {/* Column 2, Row 3: Volo più Lungo */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                        <div style={{ color: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
-                            <Trophy size={18} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Longest Flight</div>
-                            <div style={{ fontWeight: 600 }} className="data-mono">
-                                {stats.longestFlight.miles > 0
-                                    ? <>{stats.longestFlight.miles.toLocaleString()} nm <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({stats.longestFlight.departure}→{stats.longestFlight.arrival})</span></>
-                                    : 'N/A'
-                                }
+                        {/* Estimated Fuel */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ color: '#e8710a', backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+                                <Fuel size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Estimated Fuel</div>
+                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.totalFuel.toLocaleString()} kg</div>
                             </div>
                         </div>
                     </div>
