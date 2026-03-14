@@ -13,6 +13,10 @@
       "destination": "https://api.aviationstack.com/v1/:path*"
     },
     {
+      "source": "/api/simbrief",
+      "destination": "/api/simbrief"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -365,6 +365,19 @@ h6 {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Staggered delays for KPI cards */
 .kpi-grid .kpi-card:nth-child(1) {
   animation-delay: 0.05s;

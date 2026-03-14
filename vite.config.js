@@ -20,6 +20,14 @@ export default defineConfig({
         target: 'https://api.aviationstack.com/v1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/aviationstack/, '')
+      },
+      '/api/simbrief': {
+        target: 'https://www.simbrief.com/api/xml.fetcher.php',
+        changeOrigin: true,
+        rewrite: (path) => {
+          const separator = path.includes('?') ? '&' : '?';
+          return path.replace(/^\/api\/simbrief/, '') + separator + 'json=v2';
+        }
       }
     }
   }

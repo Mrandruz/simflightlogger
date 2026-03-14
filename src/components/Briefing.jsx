@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Wind, Thermometer, Droplets, Gauge, Plane, PlaneTakeoff, Globe } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
-import SuggestedRoutes from './SuggestedRoutes';
 import MetarCards from './MetarCards';
+import SimBriefBriefing from './SimBriefBriefing';
 import { getAllianceByAirline } from '../airlineAlliances';
 
 const findAirport = (icao) => {
@@ -271,8 +271,8 @@ export default function Briefing({ flights }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
 
-            {/* Suggested Routes */}
-            <SuggestedRoutes flights={flights} />
+            {/* SimBrief Flight Plan */}
+            <SimBriefBriefing />
 
             {/* Weather Feed for alliance airports */}
             {Object.values(lastArrivalByAlliance).length > 0 && (
