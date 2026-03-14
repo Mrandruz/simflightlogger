@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import FlightForm from './FlightForm';
 
 export default function NewFlight({ onAddFlight }) {
     const [showToast, setShowToast] = useState(false);
+    const location = useLocation();
+    const prefillData = location.state?.prefillData;
 
     const handleFlightAdded = async (flightData) => {
         // We call the original App.jsx handler
@@ -23,7 +26,7 @@ export default function NewFlight({ onAddFlight }) {
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
-            <FlightForm onAddFlight={handleFlightAdded} />
+            <FlightForm onAddFlight={handleFlightAdded} initialData={prefillData} />
 
             {/* Success Toast */}
             {showToast && (

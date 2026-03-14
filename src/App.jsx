@@ -12,6 +12,7 @@ import NewFlight from './components/NewFlight';
 import FlightEditModal from './components/FlightEditModal';
 import LoginScreen from './components/LoginScreen';
 import ConfirmModal from './components/ConfirmModal';
+import Schedule from './components/Schedule';
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -260,6 +261,7 @@ export default function App() {
                     <Route path="/logbook" element={<Logbook flights={flights} onDelete={handleDeleteFlight} onEdit={handleEditFlight} />} />
                     <Route path="/briefing" element={<Briefing flights={flights} />} />
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} />} />
+                    <Route path="/schedule" element={<Schedule flights={flights} />} />
                 </Route>
             </Routes>
 

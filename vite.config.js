@@ -40,9 +40,15 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000 // Increase to 5MB
       }
     })
   ],
+  build: {
+    chunkSizeWarningLimit: 4000 // Increase warning limit to 4MB
+  },
   server: {
     proxy: {
       '/api/metar': {

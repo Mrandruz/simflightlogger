@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Book, MapPin, PlusCircle, Compass, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload } from 'lucide-react';
+import { LayoutDashboard, Book, MapPin, PlusCircle, Compass, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar } from 'lucide-react';
 
 export default function Sidebar({ 
     isExpanded, 
@@ -69,6 +69,15 @@ export default function Sidebar({
                     <MapPin size={24} />
                     <span className="link-text">Briefing</span>
                     {!isExpanded && <span className="tooltip">Briefing</span>}
+                </NavLink>
+
+                <NavLink
+                    to="/schedule"
+                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                    <Calendar size={24} />
+                    <span className="link-text">Schedule</span>
+                    {!isExpanded && <span className="tooltip">Schedule</span>}
                 </NavLink>
 
                 <div className="sidebar-divider"></div>

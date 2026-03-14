@@ -122,7 +122,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
 };
 
 export default function FlightForm({ onAddFlight, initialData, onCancel }) {
-    const formData = initialData || {
+    const defaultValues = {
         airline: '',
         alliance: '',
         aircraft: '',
@@ -130,9 +130,9 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
         arrival: '',
         miles: '',
         flightTime: '',
-        date: new Date().toISOString().split('T')[0] // Default to today
+        date: new Date().toISOString().split('T')[0]
     };
-    const [state, setState] = useState(formData);
+    const [state, setState] = useState({ ...defaultValues, ...initialData });
     const isEditing = !!initialData;
 
     // Historical airlines for datalist
@@ -172,7 +172,8 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
                 let updates = { miles: distance.toString() };
 
                 // Estimate flight time if we have distance and aircraft
-                if (state.aircraft && !isEditing) {
+                // We only do this if we are not editing an existing flight (which would have an ID)
+                if (state.aircraft && (!initialData || !initialData.id)) {
                     const speed = AIRCRAFT_SPEED_KTS[state.aircraft] || AIRCRAFT_SPEED_KTS['Altro'];
                     // Add 0.5 hours (30 min) for climb/descent/taxi
                     const estimatedHours = (distance / speed) + 0.5;
