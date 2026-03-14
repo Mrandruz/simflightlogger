@@ -35,8 +35,10 @@
   --shadow-sm: 0 2px 8px 0 rgba(20, 106, 255, 0.06), 0 1px 3px 1px rgba(22, 36, 51, 0.08);
   /* Base very subtle blue glow */
   --shadow-md: 0 4px 16px 0 rgba(20, 106, 255, 0.15), 0 4px 10px 2px rgba(22, 36, 51, 0.12);
-  /* Intense blue glowy effect */
-  --shadow-lg: 0 8px 24px 0 rgba(20, 106, 255, 0.25), 0 6px 16px 4px rgba(22, 36, 51, 0.12);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Animations */
+  --shimmer-duration: 1.5s;
 
   /* Radii */
   --radius-sm: 4px;

@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { Plane, MapPin, Clock, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, AreaChart, Area } from 'recharts';
+import { useOutletContext } from 'react-router-dom';
 
-export default function Dashboard({ flights }) {
+export default function Dashboard() {
+    const { flights, loading } = useOutletContext();
 
     const kpis = useMemo(() => {
         if (!flights || flights.length === 0) return { totalFlights: 0, totalMiles: 0, totalHours: 0, daysSinceLastFlight: null, flightsThisMonth: 0 };
@@ -104,7 +106,42 @@ export default function Dashboard({ flights }) {
         return null;
     };
 
-    if (flights.length === 0) {
+    const DashboardSkeleton = () => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="kpi-grid">
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="card kpi-card">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div className="skeleton skeleton-text" style={{ width: '80px' }}></div>
+                            <div className="skeleton skeleton-circle" style={{ width: 44, height: 44 }}></div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-4)' }}>
+                            <div className="skeleton skeleton-title" style={{ width: '100px', height: '32px' }}></div>
+                            <div className="skeleton skeleton-text" style={{ width: '120px', marginTop: '12px' }}></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-6)' }}>
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="card" style={{ height: '300px' }}>
+                        <div className="skeleton skeleton-title" style={{ width: '60%', marginBottom: '24px' }}></div>
+                        <div className="skeleton" style={{ width: '100%', height: '180px', borderRadius: 'var(--radius-md)' }}></div>
+                    </div>
+                ))}
+            </div>
+            
+            <div className="card" style={{ height: '260px' }}>
+                <div className="skeleton skeleton-title" style={{ width: '30%', marginBottom: '24px' }}></div>
+                <div className="skeleton" style={{ width: '100%', height: '150px', borderRadius: 'var(--radius-md)' }}></div>
+            </div>
+        </div>
+    );
+
+    if (loading) return <DashboardSkeleton />;
+
+    if (!flights || flights.length === 0) {
         return (
             <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', color: 'var(--color-text-secondary)' }}>
                 <TrendingUp size={48} style={{ opacity: 0.2, marginBottom: 'var(--space-4)' }} />

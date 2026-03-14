@@ -217,6 +217,38 @@ const SimBriefBriefing = () => {
         };
     }, [data]);
 
+    if (loading) {
+        return (
+            <div className="card" style={{ border: 'none', background: 'var(--color-surface)', position: 'relative' }}>
+                <div style={{ padding: 'var(--space-6)', borderBottom: '1px solid var(--color-divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                        <div className="skeleton skeleton-circle" style={{ width: 44, height: 44 }}></div>
+                        <div>
+                            <div className="skeleton skeleton-title" style={{ width: '120px', marginBottom: '8px' }}></div>
+                            <div className="skeleton skeleton-text" style={{ width: '80px' }}></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ padding: 'var(--space-6)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-6)' }}>
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i}>
+                                <div className="skeleton skeleton-text" style={{ width: '50%', marginBottom: '12px', opacity: 0.6 }}></div>
+                                <div className="skeleton skeleton-title" style={{ width: '80%' }}></div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-8)' }}>
+                        <div className="skeleton" style={{ flex: 1, height: '42px', borderRadius: 'var(--radius-md)' }}></div>
+                        <div className="skeleton" style={{ flex: 1, height: '42px', borderRadius: 'var(--radius-md)' }}></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (error && !data) {
         return (
             <div className="card" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>

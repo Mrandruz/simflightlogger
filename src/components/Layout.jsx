@@ -11,7 +11,8 @@ export default function Layout({
     onImport,
     user,
     onLogout,
-    flights
+    flights,
+    loading
 }) {
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
 
@@ -50,7 +51,7 @@ export default function Layout({
                     </div>
 
                     {/* Dynamic Page Content */}
-                    <Outlet />
+                    <Outlet context={{ flights, loading }} />
                 </main>
             </div>
         </div>
