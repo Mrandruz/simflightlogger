@@ -341,14 +341,14 @@ const SimBriefBriefing = () => {
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button onClick={() => setShowSettings(!showSettings)} className="btn" style={{ padding: '10px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                    <button onClick={() => setShowSettings(!showSettings)} className="btn btn-secondary" style={{ padding: '10px' }}>
                         <Settings size={20} />
                     </button>
-                    <button className="btn" onClick={() => window.open('https://dispatch.simbrief.com/briefing/latest', '_blank')} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                    <button className="btn btn-secondary" onClick={() => window.open('https://dispatch.simbrief.com/briefing/latest', '_blank')}>
                         <ExternalLink size={18} />
                         <span>SimBrief</span>
                     </button>
-                    <button className="btn" onClick={() => window.open('https://charts.navigraph.com/flights/current', '_blank')} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                    <button className="btn btn-secondary" onClick={() => window.open('https://charts.navigraph.com/flights/current', '_blank')}>
                         <Map size={18} />
                         <span>Navigraph</span>
                     </button>
@@ -360,11 +360,11 @@ const SimBriefBriefing = () => {
             </div>
 
             {showSettings && (
-                <div className="card" style={{ padding: 'var(--space-4)', border: '1px solid var(--color-primary)', animation: 'fadeSlideUp 0.3s ease-out' }}>
+                <div className="card" style={{ padding: 'var(--space-4)', border: '1px solid var(--color-primary)', animation: 'fadeSlideUp 0.3s ease-out', backgroundColor: 'var(--color-primary-light)' }}>
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>SimBrief Credentials:</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-primary)' }}>SimBrief Configuration:</span>
                         <IdentifierToggle identifier={identifier} onTypeChange={handleTypeChange} />
-                        <input type="text" value={identifier.value} onChange={handleIdentifierChange} style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-background)', width: '180px' }} />
+                        <input type="text" className="form-input" value={identifier.value} onChange={handleIdentifierChange} style={{ width: '200px', height: '36px', fontSize: '0.9rem' }} placeholder="Enter ID/Username..." />
                     </div>
                 </div>
             )}
@@ -435,7 +435,7 @@ const SimBriefBriefing = () => {
                                     <Route size={18} style={{ color: 'var(--color-primary)' }} />
                                     <span style={{ fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ATC Route</span>
                                 </div>
-                                <button onClick={handleCopyRoute} className="btn" style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: routeCopied ? 'var(--color-success-bg)' : 'var(--color-background)', color: routeCopied ? 'var(--color-success)' : 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}>
+                                <button onClick={handleCopyRoute} className={`btn ${routeCopied ? '' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: routeCopied ? 'var(--color-success-bg)' : undefined, color: routeCopied ? 'var(--color-success)' : undefined }}>
                                     {routeCopied ? 'COPIED' : 'COPY ROUTE'}
                                 </button>
                             </div>
