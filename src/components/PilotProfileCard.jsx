@@ -12,8 +12,8 @@ const RANKS = [
     { name: 'Junior F.O.', minXp: 5000, icon: <Medal size={24} className="text-primary" /> },
     { name: 'First Officer', minXp: 15000, icon: <Award size={24} className="text-primary" /> },
     { name: 'Captain', minXp: 50000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
-    { name: 'Senior Captain', minXp: 250000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
-    { name: 'Chief Captain', minXp: Infinity, icon: <Award size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> }
+    { name: 'Senior Captain', minXp: 330000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
+    { name: 'Chief Captain', minXp: 600000, icon: <Award size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> }
 ];
 
 // Average fuel consumption in kg per nautical mile by aircraft type
@@ -181,14 +181,22 @@ export default function PilotProfileCard({ flights }) {
             checkBonus(airlineLoyalUnlockedDateMs);
             checkBonus(typeRatingMasterUnlockedDateMs);
 
-            // Base XP
-            let flightXp = Math.floor((fMiles / 10) + (fTime * 50));
+            // Base XP: +250 fixed bonus for planning/ops + miles + time
+            let flightXp = Math.floor((fMiles / 10) + (fTime * 50) + 250);
             // XP Multipliers
             if (inBonusPeriod) {
                 flightXp *= 10;
             } else if (currentStreak >= 7) {
                 flightXp *= 2;
             }
+
+            // Chief Captain Privilege: +50% XP Bonus (calculated on top of other bonuses)
+            // Note: totalXp here is the cumulative XP BEFORE this flight. 
+            // For a perfectly accurate "rank-based" reward, we check if they WERE already Chief
+            if (totalXp >= 600000) {
+                flightXp = Math.floor(flightXp * 1.5);
+            }
+            
             totalXp += flightXp;
 
             const fuelRate = FUEL_CONSUMPTION_PER_NM[f.aircraft] || FUEL_CONSUMPTION_PER_NM['Altro'];
@@ -213,9 +221,8 @@ export default function PilotProfileCard({ flights }) {
 
         let currentRankIndex = 0;
         for (let i = RANKS.length - 1; i >= 0; i--) {
-            if (totalXp >= RANKS[i].minXp && RANKS[i].minXp !== Infinity) {
+            if (totalXp >= RANKS[i].minXp) {
                 currentRankIndex = i;
-                if (totalXp >= 250000) currentRankIndex = RANKS.length - 1;
                 break;
             }
         }
