@@ -27,18 +27,19 @@ export default function Sidebar({
                     width: '100%',
                     justifyContent: isExpanded ? 'flex-start' : 'center'
                 }}>
-                    <Compass size={28} color="var(--color-primary)" />
+                    <Compass size={28} color="var(--color-primary)" aria-hidden="true" />
                     {isExpanded && <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>SimFlight</h2>}
                 </div>
                 <button 
                     className="sidebar-toggle-btn" 
                     onClick={onToggle}
+                    aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
                     style={{ 
                         alignSelf: isExpanded ? 'flex-end' : 'center',
                         marginTop: isExpanded ? '-10px' : '0' // Subtle adjustment if expanded
                     }}
                 >
-                    {isExpanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                    {isExpanded ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
                 </button>
             </div>
 
@@ -48,7 +49,7 @@ export default function Sidebar({
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                     end
                 >
-                    <LayoutDashboard size={24} />
+                    <LayoutDashboard size={24} aria-hidden="true" />
                     <span className="link-text">Dashboard</span>
                     {!isExpanded && <span className="tooltip">Dashboard</span>}
                 </NavLink>
@@ -57,7 +58,7 @@ export default function Sidebar({
                     to="/logbook"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                    <Book size={24} />
+                    <Book size={24} aria-hidden="true" />
                     <span className="link-text">Logbook</span>
                     {!isExpanded && <span className="tooltip">Logbook</span>}
                 </NavLink>
@@ -66,7 +67,7 @@ export default function Sidebar({
                     to="/schedule"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                    <Calendar size={24} />
+                    <Calendar size={24} aria-hidden="true" />
                     <span className="link-text">Schedule</span>
                     {!isExpanded && <span className="tooltip">Schedule</span>}
                 </NavLink>
@@ -75,7 +76,7 @@ export default function Sidebar({
                     to="/briefing"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                    <MapPin size={24} />
+                    <MapPin size={24} aria-hidden="true" />
                     <span className="link-text">Briefing</span>
                     {!isExpanded && <span className="tooltip">Briefing</span>}
                 </NavLink>
@@ -86,7 +87,7 @@ export default function Sidebar({
                     to="/new-flight"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                    <PlusCircle size={24} />
+                    <PlusCircle size={24} aria-hidden="true" />
                     <span className="link-text">New Flight</span>
                     {!isExpanded && <span className="tooltip">New Flight</span>}
                 </NavLink>
@@ -96,33 +97,34 @@ export default function Sidebar({
                 <div className="sidebar-divider"></div>
                 
                 <button 
-                    className="sidebar-link" 
+                    className="sidebar-link has-tooltip" 
                     onClick={onExport} 
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
-                    title="Export Backup"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', position: 'relative' }}
+                    aria-label="Export flights data backup"
                 >
-                    <Download size={24} />
+                    <Download size={24} aria-hidden="true" />
                     <span className="link-text">Export Backup</span>
                     {!isExpanded && <span className="tooltip">Export Backup</span>}
                 </button>
 
                 <label 
-                    className="sidebar-link" 
-                    style={{ cursor: 'pointer', width: '100%', margin: 0 }}
-                    title="Import Backup"
+                    className="sidebar-link has-tooltip" 
+                    style={{ cursor: 'pointer', width: '100%', margin: 0, position: 'relative' }}
+                    aria-label="Import flights data backup"
                 >
-                    <Upload size={24} />
+                    <Upload size={24} aria-hidden="true" />
                     <span className="link-text">Import Backup</span>
                     {!isExpanded && <span className="tooltip">Import Backup</span>}
-                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={onImport} />
+                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={onImport} aria-label="Upload JSON backup file" />
                 </label>
 
                 <button 
-                    className="sidebar-link" 
+                    className="sidebar-link has-tooltip" 
                     onClick={toggleTheme} 
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', position: 'relative' }}
+                    aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
                 >
-                    {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+                    {isDarkMode ? <Sun size={24} aria-hidden="true" /> : <Moon size={24} aria-hidden="true" />}
                     <span className="link-text">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
                     {!isExpanded && <span className="tooltip">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
                 </button>
@@ -164,12 +166,13 @@ export default function Sidebar({
                             </div>
                         )}
                         <button 
-                            className="sidebar-toggle-btn" 
+                            className="sidebar-toggle-btn has-tooltip" 
                             onClick={onLogout}
-                            title="Sign Out"
-                            style={{ padding: '8px' }}
+                            aria-label="Sign out"
+                            style={{ padding: '8px', position: 'relative' }}
                         >
-                            <LogOut size={20} />
+                            <LogOut size={20} aria-hidden="true" />
+                            <span className="tooltip" style={{ left: 'auto', right: '100%', marginRight: 'var(--space-3)', width: 'auto' }}>Sign Out</span>
                         </button>
                     </div>
                 )}

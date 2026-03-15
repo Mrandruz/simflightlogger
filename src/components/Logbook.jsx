@@ -2,13 +2,9 @@ import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
 import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
-import airports from 'airport-data';
-import customAirports from '../customAirports';
+import { findAirport } from '../utils/airportUtils';
 import FlightDetailsModal from './FlightDetailsModal';
 
-const findAirport = (icao) => {
-    return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
-};
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -156,7 +152,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                 </div>
                 <div style={{ width: '100%', height: '450px', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {mapZoom > 1 && (
-                        <button onClick={handleZoomReset} title="Global view" style={{
+                        <button onClick={handleZoomReset} aria-label="Reset map to global view" className="has-tooltip" style={{
                             position: 'absolute', top: '12px', right: '12px', zIndex: 10,
                             display: 'flex', alignItems: 'center', gap: '6px',
                             padding: '8px 14px', borderRadius: 'var(--radius-md)',
@@ -165,7 +161,8 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                             boxShadow: 'var(--shadow-sm)', fontSize: '0.8rem', fontWeight: 500,
                             fontFamily: 'var(--font-family-sans)', transition: 'background-color 0.2s'
                         }}>
-                            <RotateCcw size={14} /> Global View
+                            <RotateCcw size={14} aria-hidden="true" /> Global View
+                            <span className="tooltip-box">Reset map to global view</span>
                         </button>
                     )}
 
@@ -297,14 +294,16 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                 {activeFilters.icao && (
                                     <button
                                         onClick={() => handleFilterClick('icao', null)}
+                                        className="has-tooltip"
                                         style={{
                                             position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
                                             background: 'none', border: 'none', color: 'var(--color-text-hint)',
                                             cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px'
                                         }}
-                                        title="Clear ICAO"
+                                        aria-label="Clear ICAO filter"
                                     >
-                                        <X size={14} />
+                                        <X size={14} aria-hidden="true" />
+                                        <span className="tooltip-box">Clear ICAO</span>
                                     </button>
                                 )}
                             </div>
@@ -314,8 +313,9 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                     onClick={clearFilter}
                                     className="btn btn-secondary"
                                     style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                                    aria-label="Clear all filters"
                                 >
-                                    <X size={14} /> Clear All
+                                    <X size={14} aria-hidden="true" /> Clear All
                                 </button>
                             )}
                         </div>
@@ -380,9 +380,18 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                         </span>
                                     </td>
                                     <td style={{ textAlign: 'right' }}>
-                                        <button onClick={(e) => { e.stopPropagation(); setSelectedFlightDetails(f); }} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} title="View details"><Eye size={18} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); onEdit(f); }} style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} title="Edit"><Edit2 size={18} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); onDelete(f.id); }} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', padding: '4px' }} title="Delete"><Trash2 size={18} /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setSelectedFlightDetails(f); }} className="has-tooltip" style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} aria-label={`View details of flight to ${f.arrival}`}>
+                                            <Eye size={18} aria-hidden="true" />
+                                            <span className="tooltip-box">View Details</span>
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); onEdit(f); }} className="has-tooltip" style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px', marginRight: 'var(--space-2)' }} aria-label={`Edit flight to ${f.arrival}`}>
+                                            <Edit2 size={18} aria-hidden="true" />
+                                            <span className="tooltip-box">Edit Flight</span>
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); onDelete(f.id); }} className="has-tooltip" style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', padding: '4px' }} aria-label={`Delete flight to ${f.arrival}`}>
+                                            <Trash2 size={18} aria-hidden="true" />
+                                            <span className="tooltip-box">Delete Flight</span>
+                                        </button>
                                     </td>
                                 </tr>
                             )) : (

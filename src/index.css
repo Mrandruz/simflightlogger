@@ -237,8 +237,10 @@ body {
   position: absolute;
   left: 100%;
   margin-left: var(--space-3);
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
+  background: rgba(22, 36, 51, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
   padding: 6px 12px;
   border-radius: var(--radius-md);
   font-size: 0.85rem;
@@ -246,12 +248,23 @@ body {
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border);
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   transform: translateX(-10px);
   pointer-events: none;
   z-index: 101;
+}
+
+.sidebar-link .tooltip::after {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent rgba(22, 36, 51, 0.9) transparent transparent;
 }
 
 .sidebar-link:hover .tooltip {
@@ -280,37 +293,63 @@ body {
   border-color: var(--color-primary-light);
 }
 
-/* Generic Tooltip */
+/* Generic Tooltip - Premium Style */
 .has-tooltip {
     position: relative;
-    cursor: help;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tooltip-box {
     position: absolute;
-    bottom: 125%;
+    bottom: calc(100% + 10px);
     left: 50%;
-    transform: translateX(-50%) translateY(10px);
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
+    transform: translateX(-50%) translateY(8px) scale(0.95);
+    background: rgba(22, 36, 51, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
     padding: 6px 12px;
     border-radius: var(--radius-md);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--color-border);
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     pointer-events: none;
     z-index: 1000;
+}
+
+/* Light mode override for tooltips to keep them crisp and high contrast */
+[data-theme="light"] .tooltip-box {
+    background: rgba(22, 36, 51, 0.95);
+    color: #ffffff;
+}
+
+/* Arrow for the tooltip */
+.tooltip-box::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(22, 36, 51, 0.9) transparent transparent transparent;
+}
+
+[data-theme="light"] .tooltip-box::after {
+    border-color: rgba(22, 36, 51, 0.95) transparent transparent transparent;
 }
 
 .has-tooltip:hover .tooltip-box {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .sidebar-divider {
@@ -1092,4 +1131,286 @@ h6 {
   100% {
     background-position: -200% 0;
   }
+}
+
+/* Pilot Profile Achievements */
+.achievement-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    cursor: default;
+}
+
+.achievement-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-primary-light);
+    z-index: 20;
+}
+
+.achievement-card.completed {
+    background: linear-gradient(135deg, rgba(20, 106, 255, 0.1), var(--color-surface));
+    border: 1px solid rgba(20, 106, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(20, 106, 255, 0.08);
+}
+
+.achievement-card.completed:hover {
+    box-shadow: 0 10px 25px rgba(20, 106, 255, 0.2);
+    border-color: rgba(20, 106, 255, 0.6);
+}
+
+.achievement-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--color-surface-hover);
+    color: var(--color-text-secondary);
+    transition: all 0.4s ease;
+}
+
+.achievement-card.completed .achievement-icon-wrapper {
+    background: linear-gradient(135deg, var(--color-primary), #00d2ff);
+    color: white;
+    box-shadow: 0 4px 10px rgba(20, 106, 255, 0.4);
+}
+
+.achievement-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    transition: color 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.achievement-card.completed .achievement-title {
+    background: linear-gradient(135deg, var(--color-primary), #3b82f6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+:root[data-theme='dark'] .achievement-card.completed .achievement-title {
+    background: linear-gradient(135deg, #ffffff, #a5b4fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.achievement-progress-bg {
+    width: 100%;
+    height: 6px;
+    background-color: var(--color-divider);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.achievement-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), #00d2ff);
+    border-radius: 8px;
+    transition: width 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+}
+
+.achievement-card.completed .achievement-progress-fill {
+    background: var(--color-success);
+}
+
+.achievement-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+    animation: achievement-shimmer 2s infinite linear;
+}
+
+@keyframes achievement-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.achievement-tooltip {
+    position: absolute;
+    bottom: calc(100% + 15px);
+    left: 50%;
+    transform: translateX(-50%) translateY(10px) scale(0.95);
+    opacity: 0;
+    visibility: hidden;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    width: max-content;
+    max-width: 260px;
+    text-align: center;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: rgba(255,255,255,0.9);
+}
+
+.achievement-card:hover .achievement-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.achievement-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(15, 23, 42, 0.95);
+}
+
+/* Toast Notification System */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: auto;
+  animation: toastFadeSlideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  min-width: 300px;
+}
+
+.toast-item.success {
+  background: rgba(30, 215, 96, 0.95);
+  box-shadow: 0 8px 24px rgba(30, 215, 96, 0.3);
+}
+
+.toast-item.error {
+  background: rgba(231, 76, 60, 0.95);
+  box-shadow: 0 8px 24px rgba(231, 76, 60, 0.3);
+}
+
+.toast-item.warning {
+  background: rgba(241, 196, 15, 0.95);
+  box-shadow: 0 8px 24px rgba(241, 196, 15, 0.3);
+  color: #1a1a1a;
+}
+
+.toast-item.info {
+  background: rgba(52, 152, 219, 0.95);
+  box-shadow: 0 8px 24px rgba(52, 152, 219, 0.3);
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes toastFadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Premium Tooltip System */
+.has-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-box {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px) scale(0.95);
+  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.has-tooltip:hover .tooltip-box {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.tooltip-box::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(15, 23, 42, 0.95);
 }

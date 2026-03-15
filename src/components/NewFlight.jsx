@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import FlightForm from './FlightForm';
+import { useToast } from '../context/ToastContext';
 
 export default function NewFlight({ onAddFlight, flights }) {
-    const [showToast, setShowToast] = useState(false);
     const location = useLocation();
     const prefillData = location.state?.prefillData;
+    const { showToast } = useToast();
 
     const handleFlightAdded = async (flightData) => {
-        // We call the original App.jsx handler
-        await onAddFlight(flightData);
-        // Show success toast
-        setShowToast(true);
-    };
-
-    useEffect(() => {
-        if (showToast) {
-            const timer = setTimeout(() => {
-                setShowToast(false);
-            }, 2500);
-            return () => clearTimeout(timer);
+        try {
+            await onAddFlight(flightData);
+            showToast("Flight successfully added!", "success");
+        } catch (error) {
+            // Error is handled by App.jsx, but we could add more specific feedback here if needed
         }
-    }, [showToast]);
+    };
 
     return (
         <div style={{ 
@@ -40,39 +33,6 @@ export default function NewFlight({ onAddFlight, flights }) {
                 initialData={prefillData} 
                 flights={flights} 
             />
-
-            {/* Success Toast */}
-            {showToast && (
-                <div style={{
-                    position: 'absolute',
-                    top: '24px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(30, 215, 96, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    color: 'white',
-                    padding: '12px 24px',
-                    borderRadius: 'var(--radius-full)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    boxShadow: '0 8px 24px rgba(30, 215, 96, 0.25)',
-                    animation: 'fadeSlideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both',
-                    zIndex: 1000,
-                    fontWeight: 600,
-                    fontSize: '0.95rem'
-                }}>
-                    <CheckCircle size={20} color="white" />
-                    Flight successfully added!
-                </div>
-            )}
-
-            <style>{`
-                @keyframes fadeSlideDown {
-                    from { opacity: 0; transform: translate(-50%, -20px); }
-                    to { opacity: 1; transform: translate(-50%, 0); }
-                }
-            `}</style>
         </div>
     );
 }

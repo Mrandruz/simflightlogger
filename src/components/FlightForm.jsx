@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PlusCircle, Search, AlertCircle } from 'lucide-react';
-import airports from 'airport-data';
+import { findAirport } from '../utils/airportUtils';
 import customAirports from '../customAirports';
+import airports from 'airport-data';
 
-const findAirport = (icao) => {
-    return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
-};
 
 // Component for mapping aircraft to realistic cruising speeds (in knots)
 const AIRCRAFT_SPEED_KTS = {
@@ -82,7 +80,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
                 textTransform: 'uppercase'
             }}>
                 {label}
-                {query.length > 0 && !isValid && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={10} /> Invalid</span>}
+                {query.length > 0 && !isValid && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }} aria-live="polite"><AlertCircle size={10} aria-hidden="true" /> Invalid</span>}
             </label>
             <div style={{ position: 'relative' }}>
                 <input
@@ -226,7 +224,7 @@ export default function FlightForm({ onAddFlight, initialData, onCancel, flights
     return (
         <div className="card" style={{ height: 'fit-content' }}>
             <div style={{ marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <PlusCircle size={28} className="text-primary" />
+                <PlusCircle size={28} className="text-primary" aria-hidden="true" />
                 <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 800 }}>
                     {isEditing ? 'Edit Flight' : 'New Flight'}
                 </h1>

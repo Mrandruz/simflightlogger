@@ -144,7 +144,7 @@ export default function Dashboard() {
     if (!flights || flights.length === 0) {
         return (
             <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', color: 'var(--color-text-secondary)' }}>
-                <TrendingUp size={48} style={{ opacity: 0.2, marginBottom: 'var(--space-4)' }} />
+                <TrendingUp size={48} style={{ opacity: 0.2, marginBottom: 'var(--space-4)' }} aria-hidden="true" />
                 <h3 style={{ margin: 0 }}>No flights recorded</h3>
                 <p>Add your first flight in the "New Flight" section.</p>
             </div>
@@ -160,7 +160,7 @@ export default function Dashboard() {
                     <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(20,106,255,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Total Flights</span>
-                        <div style={{ padding: '10px', backgroundColor: 'var(--color-primary-light)', borderRadius: '50%', color: 'var(--color-primary)', display: 'flex' }}><Plane size={24} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-primary-light)', borderRadius: '50%', color: 'var(--color-primary)', display: 'flex' }} aria-hidden="true"><Plane size={24} /></div>
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value">{kpis.totalFlights}</span>
@@ -174,7 +174,7 @@ export default function Dashboard() {
                     <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(60,196,125,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Total Miles</span>
-                        <div style={{ padding: '10px', backgroundColor: 'var(--color-success-bg)', borderRadius: '50%', color: 'var(--color-success)', display: 'flex' }}><MapPin size={24} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-success-bg)', borderRadius: '50%', color: 'var(--color-success)', display: 'flex' }} aria-hidden="true"><MapPin size={24} /></div>
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value text-success">{kpis.totalMiles.toLocaleString()}</span>
@@ -186,7 +186,7 @@ export default function Dashboard() {
                     <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(234,135,93,0.08) 0%, transparent 70%)', borderRadius: '50%', transform: 'translate(30%, -30%)', zIndex: 0 }}></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, position: 'relative' }}>
                         <span className="kpi-label">Flight Hours</span>
-                        <div style={{ padding: '10px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '50%', color: 'var(--color-warning)', display: 'flex' }}><Clock size={24} /></div>
+                        <div style={{ padding: '10px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '50%', color: 'var(--color-warning)', display: 'flex' }} aria-hidden="true"><Clock size={24} /></div>
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value text-warning">{kpis.totalHours}</span>

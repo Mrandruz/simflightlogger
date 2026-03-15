@@ -26,7 +26,7 @@ export default function Header() {
                     borderRadius: 'var(--radius-md)',
                     display: 'flex'
                 }}>
-                    <PlaneTakeoff size={24} />
+                    <PlaneTakeoff size={24} aria-hidden="true" />
                 </div>
                 <div>
                     <h1 style={{ fontSize: '1.25rem', margin: 0 }}>SimFlight Logger</h1>

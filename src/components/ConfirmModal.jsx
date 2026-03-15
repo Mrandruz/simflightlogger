@@ -9,7 +9,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
             <div className="modal-content" style={{ maxWidth: '400px', width: '90%', padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-2)' }}>
                     <div style={{ backgroundColor: confirmStyle === 'danger' ? 'rgba(255, 69, 58, 0.15)' : 'rgba(232, 113, 10, 0.15)', padding: '16px', borderRadius: '50%' }}>
-                        {confirmStyle === 'danger' ? <Trash2 size={32} color="var(--color-danger)" /> : <AlertTriangle size={32} color="#e8710a" />}
+                        {confirmStyle === 'danger' ? <Trash2 size={32} color="var(--color-danger)" aria-hidden="true" /> : <AlertTriangle size={32} color="#e8710a" aria-hidden="true" />}
                     </div>
                 </div>
 

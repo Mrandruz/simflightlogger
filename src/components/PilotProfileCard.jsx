@@ -1,393 +1,64 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays, ChevronRight, Flame } from 'lucide-react';
-import airports from 'airport-data';
-import customAirports from '../customAirports';
+import { usePilotData } from '../hooks/usePilotData';
 
-const findAirport = (icao) => {
-    return airports.find(a => a.icao === icao) || customAirports.find(a => a.icao === icao);
+const RankIcon = ({ rankName }) => {
+    switch (rankName) {
+        case 'Cadet': return <Star size={24} className="text-secondary" aria-hidden="true" />;
+        case 'Junior F.O.': return <Medal size={24} className="text-primary" aria-hidden="true" />;
+        case 'First Officer': return <Award size={24} className="text-primary" aria-hidden="true" />;
+        case 'Captain': return <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} aria-hidden="true" />;
+        case 'Senior Captain': return <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} aria-hidden="true" />;
+        case 'Chief Captain': return <Award size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} aria-hidden="true" />;
+        default: return <Star size={24} aria-hidden="true" />;
+    }
 };
 
-const RANKS = [
-    { name: 'Cadet', minXp: 0, icon: <Star size={24} className="text-secondary" /> },
-    { name: 'Junior F.O.', minXp: 5000, icon: <Medal size={24} className="text-primary" /> },
-    { name: 'First Officer', minXp: 15000, icon: <Award size={24} className="text-primary" /> },
-    { name: 'Captain', minXp: 50000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
-    { name: 'Senior Captain', minXp: 330000, icon: <Shield size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> },
-    { name: 'Chief Captain', minXp: 600000, icon: <Award size={24} className="text-warning" style={{ fill: 'var(--color-warning)' }} /> }
-];
+const AchievementBadge = ({ title, description, icon: Icon, data }) => {
+    const { current, goal, extraInfo } = data;
+    let progress = data.progress;
+    if (progress > 100) progress = 100;
+    const isCompleted = progress >= 100;
 
-// Average fuel consumption in kg per nautical mile by aircraft type
-const FUEL_CONSUMPTION_PER_NM = {
-    'Airbus A319': 2.4,
-    'Airbus A320': 2.6,
-    'Airbus A321': 3.0,
-    'Airbus A330': 5.8,
-    'Airbus A350': 5.2,
-    'Airbus A380': 10.5,
-    'Boeing 777': 7.5,
-    'Boeing 787': 5.6,
-    'Altro': 3.5,    // default estimate
+    return (
+        <div className={`achievement-card ${isCompleted ? 'completed' : ''}`}>
+            <div className="achievement-tooltip">
+                <div style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>{description}</div>
+                {extraInfo && !isCompleted && (
+                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        {extraInfo}
+                    </div>
+                )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 1, textAlign: 'center' }}>
+                <div className="achievement-icon-wrapper">
+                    <Icon size={16} />
+                </div>
+                <div style={{ width: '100%', zIndex: 1 }}>
+                    <div className="achievement-title">{title}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>
+                        {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>UNLOCKED!</span> : `${current} / ${goal}`}
+                    </div>
+                </div>
+            </div>
+
+            <div className="achievement-progress-bg" style={{ zIndex: 1 }}>
+                <div className="achievement-progress-fill" style={{ width: `${progress}%` }}></div>
+            </div>
+        </div>
+    );
 };
 
 export default function PilotProfileCard({ flights }) {
+    const stats = usePilotData(flights);
+
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour >= 5 && hour < 12) return 'Good morning';
         if (hour >= 12 && hour < 18) return 'Good afternoon';
         if (hour >= 18 || hour < 5) return 'Good evening';
         return 'Hello';
-    };
-
-    const stats = useMemo(() => {
-        let totalHours = 0;
-        let totalMiles = 0;
-        let totalFuel = 0;
-        let totalXp = 0;
-        const airportCounts = {};
-        const airlineCounts = {};
-        const aircraftCounts = {};
-        const dateCounts = {};
-        const countriesSet = new Set();
-        let longestFlight = { miles: 0, departure: '', arrival: '' };
-
-        // For "Long Haul Ace" progression
-        let longHaulCount = 0;
-
-        // For "Airline Loyal" progression (consecutive and total)
-        let maxConsecutiveAirline = 0;
-        let currentConsecutiveAirlineCount = 0;
-        let lastAirline = null;
-
-        // Sort flights chronologically to correctly check consecutive logic and streaks
-        // If same date, use createdAt timestamp or array index as tie-breaker (newer flights are prepended in App.jsx)
-        const sortedFlights = [...flights].sort((a, b) => {
-            const dateDiff = new Date(a.date) - new Date(b.date);
-            if (dateDiff !== 0) return dateDiff;
-            if (a.createdAt && b.createdAt) return a.createdAt - b.createdAt;
-            return flights.indexOf(b) - flights.indexOf(a);
-        });
-
-        // For "Daily Streak"
-        let currentStreak = 0;
-        let maxStreak = 0;
-        let lastFlightDateMs = null;
-        let maxAirlineCount = 0;
-        let maxAircraftCount = 0;
-        let worldTravelerUnlockedDateMs = null;
-        let longHaulAceUnlockedDateMs = null;
-        let airlineLoyalUnlockedDateMs = null;
-        let typeRatingMasterUnlockedDateMs = null;
-        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-        sortedFlights.forEach(f => {
-            const fTime = f.flightTime || 0;
-            const fMiles = f.miles || 0;
-            const fDate = f.date ? f.date.substring(0, 10) : null;
-            let flightDateMs = null;
-
-            // Track Aircraft for Type Rating Master
-            if (f.aircraft) {
-                aircraftCounts[f.aircraft] = (aircraftCounts[f.aircraft] || 0) + 1;
-                if (aircraftCounts[f.aircraft] > maxAircraftCount) {
-                    maxAircraftCount = aircraftCounts[f.aircraft];
-                }
-            }
-
-            if (f.airline) {
-                airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1;
-                if (airlineCounts[f.airline] > maxAirlineCount) {
-                    maxAirlineCount = airlineCounts[f.airline];
-                }
-
-                if (f.airline === lastAirline) {
-                    currentConsecutiveAirlineCount++;
-                } else {
-                    currentConsecutiveAirlineCount = 1;
-                    lastAirline = f.airline;
-                }
-
-                if (currentConsecutiveAirlineCount > maxConsecutiveAirline) {
-                    maxConsecutiveAirline = currentConsecutiveAirlineCount;
-                }
-            } else {
-                currentConsecutiveAirlineCount = 0;
-                lastAirline = null;
-            }
-
-            // Calculate sequence for daily streak based on unique days
-            if (fDate) {
-                const flightDateObj = new Date(fDate);
-                flightDateMs = new Date(flightDateObj.getFullYear(), flightDateObj.getMonth(), flightDateObj.getDate()).getTime();
-
-                if (lastFlightDateMs === null) {
-                    currentStreak = 1;
-                } else {
-                    const diffDays = Math.round((flightDateMs - lastFlightDateMs) / ONE_DAY_MS);
-                    if (diffDays === 1) {
-                        currentStreak++;
-                    } else if (diffDays > 1) {
-                        currentStreak = 1; // reset streak
-                    }
-                }
-
-                if (currentStreak > maxStreak) {
-                    maxStreak = currentStreak;
-                }
-                lastFlightDateMs = flightDateMs;
-                dateCounts[fDate] = (dateCounts[fDate] || 0) + 1;
-            }
-
-            if (fMiles > 5000) {
-                longHaulCount++;
-            }
-
-            if (f.departure) {
-                const depAirport = findAirport(f.departure.toUpperCase());
-                if (depAirport?.country) countriesSet.add(depAirport.country);
-                airportCounts[f.departure] = (airportCounts[f.departure] || 0) + 1;
-            }
-            if (f.arrival) {
-                const arrAirport = findAirport(f.arrival.toUpperCase());
-                if (arrAirport?.country) countriesSet.add(arrAirport.country);
-                airportCounts[f.arrival] = (airportCounts[f.arrival] || 0) + 1;
-            }
-
-            // XP Bonus 10x when ANY of the 4 major achievements unlocks
-            if (worldTravelerUnlockedDateMs === null && countriesSet.size >= 100 && flightDateMs) {
-                worldTravelerUnlockedDateMs = flightDateMs;
-            }
-            if (longHaulAceUnlockedDateMs === null && longHaulCount >= 120 && flightDateMs) {
-                longHaulAceUnlockedDateMs = flightDateMs;
-            }
-            if (airlineLoyalUnlockedDateMs === null && maxAirlineCount >= 70 && flightDateMs) {
-                airlineLoyalUnlockedDateMs = flightDateMs;
-            }
-            if (typeRatingMasterUnlockedDateMs === null && maxAircraftCount >= 120 && flightDateMs) {
-                typeRatingMasterUnlockedDateMs = flightDateMs;
-            }
-
-            totalHours += fTime;
-            totalMiles += fMiles;
-
-            // Check if current flight is within the 30-day bonus period of any tracked achievement
-            let inBonusPeriod = false;
-            const checkBonus = (unlockDateMs) => {
-                if (unlockDateMs !== null && flightDateMs && flightDateMs <= (unlockDateMs + 30 * ONE_DAY_MS)) {
-                    inBonusPeriod = true;
-                }
-            };
-            checkBonus(worldTravelerUnlockedDateMs);
-            checkBonus(longHaulAceUnlockedDateMs);
-            checkBonus(airlineLoyalUnlockedDateMs);
-            checkBonus(typeRatingMasterUnlockedDateMs);
-
-            // Base XP: +250 fixed bonus for planning/ops + miles + time
-            let flightXp = Math.floor((fMiles / 10) + (fTime * 50) + 250);
-            // XP Multipliers
-            if (inBonusPeriod) {
-                flightXp *= 10;
-            } else if (currentStreak >= 7) {
-                flightXp *= 2;
-            }
-
-            // Chief Captain Privilege: +50% XP Bonus (calculated on top of other bonuses)
-            // Note: totalXp here is the cumulative XP BEFORE this flight. 
-            // For a perfectly accurate "rank-based" reward, we check if they WERE already Chief
-            if (totalXp >= 600000) {
-                flightXp = Math.floor(flightXp * 1.5);
-            }
-            
-            totalXp += flightXp;
-
-            const fuelRate = FUEL_CONSUMPTION_PER_NM[f.aircraft] || FUEL_CONSUMPTION_PER_NM['Altro'];
-            totalFuel += fMiles * fuelRate;
-
-            if (fMiles > longestFlight.miles) {
-                longestFlight = { miles: fMiles, departure: f.departure, arrival: f.arrival };
-            }
-        });
-
-        let favoriteAirport = 'N/A';
-        let maxVisits = 0;
-        for (const [icao, count] of Object.entries(airportCounts)) {
-            if (count > maxVisits) {
-                maxVisits = count;
-                favoriteAirport = icao;
-            }
-        }
-
-        const avgTime = flights.length > 0 ? (totalHours / flights.length) : 0;
-        const avgMiles = flights.length > 0 ? (totalMiles / flights.length) : 0;
-
-        let currentRankIndex = 0;
-        for (let i = RANKS.length - 1; i >= 0; i--) {
-            if (totalXp >= RANKS[i].minXp) {
-                currentRankIndex = i;
-                break;
-            }
-        }
-
-        const currentRank = RANKS[currentRankIndex];
-        const nextRank = currentRankIndex < RANKS.length - 1 ? RANKS[currentRankIndex + 1] : null;
-
-        let progress = 100;
-        let xpRemaining = 0;
-        if (nextRank) {
-            const xpInCurrentRankLevel = totalXp - currentRank.minXp;
-            const rankXpSpan = nextRank.minXp - currentRank.minXp;
-            progress = Math.min(100, Math.max(0, (xpInCurrentRankLevel / rankXpSpan) * 100));
-            xpRemaining = nextRank.minXp - totalXp;
-        }
-
-        const avgFuelPerNm = totalMiles > 0 ? (totalFuel / totalMiles) : 0;
-
-        // Progress Calculations for Achievements
-
-        // World Traveler (100 countries)
-        const countriesCount = countriesSet.size;
-        const worldTravelerGoal = 100;
-        const hasWorldTraveler = countriesCount >= worldTravelerGoal;
-        const worldTravelerProgress = Math.min(100, (countriesCount / worldTravelerGoal) * 100);
-
-        // Long Haul Ace (120 flights > 5000nm)
-        const longHaulGoal = 120;
-        const hasLongHaulAce = longHaulCount >= longHaulGoal;
-        const longHaulProgress = Math.min(100, (longHaulCount / longHaulGoal) * 100);
-
-        // Airline Loyal (50 total)
-        let topAirline = 'None';
-        let maxTotalAnyAirline = 0;
-        for (const [airline, count] of Object.entries(airlineCounts)) {
-            if (count > maxTotalAnyAirline) {
-                maxTotalAnyAirline = count;
-                topAirline = airline;
-            }
-        }
-        const hasAirlineLoyal = maxTotalAnyAirline >= 70;
-        const airlineLoyalGoal = 70;
-        const airlineLoyalProgress = Math.min(100, (maxTotalAnyAirline / airlineLoyalGoal) * 100);
-        const airlineLoyalCurrent = maxTotalAnyAirline;
-
-        // Tireless (3 flights in the same day)
-        const maxFlightsInDay = Object.values(dateCounts).reduce((max, val) => Math.max(max, val), 0);
-        const tirelessGoal = 3;
-        const hasTireless = maxFlightsInDay >= tirelessGoal;
-        const tirelessProgress = Math.min(100, (maxFlightsInDay / tirelessGoal) * 100);
-
-        // Type Rating Master (50 total with same aircraft)
-        let topAircraft = 'None';
-        let maxTotalAnyAircraft = 0;
-        for (const [aircraft, count] of Object.entries(aircraftCounts)) {
-            if (count > maxTotalAnyAircraft) {
-                maxTotalAnyAircraft = count;
-                topAircraft = aircraft;
-            }
-        }
-        const typeRatingGoal = 120;
-        const hasTypeRatingMaster = maxTotalAnyAircraft >= typeRatingGoal;
-        const typeRatingProgress = Math.min(100, (maxTotalAnyAircraft / typeRatingGoal) * 100);
-
-        // Daily Streak (7 days consecutive)
-        const streakGoal = 7;
-        const hasDailyStreak = maxStreak >= streakGoal;
-        const streakProgress = Math.min(100, (maxStreak / streakGoal) * 100);
-
-        // Achievement 10x XP Active Status (Latest Expiry)
-        const todayMs = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
-        let latestExpiryMs = null;
-        const checkExpiry = (unlockDateMs) => {
-            if (unlockDateMs !== null) {
-                const expiry = unlockDateMs + 30 * ONE_DAY_MS;
-                if (todayMs <= expiry) {
-                    if (latestExpiryMs === null || expiry > latestExpiryMs) {
-                        latestExpiryMs = expiry;
-                    }
-                }
-            }
-        };
-
-        checkExpiry(worldTravelerUnlockedDateMs);
-        checkExpiry(longHaulAceUnlockedDateMs);
-        checkExpiry(airlineLoyalUnlockedDateMs);
-        checkExpiry(typeRatingMasterUnlockedDateMs);
-
-        const isMasterBonusActive = latestExpiryMs !== null;
-        const activeBonusExpiryMs = latestExpiryMs;
-
-        // Latest Flight
-        let latestFlight = null;
-        if (sortedFlights.length > 0) {
-            const last = sortedFlights[sortedFlights.length - 1];
-            latestFlight = {
-                departure: last.departure,
-                arrival: last.arrival,
-                date: last.date
-            };
-        }
-
-        return {
-            totalHours,
-            totalXp,
-            currentRank,
-            nextRank,
-            progress,
-            xpRemaining,
-            avgTime: avgTime.toFixed(1),
-            avgMiles: Math.round(avgMiles),
-            favoriteAirport,
-            totalFuel: Math.round(totalFuel),
-            avgFuelPerNm: avgFuelPerNm.toFixed(1),
-            countriesVisited: countriesCount,
-            longestFlight,
-            latestFlight,
-            isMasterBonusActive,
-            activeBonusExpiryMs,
-            achievements: {
-                worldTraveler: { unlocked: hasWorldTraveler, progress: worldTravelerProgress, current: countriesCount, goal: worldTravelerGoal },
-                longHaulAce: { unlocked: hasLongHaulAce, progress: longHaulProgress, current: longHaulCount, goal: longHaulGoal },
-                airlineLoyal: { unlocked: hasAirlineLoyal, progress: airlineLoyalProgress, current: airlineLoyalCurrent, goal: airlineLoyalGoal, extraInfo: airlineLoyalCurrent > 0 ? `Leading with: ${topAirline}` : null },
-                tireless: { unlocked: hasTireless, progress: tirelessProgress, current: maxFlightsInDay, goal: tirelessGoal },
-                typeRatingMaster: { unlocked: hasTypeRatingMaster, progress: typeRatingProgress, current: maxTotalAnyAircraft, goal: typeRatingGoal, extraInfo: maxTotalAnyAircraft > 0 ? `Leading with: ${topAircraft}` : null },
-                dailyStreak: { unlocked: hasDailyStreak, progress: streakProgress, current: maxStreak, goal: streakGoal }
-            }
-        };
-    }, [flights]);
-
-    // Reusable component for the achievements
-    const AchievementBadge = ({ id, title, description, icon: Icon, data }) => {
-        const { current, goal, extraInfo } = data;
-        let progress = data.progress;
-        if (progress > 100) progress = 100;
-        const isCompleted = progress >= 100;
-
-        return (
-            <div className={`achievement-card ${isCompleted ? 'completed' : ''}`}>
-                <div className="achievement-tooltip">
-                    <div style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>{description}</div>
-                    {extraInfo && !isCompleted && (
-                        <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                            {extraInfo}
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 1, textAlign: 'center' }}>
-                    <div className="achievement-icon-wrapper">
-                        <Icon size={16} />
-                    </div>
-                    <div style={{ width: '100%', zIndex: 1 }}>
-                        <div className="achievement-title">{title}</div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>
-                            {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>UNLOCKED!</span> : `${current} / ${goal}`}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="achievement-progress-bg" style={{ zIndex: 1 }}>
-                    <div className="achievement-progress-fill" style={{ width: `${progress}%` }}></div>
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -409,7 +80,7 @@ export default function PilotProfileCard({ flights }) {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}>
-                                    {stats.currentRank.icon}
+                                    <RankIcon rankName={stats.currentRank.name} />
                                 </div>
                                 <h2 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'var(--font-family-display)', color: 'var(--color-primary)' }}>
                                     {stats.currentRank.name}
@@ -611,42 +282,36 @@ export default function PilotProfileCard({ flights }) {
                         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)' }}>
 
                             <AchievementBadge
-                                id="worldTraveler"
                                 title="World Traveler"
                                 description="Visit 100 different countries"
                                 icon={Globe}
                                 data={stats.achievements.worldTraveler}
                             />
                             <AchievementBadge
-                                id="longHaulAce"
                                 title="Long Haul Ace"
                                 description="Complete 120 flights over 5000nm"
                                 icon={PlaneIcon}
                                 data={stats.achievements.longHaulAce}
                             />
                             <AchievementBadge
-                                id="airlineLoyal"
                                 title="Airline Loyal"
                                 description="Fly 70 times total with the same airline"
                                 icon={Users}
                                 data={stats.achievements.airlineLoyal}
                             />
                             <AchievementBadge
-                                id="tireless"
                                 title="Tireless"
                                 description="Complete 3 flights in a single day"
                                 icon={Zap}
                                 data={stats.achievements.tireless}
                             />
                             <AchievementBadge
-                                id="typeRatingMaster"
                                 title="Type Rating Master"
                                 description="Fly 120 times with the same aircraft type"
                                 icon={Award}
                                 data={stats.achievements.typeRatingMaster}
                             />
                             <AchievementBadge
-                                id="dailyStreak"
                                 title="7-Day Streak"
                                 description="Log at least one flight per day for 7 consecutive days"
                                 icon={CalendarDays}
@@ -657,161 +322,6 @@ export default function PilotProfileCard({ flights }) {
                 </div>
 
             </div>
-
-            <style>{`
-                @media (max-width: 640px) {
-                    .hide-on-mobile {
-                        display: none;
-                    }
-                }
-
-                .achievement-card {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 9px;
-                    padding: 9px 12px;
-                    border-radius: 12px;
-                    background: var(--color-surface);
-                    border: 1px solid var(--color-border);
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    position: relative;
-                    cursor: default;
-                }
-
-                .achievement-card:hover {
-                    transform: translateY(-3px) scale(1.02);
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-                    border-color: var(--color-primary-light);
-                    z-index: 20;
-                }
-
-                .achievement-card.completed {
-                    background: linear-gradient(135deg, rgba(20, 106, 255, 0.1), var(--color-surface));
-                    border: 1px solid rgba(20, 106, 255, 0.3);
-                    box-shadow: 0 4px 16px rgba(20, 106, 255, 0.08);
-                }
-
-                .achievement-card.completed:hover {
-                    box-shadow: 0 10px 25px rgba(20, 106, 255, 0.2);
-                    border-color: rgba(20, 106, 255, 0.6);
-                }
-
-                .achievement-icon-wrapper {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: var(--color-surface-hover);
-                    color: var(--color-text-secondary);
-                    transition: all 0.4s ease;
-                }
-
-                .achievement-card.completed .achievement-icon-wrapper {
-                    background: linear-gradient(135deg, var(--color-primary), #00d2ff);
-                    color: white;
-                    box-shadow: 0 4px 10px rgba(20, 106, 255, 0.4);
-                }
-
-                .achievement-title {
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    color: var(--color-text-primary);
-                    transition: color 0.3s ease;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                .achievement-card.completed .achievement-title {
-                    background: linear-gradient(135deg, var(--color-primary), #3b82f6);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-                
-                :root[data-theme='dark'] .achievement-card.completed .achievement-title {
-                    background: linear-gradient(135deg, #ffffff, #a5b4fc);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-
-                .achievement-progress-bg {
-                    width: 100%;
-                    height: 6px;
-                    background-color: var(--color-divider);
-                    border-radius: 8px;
-                    overflow: hidden;
-                    margin-top: 4px;
-                }
-
-                .achievement-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, var(--color-primary), #00d2ff);
-                    border-radius: 8px;
-                    transition: width 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-                    position: relative;
-                }
-                
-                .achievement-card.completed .achievement-progress-fill {
-                    background: var(--color-success);
-                }
-
-                .achievement-progress-fill::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    bottom: 0;
-                    right: 0;
-                    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
-                    animation: shimmer 2s infinite linear;
-                }
-
-                @keyframes shimmer {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-
-                .achievement-tooltip {
-                    position: absolute;
-                    bottom: calc(100% + 15px);
-                    left: 50%;
-                    transform: translateX(-50%) translateY(10px) scale(0.95);
-                    opacity: 0;
-                    visibility: hidden;
-                    padding: 12px 16px;
-                    background: rgba(15, 23, 42, 0.95);
-                    backdrop-filter: blur(8px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-                    z-index: 100;
-                    width: max-content;
-                    max-width: 260px;
-                    text-align: center;
-                    pointer-events: none;
-                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    color: rgba(255,255,255,0.9);
-                }
-
-                .achievement-card:hover .achievement-tooltip {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateX(-50%) translateY(0) scale(1);
-                }
-
-                .achievement-tooltip::after {
-                    content: '';
-                    position: absolute;
-                    top: 100%;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    border-left: 6px solid transparent;
-                    border-right: 6px solid transparent;
-                    border-top: 6px solid rgba(15, 23, 42, 0.95);
-                }
-            `}</style>
         </div>
     );
 }

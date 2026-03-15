@@ -75,22 +75,22 @@ const MiniMetar = ({ icao }) => {
             border: '1px solid var(--color-border)'
         }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Gauge size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} />
+                <Gauge size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
                 <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Pres</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.altim ? `${Math.round(metar.altim)}` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Wind size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} />
+                <Wind size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
                 <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Wind</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.wdir !== undefined ? `${metar.wdir}°` : '--'}/{metar.wspd !== undefined ? `${metar.wspd}k` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Thermometer size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} />
+                <Thermometer size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
                 <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Temp</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.temp !== undefined ? `${Math.round(metar.temp)}°` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Droplets size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} />
+                <Droplets size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
                 <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Dew</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.dewp !== undefined ? `${Math.round(metar.dewp)}°` : '--'}</span>
             </div>
@@ -335,7 +335,7 @@ const SimBriefBriefing = () => {
         return (
             <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-6)' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)' }}>
-                    <AlertTriangle size={32} />
+                    <AlertTriangle size={32} aria-hidden="true" />
                 </div>
                 <div>
                     <h3 style={{ marginBottom: '8px' }}>Mission Briefing Unavailable</h3>
@@ -356,26 +356,26 @@ const SimBriefBriefing = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        <Zap size={16} />
+                        <Zap size={16} aria-hidden="true" />
                         Flight Control
                     </div>
                     <h1 style={{ fontSize: '2rem', margin: 0 }}>Briefing & Dispatch</h1>
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button onClick={() => setShowSettings(!showSettings)} className="btn btn-secondary" style={{ padding: '10px' }}>
-                        <Settings size={20} />
+                    <button onClick={() => setShowSettings(!showSettings)} className="btn btn-secondary" style={{ padding: '10px' }} aria-label="SimBrief settings">
+                        <Settings size={20} aria-hidden="true" />
                     </button>
                     <button className="btn btn-secondary" onClick={() => window.open('https://dispatch.simbrief.com/briefing/latest', '_blank')}>
-                        <ExternalLink size={18} />
+                        <ExternalLink size={18} aria-hidden="true" />
                         <span>SimBrief</span>
                     </button>
                     <button className="btn btn-secondary" onClick={() => window.open('https://charts.navigraph.com/flights/current', '_blank')}>
-                        <Map size={18} />
+                        <Map size={18} aria-hidden="true" />
                         <span>Navigraph</span>
                     </button>
                     <button className="btn btn-primary" onClick={loadFlightPlan} disabled={loading}>
-                        <RefreshCw size={18} className={loading ? 'spin' : ''} />
+                        <RefreshCw size={18} className={loading ? 'spin' : ''} aria-hidden="true" />
                         <span>Refresh Ops</span>
                     </button>
                 </div>
@@ -410,7 +410,7 @@ const SimBriefBriefing = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--color-text-hint)' }}>
                                         <div style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: '2px' }}>{data.duration}</div>
                                         <div style={{ width: '100px', height: '2px', backgroundColor: 'currentColor', position: 'relative' }}>
-                                            <Plane size={14} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'var(--color-surface)', padding: '0 4px' }} />
+                                            <Plane size={14} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'var(--color-surface)', padding: '0 4px' }} aria-hidden="true" />
                                         </div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
@@ -454,7 +454,7 @@ const SimBriefBriefing = () => {
                         <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Route size={18} style={{ color: 'var(--color-primary)' }} />
+                                    <Route size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
                                     <span style={{ fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ATC Route</span>
                                 </div>
                                 <button onClick={handleCopyRoute} className={`btn ${routeCopied ? '' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: routeCopied ? 'var(--color-success-bg)' : undefined, color: routeCopied ? 'var(--color-success)' : undefined }}>
@@ -497,7 +497,7 @@ const IdentifierToggle = ({ identifier, onTypeChange }) => (
 const MetricBlock = ({ label, value, icon: Icon }) => (
     <div className="card" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)', background: 'var(--color-surface)' }}>
         <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}>
-            <Icon size={18} />
+            <Icon size={18} aria-hidden="true" />
         </div>
         <div>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
@@ -520,7 +520,7 @@ const InfoBlock = ({ icon: Icon, label, value, color, children }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', position: 'relative' }}>
             <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.5px' }}>
-                <Icon size={12} style={{ color: color || 'var(--color-primary)' }} />
+                <Icon size={12} style={{ color: color || 'var(--color-primary)' }} aria-hidden="true" />
                 {label}
             </span>
             <div style={{ position: 'relative', cursor: isTruncated ? 'help' : 'default' }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>

@@ -129,10 +129,12 @@ export default function SuggestedRoutes({ flights }) {
             </div>
             <button
                 onClick={handleShuffle}
-                className="suggested-route-shuffle"
-                title="New suggestion"
+                className="suggested-route-shuffle has-tooltip"
+                style={{ position: 'relative' }}
+                aria-label="Generate new route suggestion"
             >
-                <RefreshCw size={16} />
+                <RefreshCw size={16} aria-hidden="true" />
+                <span className="tooltip-box">New Suggestion</span>
             </button>
         </div>
     );

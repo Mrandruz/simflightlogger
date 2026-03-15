@@ -3,12 +3,8 @@ import { Calendar, Plane, Globe, Award, Star, Shield, Zap, TrendingUp, MapPin, R
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import airportsRaw from 'airport-data';
-import customAirportsRaw from '../customAirports';
+import { findAirport } from '../utils/airportUtils';
 
-// Handle potential ESM/CJS import discrepancies for airport data
-const airports = Array.isArray(airportsRaw) ? airportsRaw : (airportsRaw?.default || []);
-const customAirports = Array.isArray(customAirportsRaw) ? customAirportsRaw : (customAirportsRaw?.default || []);
 
 const ALLIANCE_MAP = {
     'United Airlines': 'Star Alliance', 'Lufthansa': 'Star Alliance', 'Air Canada': 'Star Alliance',
@@ -30,11 +26,6 @@ const ALLIANCE_MAP = {
     'Royal Air Maroc': 'Oneworld', 'Alaska Airlines': 'Oneworld', 'SriLankan Airlines': 'Oneworld',
 };
 
-const findAirport = (icao) => {
-    if (!icao) return null;
-    const code = icao.toUpperCase();
-    return airports.find(a => a && a.icao === code) || customAirports.find(a => a && a.icao === code);
-};
 
 const haversineNm = (lat1, lon1, lat2, lon2) => {
     if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return 0;
