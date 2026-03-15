@@ -3,7 +3,7 @@ import { CheckCircle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import FlightForm from './FlightForm';
 
-export default function NewFlight({ onAddFlight }) {
+export default function NewFlight({ onAddFlight, flights }) {
     const [showToast, setShowToast] = useState(false);
     const location = useLocation();
     const prefillData = location.state?.prefillData;
@@ -25,8 +25,21 @@ export default function NewFlight({ onAddFlight }) {
     }, [showToast]);
 
     return (
-        <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
-            <FlightForm onAddFlight={handleFlightAdded} initialData={prefillData} />
+        <div style={{ 
+            maxWidth: '700px', 
+            width: '100%',
+            margin: '0 auto', 
+            position: 'relative',
+            padding: 'var(--space-6) 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-6)'
+        }}>
+            <FlightForm 
+                onAddFlight={handleFlightAdded} 
+                initialData={prefillData} 
+                flights={flights} 
+            />
 
             {/* Success Toast */}
             {showToast && (

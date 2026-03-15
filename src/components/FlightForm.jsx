@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PlusCircle, Search, AlertCircle } from 'lucide-react';
 import airports from 'airport-data';
 import customAirports from '../customAirports';
@@ -71,9 +71,18 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
 
     return (
         <div className="form-group" style={{ flex: 1, minWidth: 0, position: 'relative' }} ref={wrapperRef}>
-            <label className="form-label" style={{ whiteSpace: 'nowrap', display: 'flex', justifyContent: 'space-between' }}>
+            <label className="form-label" style={{ 
+                whiteSpace: 'nowrap', 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                color: name === 'departure' ? 'var(--color-success)' : 'var(--color-danger)',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                fontSize: '0.75rem',
+                textTransform: 'uppercase'
+            }}>
                 {label}
-                {query.length > 0 && !isValid && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={10} /> Invalid ICAO</span>}
+                {query.length > 0 && !isValid && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={10} /> Invalid</span>}
             </label>
             <div style={{ position: 'relative' }}>
                 <input
@@ -89,10 +98,17 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
                     placeholder={placeholder}
                     style={{
                         textTransform: 'uppercase',
-                        borderColor: (query.length > 0 && !isValid) ? 'var(--color-danger)' : undefined
+                        borderColor: (query.length > 0 && !isValid) ? 'var(--color-danger)' : undefined,
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        padding: '10px 12px',
+                        height: 'auto',
+                        letterSpacing: '0.02em',
+                        fontFamily: 'var(--font-family-mono)',
+                        textAlign: 'center',
+                        backgroundColor: 'var(--color-surface-hover)'
                     }}
                 />
-                <Search size={16} style={{ position: 'absolute', right: '12px', top: '12px', color: 'var(--color-text-hint)', pointerEvents: 'none' }} />
             </div>
 
             {showDropdown && results.length > 0 && (
@@ -121,7 +137,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
     );
 };
 
-export default function FlightForm({ onAddFlight, initialData, onCancel }) {
+export default function FlightForm({ onAddFlight, initialData, onCancel, flights = [] }) {
     const defaultValues = {
         airline: '',
         alliance: '',
@@ -135,21 +151,11 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
     const [state, setState] = useState({ ...defaultValues, ...initialData });
     const isEditing = !!initialData;
 
-    // Historical airlines for datalist
-    const [historicalAirlines, setHistoricalAirlines] = useState([]);
-
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('sim-flights');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                const airlines = [...new Set(parsed.map(f => f.airline))].filter(Boolean);
-                setHistoricalAirlines(airlines);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }, []);
+    // Derived airlines from flights for datalist
+    const historicalAirlines = useMemo(() => {
+        if (!Array.isArray(flights)) return [];
+        return [...new Set(flights.map(f => f.airline))].filter(Boolean).sort();
+    }, [flights]);
 
     // Calculate distance and flight time automatically
     useEffect(() => {
@@ -219,10 +225,12 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
 
     return (
         <div className="card" style={{ height: 'fit-content' }}>
-            <h2 className="card-title">
-                <PlusCircle size={20} className="text-primary" />
-                {isEditing ? 'Edit Flight' : 'New Flight'}
-            </h2>
+            <div style={{ marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <PlusCircle size={28} className="text-primary" />
+                <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 800 }}>
+                    {isEditing ? 'Edit Flight' : 'New Flight'}
+                </h1>
+            </div>
             <form onSubmit={handleSubmit}>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
                     <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
@@ -285,11 +293,32 @@ export default function FlightForm({ onAddFlight, initialData, onCancel }) {
                 <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
                     <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                         <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Distance (nm)</label>
-                        <input required type="number" min="0" name="miles" value={state.miles} onChange={handleChange} className="form-input" placeholder="e.g. 350" />
+                        <input 
+                            required 
+                            type="number" 
+                            min="0" 
+                            name="miles" 
+                            value={state.miles} 
+                            onChange={handleChange} 
+                            className="form-input" 
+                            placeholder="e.g. 350" 
+                            style={{ fontSize: '1.25rem', fontWeight: 700 }}
+                        />
                     </div>
                     <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                        <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Flight Time (hours)</label>
-                        <input required type="number" min="0" step="0.01" name="flightTime" value={state.flightTime} onChange={handleChange} className="form-input" placeholder="e.g. 1.5" />
+                        <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Flight Time (h)</label>
+                        <input 
+                            required 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            name="flightTime" 
+                            value={state.flightTime} 
+                            onChange={handleChange} 
+                            className="form-input" 
+                            placeholder="e.g. 1.5" 
+                            style={{ fontSize: '1.25rem', fontWeight: 700 }}
+                        />
                     </div>
                 </div>
 

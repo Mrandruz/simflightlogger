@@ -28,7 +28,13 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
                     </button>
                     <button
                         className="btn"
-                        onClick={() => { onConfirm(); onClose(); }}
+                        onClick={() => {
+                            try {
+                                onConfirm();
+                            } finally {
+                                onClose();
+                            }
+                        }}
                         style={{ flex: 1, backgroundColor: confirmStyle === 'danger' ? 'var(--color-danger)' : '#e8710a', color: 'white' }}
                     >
                         {confirmText}

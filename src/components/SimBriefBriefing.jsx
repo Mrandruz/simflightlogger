@@ -8,20 +8,26 @@ import { fetchSimBriefData, parseSimBriefData } from '../services/simbriefServic
 const MiniMetar = ({ icao }) => {
     const [metar, setMetar] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
         const fetchMetar = async () => {
             if (!icao) return;
             setLoading(true);
+            setError(false);
             try {
                 const res = await fetch(`/api/metar?ids=${icao}&format=json`);
+                if (!res.ok) throw new Error('HTTP Error');
                 const data = await res.json();
                 if (isMounted && data && data.length > 0) {
                     setMetar(data[0]);
+                } else if (isMounted) {
+                    setError(true);
                 }
             } catch (error) {
                 console.error('Failed to fetch METAR for', icao, error);
+                if (isMounted) setError(true);
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -39,7 +45,23 @@ const MiniMetar = ({ icao }) => {
         );
     }
 
-    if (!metar) return null;
+    if (error || !metar) {
+        return (
+            <div style={{ 
+                marginTop: '8px', 
+                padding: '8px', 
+                backgroundColor: 'var(--color-danger-bg)', 
+                color: 'var(--color-danger)', 
+                fontSize: '0.7rem', 
+                borderRadius: '4px',
+                textAlign: 'center',
+                fontWeight: 600,
+                border: '1px solid var(--color-danger)'
+            }}>
+                METAR Unavailable for {icao}
+            </div>
+        );
+    }
 
     return (
         <div style={{ 

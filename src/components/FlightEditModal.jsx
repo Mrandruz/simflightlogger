@@ -1,7 +1,7 @@
 import React from 'react';
 import FlightForm from './FlightForm';
 
-export default function FlightEditModal({ flight, onUpdateFlight, onCancel }) {
+export default function FlightEditModal({ flight, onUpdateFlight, onCancel, flights }) {
     if (!flight) return null;
 
     return (
@@ -32,6 +32,7 @@ export default function FlightEditModal({ flight, onUpdateFlight, onCancel }) {
                     initialData={flight}
                     onAddFlight={onUpdateFlight}
                     onCancel={onCancel}
+                    flights={flights}
                 />
             </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlaneTakeoff } from 'lucide-react';
 
-export default function Header({ isDarkMode, toggleTheme, onExport, onImport, user, onLogout }) {
+export default function Header() {
     return (
         <header style={{
             backgroundColor: 'var(--color-surface)',

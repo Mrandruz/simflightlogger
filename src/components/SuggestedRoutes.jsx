@@ -36,6 +36,7 @@ const ALLIANCES = ['Star Alliance', 'SkyTeam', 'Oneworld'];
 
 export default function SuggestedRoutes({ flights }) {
     const [shuffleKey, setShuffleKey] = useState(0);
+    const [suggestion, setSuggestion] = useState(null);
 
     const handleShuffle = useCallback(() => {
         setShuffleKey(prev => prev + 1);
@@ -50,12 +51,15 @@ export default function SuggestedRoutes({ flights }) {
         return set;
     }, [flights]);
 
-    const suggestion = useMemo(() => {
+    const generateSuggestion = useCallback(() => {
         // Pick a random alliance that has flights
         const alliancesWithFlights = ALLIANCES.filter(al =>
             flights.some(f => f.alliance === al && f.arrival)
         );
-        if (alliancesWithFlights.length === 0) return null;
+        if (alliancesWithFlights.length === 0) {
+            setSuggestion(null);
+            return;
+        }
 
         const alliance = alliancesWithFlights[Math.floor(Math.random() * alliancesWithFlights.length)];
 
@@ -64,9 +68,17 @@ export default function SuggestedRoutes({ flights }) {
             .filter(f => f.alliance === alliance && f.arrival)
             .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
+        if (allianceFlights.length === 0) {
+            setSuggestion(null);
+            return;
+        }
+
         const lastAirportCode = allianceFlights[0].arrival.toUpperCase();
         const originAirport = airports.find(a => a.icao === lastAirportCode);
-        if (!originAirport) return null;
+        if (!originAirport) {
+            setSuggestion(null);
+            return;
+        }
 
         // Pick a random major airport not visited
         const candidates = majorAirports
@@ -77,10 +89,14 @@ export default function SuggestedRoutes({ flights }) {
             }))
             .filter(ap => ap.distance > 100);
 
-        if (candidates.length === 0) return null;
+        if (candidates.length === 0) {
+            setSuggestion(null);
+            return;
+        }
+
         const dest = candidates[Math.floor(Math.random() * candidates.length)];
 
-        return {
+        setSuggestion({
             alliance,
             fromCode: lastAirportCode,
             fromCity: originAirport.city || originAirport.name,
@@ -88,9 +104,12 @@ export default function SuggestedRoutes({ flights }) {
             toCity: dest.city || dest.name,
             toCountry: dest.country,
             distance: dest.distance,
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [flights, visitedSet, shuffleKey]);
+        });
+    }, [flights, visitedSet]);
+
+    useEffect(() => {
+        generateSuggestion();
+    }, [generateSuggestion, shuffleKey]);
 
     if (!suggestion) return null;
 

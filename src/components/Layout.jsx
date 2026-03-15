@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Activity, Wifi, Cpu, Zap, Heart } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -16,6 +16,8 @@ export default function Layout({
     loading
 }) {
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
+    const location = useLocation();
+    const isNewFlightPage = location.pathname === '/new-flight';
 
     const toggleSidebar = () => {
         setIsSidebarExpanded(!isSidebarExpanded);
@@ -103,20 +105,20 @@ export default function Layout({
             />
 
             <div className={`main-wrapper ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
-                <Header
-                    isDarkMode={isDarkMode}
-                    toggleTheme={toggleTheme}
-                    onExport={onExport}
-                    onImport={onImport}
-                    user={user}
-                    onLogout={onLogout}
-                />
+                <Header />
 
-                <main className="main-content">
-                    {/* Shared Pilot Profile that stays at the top of every page */}
-                    <div style={{ marginBottom: 'var(--space-6)' }}>
-                        <PilotProfileCard flights={flights} />
-                    </div>
+                <main className="main-content" style={{ 
+                    display: isNewFlightPage ? 'flex' : 'block',
+                    flexDirection: 'column',
+                    justifyContent: isNewFlightPage ? 'center' : 'flex-start',
+                    minHeight: isNewFlightPage ? 'calc(100vh - 120px)' : 'auto'
+                }}>
+                    {/* Hide Pilot Profile on New Flight page to save space */}
+                    {!isNewFlightPage && (
+                        <div style={{ marginBottom: 'var(--space-6)' }}>
+                            <PilotProfileCard flights={flights} />
+                        </div>
+                    )}
 
                     {/* Dynamic Page Content */}
                     <Outlet context={{ flights, loading, isDarkMode }} />
