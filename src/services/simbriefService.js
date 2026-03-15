@@ -202,6 +202,15 @@ export const parseSimBriefData = (data) => {
     distance: data.general?.air_distance || 0,
     fuel: data.fuel?.plan_ramp || 0,
     duration: rawDuration ? formatDuration(rawDuration) : 'N/D',
+    passengers: data.general?.passengers || '0',
+    costIndex: data.general?.costindex || '0',
+    zfw: data.weights?.est_zfw || '0',
+    departureTime: data.times?.est_off || data.times?.sched_off || data.params?.time_off || data.general?.sched_departure || null,
+    arrivalTime: data.times?.est_on || data.times?.sched_on || data.params?.time_on || data.general?.sched_arrival || null,
+    departureRunway: data.origin?.plan_rwy || '--',
+    arrivalRunway: data.destination?.plan_rwy || '--',
+    sid: data.general?.sid || '--',
+    star: data.general?.star || '--',
     ofpUrl: data.files?.html?.link || data.files?.pdf?.link || null,
     waypoints: waypoints
   };

@@ -86,6 +86,7 @@ const SimBriefBriefing = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const [showSettings, setShowSettings] = useState(false);
+    const [routeCopied, setRouteCopied] = useState(false);
 
     const [identifier, setIdentifier] = useState(() => {
         const saved = localStorage.getItem('simBriefIdentifier');
@@ -100,7 +101,6 @@ const SimBriefBriefing = () => {
             const fetchOptions = identifier.type === 'userid' 
                 ? { userid: trimmedValue } 
                 : { username: trimmedValue };
-                
             const rawData = await fetchSimBriefData(fetchOptions);
             const parsed = parseSimBriefData(rawData);
             setData(parsed);
@@ -122,6 +122,52 @@ const SimBriefBriefing = () => {
         setIdentifier(newId);
         localStorage.setItem('simBriefIdentifier', JSON.stringify(newId));
     };
+
+    const handleCopyRoute = () => {
+        if (data?.route) {
+            navigator.clipboard.writeText(data.route).then(() => {
+                setRouteCopied(true);
+                setTimeout(() => setRouteCopied(false), 2000);
+            });
+        }
+    };
+
+    const formatZulu = (val) => {
+        if (!val) return '--:--z';
+        
+        // Handle ISO strings or valid date strings
+        const dateObj = new Date(val);
+        if (!isNaN(dateObj.getTime())) {
+            const h = String(dateObj.getUTCHours()).padStart(2, '0');
+            const m = String(dateObj.getUTCMinutes()).padStart(2, '0');
+            return `${h}:${m}z`;
+        }
+
+        // Handle Unix timestamp (seconds) fallback
+        if (!isNaN(Number(val)) && String(val).length >= 10) {
+            const d = new Date(Number(val) * 1000);
+            const h = String(d.getUTCHours()).padStart(2, '0');
+            const m = String(d.getUTCMinutes()).padStart(2, '0');
+            return `${h}:${m}z`;
+        }
+
+        // Handle HHMM or HH:MM string
+        const str = String(val).replace(':', '');
+        if (str.length === 4 && !isNaN(Number(str))) {
+            return `${str.slice(0, 2)}:${str.slice(2, 4)}z`;
+        }
+
+        return '--:--z';
+    };
+
+    useEffect(() => {
+        if (data) {
+            console.log('SimBrief Debug - Times:', {
+                dep: data.departureTime,
+                arr: data.arrivalTime
+            });
+        }
+    }, [data]);
 
     useEffect(() => {
         loadFlightPlan();
@@ -255,16 +301,8 @@ const SimBriefBriefing = () => {
                 <div style={{ padding: 'var(--space-6)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-6)' }}>
                         {[...Array(6)].map((_, i) => (
-                            <div key={i}>
-                                <div className="skeleton skeleton-text" style={{ width: '50%', marginBottom: '12px', opacity: 0.6 }}></div>
-                                <div className="skeleton skeleton-title" style={{ width: '80%' }}></div>
-                            </div>
+                            <div key={i}><div className="skeleton skeleton-text" style={{ width: '50%', marginBottom: '12px', opacity: 0.6 }}></div><div className="skeleton skeleton-title" style={{ width: '80%' }}></div></div>
                         ))}
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-8)' }}>
-                        <div className="skeleton" style={{ flex: 1, height: '42px', borderRadius: 'var(--radius-md)' }}></div>
-                        <div className="skeleton" style={{ flex: 1, height: '42px', borderRadius: 'var(--radius-md)' }}></div>
                     </div>
                 </div>
             </div>
@@ -273,313 +311,178 @@ const SimBriefBriefing = () => {
 
     if (error && !data) {
         return (
-            <div className="card" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
-                <div style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <AlertTriangle size={24} />
-                    <h3 style={{ margin: 0, color: 'inherit' }}>SimBrief Error</h3>
+            <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-6)' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)' }}>
+                    <AlertTriangle size={32} />
                 </div>
-                <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>{error}</p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <div style={{
-                            display: 'flex',
-                            backgroundColor: 'var(--color-background)',
-                            padding: '4px',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--color-border)',
-                            gap: '4px'
-                        }}>
-                            <button
-                                onClick={() => handleTypeChange('username')}
-                                style={{
-                                    padding: '4px 8px',
-                                    fontSize: '0.7rem',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    backgroundColor: identifier.type === 'username' ? 'var(--color-primary)' : 'transparent',
-                                    color: identifier.type === 'username' ? '#fff' : 'var(--color-text-secondary)'
-                                }}
-                            >
-                                Username
-                            </button>
-                            <button
-                                onClick={() => handleTypeChange('userid')}
-                                style={{
-                                    padding: '4px 8px',
-                                    fontSize: '0.7rem',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    backgroundColor: identifier.type === 'userid' ? 'var(--color-primary)' : 'transparent',
-                                    color: identifier.type === 'userid' ? '#fff' : 'var(--color-text-secondary)'
-                                }}
-                            >
-                                Pilot ID
-                            </button>
-                        </div>
-                        <input
-                            type="text"
-                            value={identifier.value}
-                            onChange={handleIdentifierChange}
-                            placeholder={identifier.type === 'username' ? "Username" : "Pilot ID"}
-                            style={{
-                                padding: '6px 10px',
-                                fontSize: '0.85rem',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--color-border)',
-                                backgroundColor: 'var(--color-background)',
-                                color: 'var(--color-text-primary)',
-                                width: '120px'
-                            }}
-                        />
-                        <button className="btn btn-primary" onClick={loadFlightPlan}>Retry</button>
-                     </div>
+                <div>
+                    <h3 style={{ marginBottom: '8px' }}>Mission Briefing Unavailable</h3>
+                    <p style={{ color: 'var(--color-text-secondary)', maxWidth: '400px' }}>{error}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: 'var(--color-background)', padding: '12px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                     <IdentifierToggle identifier={identifier} onTypeChange={handleTypeChange} />
+                     <input type="text" value={identifier.value} onChange={handleIdentifierChange} style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', width: '140px' }} />
+                     <button className="btn btn-primary" onClick={loadFlightPlan}>Retry Connection</button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="card-title" style={{ margin: 0 }}>
-                    <Zap size={20} style={{ color: 'var(--color-warning)' }} />
-                    Latest SimBrief Flight Plan
-                </h3>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        style={{
-                            padding: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--color-border)',
-                            backgroundColor: showSettings ? 'var(--color-surface-hover)' : 'var(--color-surface)',
-                            color: showSettings ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                        title="SimBrief Settings"
-                    >
-                        <Settings size={18} />
-                    </button>
-
-                    {showSettings && (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-                            <div style={{
-                                display: 'flex',
-                                backgroundColor: 'var(--color-background)',
-                                padding: '4px',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--color-border)',
-                                gap: '4px'
-                            }}>
-                                <button
-                                    onClick={() => handleTypeChange('username')}
-                                    style={{
-                                        padding: '4px 8px',
-                                        fontSize: '0.7rem',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        backgroundColor: identifier.type === 'username' ? 'var(--color-primary)' : 'transparent',
-                                        color: identifier.type === 'username' ? '#fff' : 'var(--color-text-secondary)',
-                                        fontWeight: identifier.type === 'username' ? 600 : 400
-                                    }}
-                                >
-                                    Username
-                                </button>
-                                <button
-                                    onClick={() => handleTypeChange('userid')}
-                                    style={{
-                                        padding: '4px 8px',
-                                        fontSize: '0.7rem',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        backgroundColor: identifier.type === 'userid' ? 'var(--color-primary)' : 'transparent',
-                                        color: identifier.type === 'userid' ? '#fff' : 'var(--color-text-secondary)',
-                                        fontWeight: identifier.type === 'userid' ? 600 : 400
-                                    }}
-                                >
-                                    Pilot ID
-                                </button>
-                            </div>
-                            <input
-                                type="text"
-                                value={identifier.value}
-                                onChange={handleIdentifierChange}
-                                placeholder={identifier.type === 'username' ? "Username" : "Pilot ID"}
-                                style={{
-                                    padding: '6px 10px',
-                                    fontSize: '0.85rem',
-                                    borderRadius: 'var(--radius-md)',
-                                    border: '1px solid var(--color-border)',
-                                    backgroundColor: 'var(--color-background)',
-                                    color: 'var(--color-text-primary)',
-                                    width: '120px'
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                            className="btn"
-                            onClick={() => {
-                                window.open('https://dispatch.simbrief.com/briefing/latest', '_blank');
-                            }}
-                            style={{ 
-                                padding: '8px 16px', 
-                                gap: '8px',
-                                backgroundColor: 'var(--color-surface)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-primary)',
-                                opacity: !identifier.value ? 0.5 : 1,
-                                cursor: !identifier.value ? 'not-allowed' : 'pointer'
-                            }}
-                            disabled={!identifier.value}
-                        >
-                            <ExternalLink size={16} />
-                            <span>Open SimBrief</span>
-                        </button>
-                        <button
-                            className="btn"
-                            onClick={() => {
-                                window.open('https://charts.navigraph.com/flights/current', '_blank');
-                            }}
-                            style={{ 
-                                padding: '8px 16px', 
-                                gap: '8px',
-                                backgroundColor: 'var(--color-surface)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-primary)',
-                                opacity: !identifier.value ? 0.5 : 1,
-                                cursor: !identifier.value ? 'not-allowed' : 'pointer'
-                            }}
-                            disabled={!identifier.value}
-                        >
-                            <Map size={16} />
-                            <span>Navigraph Charts</span>
-                        </button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={loadFlightPlan}
-                            disabled={loading}
-                            style={{ padding: '8px 16px', gap: '8px' }}
-                        >
-                            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-                            <span>{loading ? 'Loading...' : 'Refresh'}</span>
-                        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header & Mission Status */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        <Zap size={16} />
+                        Flight Control
                     </div>
+                    <h1 style={{ fontSize: '2rem', margin: 0 }}>Briefing & Dispatch</h1>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button onClick={() => setShowSettings(!showSettings)} className="btn" style={{ padding: '10px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                        <Settings size={20} />
+                    </button>
+                    <button className="btn" onClick={() => window.open('https://dispatch.simbrief.com/briefing/latest', '_blank')} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                        <ExternalLink size={18} />
+                        <span>SimBrief</span>
+                    </button>
+                    <button className="btn" onClick={() => window.open('https://charts.navigraph.com/flights/current', '_blank')} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                        <Map size={18} />
+                        <span>Navigraph</span>
+                    </button>
+                    <button className="btn btn-primary" onClick={loadFlightPlan} disabled={loading}>
+                        <RefreshCw size={18} className={loading ? 'spin' : ''} />
+                        <span>Refresh Ops</span>
+                    </button>
                 </div>
             </div>
 
-            {error && (
-                <div style={{
-                    padding: 'var(--space-4)',
-                    backgroundColor: 'var(--color-danger-bg)',
-                    color: 'var(--color-danger)',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                    border: '1px solid var(--color-danger)'
-                }}>
-                    <AlertTriangle size={20} />
-                    <span style={{ fontWeight: 500 }}>{error}</span>
-                </div>
-            )}
-
-            {!error && !data && !loading && (
-                <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-                    <p>No flight plan loaded. Click "Refresh" to fetch the latest OFP from SimBrief.</p>
+            {showSettings && (
+                <div className="card" style={{ padding: 'var(--space-4)', border: '1px solid var(--color-primary)', animation: 'fadeSlideUp 0.3s ease-out' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>SimBrief Credentials:</span>
+                        <IdentifierToggle identifier={identifier} onTypeChange={handleTypeChange} />
+                        <input type="text" value={identifier.value} onChange={handleIdentifierChange} style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-background)', width: '180px' }} />
+                    </div>
                 </div>
             )}
 
             {data && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 1fr) 1.5fr', gap: 'var(--space-6)' }}>
-                        {/* Information Grid */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-                            {/* Origins & Destinations row */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-4)' }}>
-                                <InfoBlock icon={MapPin} label="Origin" value={`${data.origin.icao} - ${data.origin.name}`} color="var(--color-success)">
-                                    <MiniMetar icao={data.origin.icao} />
-                                </InfoBlock>
-                                <InfoBlock icon={MapPin} label="Destination" value={`${data.destination.icao} - ${data.destination.name}`} color="var(--color-danger)">
-                                    <MiniMetar icao={data.destination.icao} />
-                                </InfoBlock>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: 'var(--space-6)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                        {/* Hero Flight Card */}
+                        <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', background: 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-background) 100%)' }}>
+                            <div style={{ padding: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-divider)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-success)', marginBottom: '4px' }}>ORIGIN</div>
+                                        <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>{data.origin.icao}</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>{data.origin.name}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 600 }}>{formatZulu(data.departureTime)}</div>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-hint)', marginTop: '2px' }}>
+                                            RWY {data.departureRunway} • {data.sid}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--color-text-hint)' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: '2px' }}>{data.duration}</div>
+                                        <div style={{ width: '100px', height: '2px', backgroundColor: 'currentColor', position: 'relative' }}>
+                                            <Plane size={14} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'var(--color-surface)', padding: '0 4px' }} />
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-danger)', marginBottom: '4px' }}>DESTINATION</div>
+                                        <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>{data.destination.icao}</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>{data.destination.name}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 600 }}>{formatZulu(data.arrivalTime)}</div>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-hint)', marginTop: '2px' }}>
+                                            RWY {data.arrivalRunway} • {data.star}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>{data.callsign}</div>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{data.aircraft} • {data.airlineName || 'Private'}</div>
+                                </div>
                             </div>
-
-                            {/* Main stats grid */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-4)' }}>
-                                <InfoBlock icon={Radio} label="Callsign" value={`${data.callsign}${data.airlineName ? ` (${data.airlineName})` : ''}`} />
-                                <InfoBlock icon={Plane} label="Aircraft" value={data.aircraft} />
-                                <InfoBlock icon={Route} label="Distance" value={`${data.distance} nm`} />
-                                <InfoBlock icon={ArrowUp} label="Cruise Altitude" value={`FL${Math.round(data.cruiseAltitude / 100)}`} />
-                                <InfoBlock icon={Fuel} label="Fuel" value={`${data.fuel} kg`} />
-                                <InfoBlock icon={Clock} label="Estimated Duration" value={data.duration} />
-                            </div>
-                            
-                            <div style={{
-                                padding: 'var(--space-3)',
-                                backgroundColor: 'var(--color-background)',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--color-border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '4px'
-                            }}>
-                                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Route</span>
-                                <span className="data-mono" style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', wordBreak: 'break-all', lineHeight: '1.4' }}>
-                                    {data.route}
-                                </span>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                                 <div style={{ padding: 'var(--space-4) var(--space-6)', borderRight: '1px solid var(--color-divider)' }}>
+                                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Origin Weather</span>
+                                     <MiniMetar icao={data.origin.icao} />
+                                 </div>
+                                 <div style={{ padding: 'var(--space-4) var(--space-6)' }}>
+                                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Dest Weather</span>
+                                     <MiniMetar icao={data.destination.icao} />
+                                 </div>
                             </div>
                         </div>
 
-                        {/* Map Display */}
-                        <div style={{ 
-                            height: '100%', 
-                            minHeight: '450px',
-                            borderRadius: 'var(--radius-md)', 
-                            overflow: 'hidden', 
-                            border: '1px solid var(--color-border)',
-                            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)'
-                        }}>
-                            <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 1 }} />
+                        {/* Operational Metrics Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-4)' }}>
+                            <MetricBlock label="Fuel Load" value={`${data.fuel} kg`} icon={Fuel} />
+                            <MetricBlock label="Passengers" value={data.passengers} icon={Droplets} />
+                            <MetricBlock label="Zero Fuel Weight" value={`${data.zfw} kg`} icon={Gauge} />
+                            <MetricBlock label="Plan Distance" value={`${data.distance} nm`} icon={Route} />
+                            <MetricBlock label="Cruise Level" value={`FL${Math.round(data.cruiseAltitude/100)}`} icon={ArrowUp} />
+                            <MetricBlock label="Cost Index" value={data.costIndex} icon={Zap} />
+                        </div>
+
+                        {/* Route Operations */}
+                        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Route size={18} style={{ color: 'var(--color-primary)' }} />
+                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ATC Route</span>
+                                </div>
+                                <button onClick={handleCopyRoute} className="btn" style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: routeCopied ? 'var(--color-success-bg)' : 'var(--color-background)', color: routeCopied ? 'var(--color-success)' : 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}>
+                                    {routeCopied ? 'COPIED' : 'COPY ROUTE'}
+                                </button>
+                            </div>
+                            <div style={{ backgroundColor: 'var(--color-background)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontFamily: 'var(--font-family-mono)', fontSize: '0.85rem', lineHeight: 1.6, wordBreak: 'break-all', color: 'var(--color-text-primary)' }}>
+                                {data.route}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-            
-            {loading && (
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 'var(--space-3)',
-                    zIndex: 10
-                }}>
-                    <RefreshCw size={32} className="spin" style={{ color: 'var(--color-primary)' }} />
-                    <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>Fetching data from SimBrief...</span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                        {/* Map View */}
+                        <div style={{ flex: 1, minHeight: '500px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
+                             <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 1 }} />
+                             <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, display: 'flex', gap: '8px' }}>
+                                <div style={{ backgroundColor: 'var(--color-surface)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+                                    {data.distance} NM
+                                </div>
+                             </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
     );
 };
+
+const IdentifierToggle = ({ identifier, onTypeChange }) => (
+    <div style={{ display: 'flex', backgroundColor: 'var(--color-surface)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', gap: '4px' }}>
+        {['username', 'userid'].map(type => (
+            <button key={type} onClick={() => onTypeChange(type)} style={{ padding: '4px 10px', fontSize: '0.65rem', border: 'none', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: identifier.type === type ? 'var(--color-primary)' : 'transparent', color: identifier.type === type ? '#fff' : 'var(--color-text-secondary)', fontWeight: 600 }}>
+                {type === 'username' ? 'Username' : 'Pilot ID'}
+            </button>
+        ))}
+    </div>
+);
+
+const MetricBlock = ({ label, value, icon: Icon }) => (
+    <div className="card" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)', background: 'var(--color-surface)' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}>
+            <Icon size={18} />
+        </div>
+        <div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{value}</div>
+        </div>
+    </div>
+);
 
 const InfoBlock = ({ icon: Icon, label, value, color, children }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -594,74 +497,22 @@ const InfoBlock = ({ icon: Icon, label, value, color, children }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', position: 'relative' }}>
-            <span style={{
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                color: 'var(--color-text-hint)',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                letterSpacing: '0.5px'
-            }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.5px' }}>
                 <Icon size={12} style={{ color: color || 'var(--color-primary)' }} />
                 {label}
             </span>
-            <div 
-                style={{ position: 'relative', cursor: isTruncated ? 'help' : 'default' }}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                <span 
-                    ref={spanRef}
-                    style={{ 
-                        fontSize: '0.95rem', 
-                        fontWeight: 600, 
-                        color: 'var(--color-text-primary)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'block'
-                    }}
-                >
+            <div style={{ position: 'relative', cursor: isTruncated ? 'help' : 'default' }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+                <span ref={spanRef} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                     {value}
                 </span>
-                
                 {isHovered && isTruncated && (
-                    <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '0',
-                        marginBottom: '8px',
-                        backgroundColor: '#1e293b',
-                        color: '#f8fafc',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap',
-                        zIndex: 1000,
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        pointerEvents: 'none'
-                    }}>
+                    <div style={{ position: 'absolute', bottom: '100%', left: '0', marginBottom: '8px', backgroundColor: '#1e293b', color: '#f8fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 500, whiteSpace: 'nowrap', zIndex: 1000, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)', border: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none' }}>
                         {value}
-                        <div style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: '12px',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '6px solid transparent',
-                            borderRight: '6px solid transparent',
-                            borderTop: '6px solid #1e293b'
-                        }} />
+                        <div style={{ position: 'absolute', top: '100%', left: '12px', width: '0', height: '0', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1e293b' }} />
                     </div>
                 )}
             </div>
-            <div style={{ marginTop: 'auto' }}>
-                {children}
-            </div>
+            <div style={{ marginTop: 'auto' }}>{children}</div>
         </div>
     );
 };
