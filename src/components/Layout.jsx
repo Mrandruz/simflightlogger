@@ -25,9 +25,46 @@ export default function Layout({
         <div className="status-bar">
             <div className="status-bar-section">
                 <span>v1.3.0 • Stable</span>
+                <span style={{ marginLeft: 'var(--space-1)', opacity: 0.7 }}>•</span>
+                <div className="has-tooltip" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 'var(--space-1)' }}>
+                    <span style={{ cursor: 'pointer', transition: 'opacity 0.2s' }} className="hover-opacity">Credits</span>
+                    <div className="tooltip-box" style={{ 
+                        whiteSpace: 'nowrap', 
+                        bottom: '200%', 
+                        padding: '10px 14px',
+                        left: '0',
+                        transform: 'translateX(0) translateY(10px)'
+                    }}>
+                        <div style={{ 
+                            fontFamily: 'var(--font-family-mono)', 
+                            fontSize: '0.7rem', 
+                            lineHeight: '1.8',
+                            letterSpacing: '0'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', fontWeight: 'bold', marginBottom: '4px' }}>
+                                A project by Andrea Lana
+                                <img src="/avatar.jpg" alt="AL" style={{ height: '14px', width: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.8 }}>
+                                Coded with Antigravity
+                                <img src="/antigravity-icon.png" alt="AG" style={{ height: '12px', width: '12px' }} />
+                                &nbsp;+ Gemini 3
+                                <img 
+                                    src={`/gemini-icon.png?v=${Date.now()}`} 
+                                    alt="G3" 
+                                    style={{ 
+                                        height: '14px', 
+                                        width: 'auto', 
+                                        objectFit: 'contain'
+                                    }} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="status-bar-section">
+            <div className="status-bar-section" style={{ marginLeft: 'auto' }}>
                 <div className="status-item">
                     <Wifi size={12} className="status-icon" style={{ color: '#F6821F' }} />
                     <span>Firebase</span>
@@ -47,10 +84,6 @@ export default function Layout({
                     <span>Navigraph</span>
                     <div className="status-dot pulse"></div>
                 </div>
-            </div>
-
-            <div className="status-bar-section">
-                <span>Designed with <Heart size={10} fill="#ff4d4d" color="#ff4d4d" style={{ verticalAlign: 'middle', margin: '0 2px' }} /> by <img src="/antigravity-icon.png" alt="Antigravity" style={{ height: '14px', verticalAlign: 'middle', margin: '0 2px' }} /> <strong>Antigravity</strong></span>
             </div>
         </div>
     );
