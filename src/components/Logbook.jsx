@@ -295,12 +295,15 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                     zIndexOffset: 1000
                 })
                     .addTo(markersGroupRef.current)
-                    .bindTooltip(`${isLatestOrigin ? 'Latest Dep' : 'Latest Arr'}: ${ap.icao}`, {
+                    .bindTooltip(`<b>${ap.name || ap.icao}</b><br/>${ap.icao}`, {
                         direction: 'top', offset: [0, -5], sticky: false
                     });
             } else {
                 L.marker(latLng, { icon: pointIcon })
-                    .addTo(markersGroupRef.current);
+                    .addTo(markersGroupRef.current)
+                    .bindTooltip(`<b>${ap.name || ap.icao}</b><br/>${ap.icao}`, {
+                        direction: 'top', offset: [0, -5], sticky: false
+                    });
             }
         });
 
