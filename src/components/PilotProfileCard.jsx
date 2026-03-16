@@ -50,7 +50,7 @@ const AchievementBadge = ({ title, description, icon: Icon, data }) => {
     );
 };
 
-export default function PilotProfileCard({ flights }) {
+export default function PilotProfileCard({ flights, user }) {
     const stats = usePilotData(flights);
 
     const getGreeting = () => {
@@ -69,14 +69,14 @@ export default function PilotProfileCard({ flights }) {
                 <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                         <img
-                            src="/avatar.jpg"
-                            alt="Andrea"
+                            src={user?.photoURL || "/avatar.jpg"}
+                            alt={user?.displayName || "Pilot"}
                             style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-primary-light)', boxShadow: 'var(--shadow-sm)' }}
-                            onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Andrea&background=1a73e8&color=fff&size=80' }}
+                            onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || "User")}&background=1a73e8&color=fff&size=80` }}
                         />
                         <div>
                             <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
-                                {getGreeting()} Andrea
+                                {getGreeting()} {user?.displayName?.split(' ')[0] || "Pilot"}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}>

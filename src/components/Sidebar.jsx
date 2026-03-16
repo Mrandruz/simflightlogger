@@ -152,18 +152,18 @@ export default function Sidebar({
                         padding: isExpanded ? 'var(--space-2)' : '0',
                         width: '100%'
                     }}>
-                        {user.photoURL && (
-                            <img
-                                src={user.photoURL}
-                                alt="User"
-                                style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: '50%',
-                                    border: '2px solid var(--color-border)'
-                                }}
-                            />
-                        )}
+                        <img
+                            src={user.photoURL || "/avatar.jpg"}
+                            alt="User"
+                            style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                border: '2px solid var(--color-border)',
+                                objectFit: 'cover'
+                            }}
+                            onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=1a73e8&color=fff&size=32` }}
+                        />
                         {isExpanded && (
                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                 <p style={{ 

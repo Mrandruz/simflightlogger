@@ -112,7 +112,7 @@ export default function Layout({
                     {/* Hide Pilot Profile on New Flight page to save space */}
                     {!isNewFlightPage && (
                         <div style={{ marginBottom: 'var(--space-6)' }}>
-                            <PilotProfileCard flights={flights} />
+                            <PilotProfileCard flights={flights} user={user} />
                         </div>
                     )}
 
