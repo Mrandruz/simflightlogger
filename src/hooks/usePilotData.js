@@ -25,6 +25,7 @@ export const FUEL_CONSUMPTION_PER_NM = {
 
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const NEW_DISCOVERY_THRESHOLD_MS = 1773701100000; // 2026-03-16 23:45 Local
 
 export function usePilotData(flights) {
     return useMemo(() => {
@@ -38,6 +39,9 @@ export function usePilotData(flights) {
         const dateCounts = {};
         const countriesSet = new Set();
         let longestFlight = { miles: 0, departure: '', arrival: '' };
+        const visitedAirportsHistory = new Set();
+        const newDiscoveriesSet = new Set();
+        const visitedAirportsAllTime = new Set(); // To track all unique airports for historical reference
 
         // For "Long Haul Ace" progression
         let longHaulCount = 0;
@@ -48,10 +52,16 @@ export function usePilotData(flights) {
         let lastAirline = null;
 
         const sortedFlights = [...flights].sort((a, b) => {
-            const dateDiff = new Date(a.date) - new Date(b.date);
+            const dateA = new Date(a.date || 0);
+            const dateB = new Date(b.date || 0);
+            const dateDiff = dateA - dateB;
             if (dateDiff !== 0) return dateDiff;
-            if (a.createdAt && b.createdAt) return a.createdAt - b.createdAt;
-            return flights.indexOf(b) - flights.indexOf(a);
+            
+            const timeA = a.createdAt || 0;
+            const timeB = b.createdAt || 0;
+            if (timeA !== timeB) return timeA - timeB;
+            
+            return flights.indexOf(a) - flights.indexOf(b);
         });
 
         let currentStreak = 0;
@@ -125,14 +135,28 @@ export function usePilotData(flights) {
             }
 
             if (f.departure) {
-                const depAirport = findAirport(f.departure.toUpperCase());
+                const depCode = f.departure.toUpperCase();
+                const depAirport = findAirport(depCode);
                 if (depAirport?.country) countriesSet.add(depAirport.country);
                 airportCounts[f.departure] = (airportCounts[f.departure] || 0) + 1;
+                visitedAirportsAllTime.add(depCode);
             }
             if (f.arrival) {
-                const arrAirport = findAirport(f.arrival.toUpperCase());
+                const arrCode = f.arrival.toUpperCase();
+                const arrAirport = findAirport(arrCode);
                 if (arrAirport?.country) countriesSet.add(arrAirport.country);
                 airportCounts[f.arrival] = (airportCounts[f.arrival] || 0) + 1;
+
+                // New Discovery Achievement Logic (Non-retroactive)
+                // Use createdAt as the primary source of truth for "when" it was logged
+                const logTimeMs = f.createdAt || flightDateMs;
+                if (logTimeMs >= NEW_DISCOVERY_THRESHOLD_MS) {
+                    // Check if this arrival was NEVER seen before in the entire sequence up to this flight
+                    if (!visitedAirportsAllTime.has(arrCode)) {
+                        newDiscoveriesSet.add(arrCode);
+                    }
+                }
+                visitedAirportsAllTime.add(arrCode);
             }
 
             if (worldTravelerUnlockedDateMs === null && countriesSet.size >= 100 && flightDateMs) {
@@ -270,6 +294,11 @@ export function usePilotData(flights) {
         const hasDailyStreak = maxStreak >= streakGoal;
         const streakProgress = Math.min(100, (maxStreak / streakGoal) * 100);
 
+        const newDiscoveryCount = newDiscoveriesSet.size;
+        const newDiscoveryGoal = 50;
+        const hasNewDiscovery = newDiscoveryCount >= newDiscoveryGoal;
+        const newDiscoveryProgress = Math.min(100, (newDiscoveryCount / newDiscoveryGoal) * 100);
+
         const todayMs = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
         let latestExpiryMs = null;
         const checkExpiry = (unlockDateMs) => {
@@ -324,7 +353,8 @@ export function usePilotData(flights) {
                 airlineLoyal: { unlocked: hasAirlineLoyal, progress: airlineLoyalProgress, current: airlineLoyalCurrent, goal: airlineLoyalGoal, extraInfo: airlineLoyalCurrent > 0 ? `Leading with: ${topAirline}` : null },
                 tireless: { unlocked: hasTireless, progress: tirelessProgress, current: maxFlightsInDay, goal: tirelessGoal },
                 typeRatingMaster: { unlocked: hasTypeRatingMaster, progress: typeRatingProgress, current: maxTotalAnyAircraft, goal: typeRatingGoal, extraInfo: maxTotalAnyAircraft > 0 ? `Leading with: ${topAircraft}` : null },
-                dailyStreak: { unlocked: hasDailyStreak, progress: streakProgress, current: maxStreak, goal: streakGoal }
+                dailyStreak: { unlocked: hasDailyStreak, progress: streakProgress, current: maxStreak, goal: streakGoal },
+                newDiscovery: { unlocked: hasNewDiscovery, progress: newDiscoveryProgress, current: newDiscoveryCount, goal: newDiscoveryGoal }
             }
         };
     }, [flights]);

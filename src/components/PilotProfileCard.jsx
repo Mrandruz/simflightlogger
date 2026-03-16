@@ -317,6 +317,12 @@ export default function PilotProfileCard({ flights, user }) {
                                 icon={CalendarDays}
                                 data={stats.achievements.dailyStreak}
                             />
+                            <AchievementBadge
+                                title="New Discovery"
+                                description="Discover 50 new destinations never visited before"
+                                icon={MapPin}
+                                data={stats.achievements.newDiscovery}
+                            />
                         </div>
                     </div>
                 </div>
