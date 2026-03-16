@@ -11,6 +11,8 @@ import LoginScreen from './components/LoginScreen';
 import ConfirmModal from './components/ConfirmModal';
 import Schedule from './components/Schedule';
 import AppSkeleton from './components/AppSkeleton';
+import AdminPanel from './components/AdminPanel';
+import DataRecovery from './components/DataRecovery';
 
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
@@ -18,7 +20,7 @@ import { useFlights } from './hooks/useFlights';
 import { useToast } from './context/ToastContext';
 
 export default function App() {
-    const { user, authLoading, logout } = useAuth();
+    const { user, authLoading, logout, isAuthorized, isAdmin } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
     const { showToast } = useToast();
     const { 
@@ -103,6 +105,19 @@ export default function App() {
         return <LoginScreen />;
     }
 
+    if (!isAuthorized) {
+        return (
+            <div className="pending-access">
+                <div className="login-card">
+                    <h2>Access Pending</h2>
+                    <p>Your account has been created, but it's currently awaiting approval from the administrator.</p>
+                    <p>You will be notified once your access is granted.</p>
+                    <button onClick={logout} className="google-login-btn mt-4">Sign Out</button>
+                </div>
+            </div>
+        );
+    }
+
     if (loading) {
         return <AppSkeleton isDarkMode={isDarkMode} />;
     }
@@ -119,6 +134,7 @@ export default function App() {
                             onImport={handleImport}
                             user={user}
                             onLogout={logout}
+                            isAdmin={isAdmin}
                             flights={flights}
                         />
                     }
@@ -128,6 +144,8 @@ export default function App() {
                     <Route path="/briefing" element={<Briefing flights={flights} />} />
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} flights={flights} />} />
                     <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
+                    {isAdmin && <Route path="/admin" element={<AdminPanel />} />}
+                    {isAdmin && <Route path="/admin/recovery" element={<DataRecovery />} />}
                 </Route>
             </Routes>
 

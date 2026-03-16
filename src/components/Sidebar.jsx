@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Book, MapPin, PlusCircle, Compass, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar } from 'lucide-react';
+import { LayoutDashboard, Book, MapPin, PlusCircle, Compass, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar, ShieldCheck } from 'lucide-react';
 
 export default function Sidebar({ 
     isExpanded, 
@@ -10,7 +10,8 @@ export default function Sidebar({
     isDarkMode, 
     toggleTheme,
     onExport,
-    onImport
+    onImport,
+    isAdmin
 }) {
     return (
         <nav className={`sidebar ${isExpanded ? 'expanded' : ''}`}>
@@ -91,6 +92,18 @@ export default function Sidebar({
                     <span className="link-text">New Flight</span>
                     {!isExpanded && <span className="tooltip">New Flight</span>}
                 </NavLink>
+
+                {isAdmin && (
+                    <NavLink
+                        to="/admin"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        style={{ color: 'var(--color-warning)' }}
+                    >
+                        <ShieldCheck size={24} aria-hidden="true" />
+                        <span className="link-text">Admin</span>
+                        {!isExpanded && <span className="tooltip">Admin Panel</span>}
+                    </NavLink>
+                )}
             </div>
 
             <div className="sidebar-footer">

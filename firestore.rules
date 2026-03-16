@@ -1,19 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regole per la collezione users
-    // Regole per il documento utente
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Function to check if the user is the admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.matches('(?i)and977@gmail.com') || 
+        request.auth.uid == 'Mx2IJjVduddCkgs2c9dHrlAjIRT2'
+      );
+    }
 
-      // Sotto-collezione dei voli
-      match /flights/{flightId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    // Rules for the users collection
+    match /users {
+      allow list: if request.auth != null;
+      
+      match /{userId} {
+        allow get: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow update, delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
 
-      // Sotto-collezione delle impostazioni (incluso lo schedule)
-      match /settings/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Sub-collections (flights, settings)
+        match /{allSubcollections=**} {
+          allow read: if request.auth != null;
+          allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+        }
       }
     }
   }

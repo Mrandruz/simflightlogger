@@ -74,7 +74,8 @@ export default function Layout({
     user,
     onLogout,
     flights,
-    loading
+    loading,
+    isAdmin
 }) {
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
     const location = useLocation();
@@ -96,6 +97,7 @@ export default function Layout({
                 toggleTheme={toggleTheme}
                 onExport={onExport}
                 onImport={onImport}
+                isAdmin={isAdmin}
             />
 
             <div className={`main-wrapper ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
