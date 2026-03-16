@@ -69,7 +69,7 @@ export default function PilotProfileCard({ flights, user }) {
                 <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                         <img
-                            src={user?.photoURL || "/avatar.jpg"}
+                            src={user?.photoURL || (user?.email?.toLowerCase() === 'and977@gmail.com' ? "/avatar.jpg" : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || "User")}&background=1a73e8&color=fff&size=80`)}
                             alt={user?.displayName || "Pilot"}
                             style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-primary-light)', boxShadow: 'var(--shadow-sm)' }}
                             onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || "User")}&background=1a73e8&color=fff&size=80` }}

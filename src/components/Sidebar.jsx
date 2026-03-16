@@ -153,7 +153,7 @@ export default function Sidebar({
                         width: '100%'
                     }}>
                         <img
-                            src={user.photoURL || "/avatar.jpg"}
+                            src={user.photoURL || (user.email?.toLowerCase() === 'and977@gmail.com' ? "/avatar.jpg" : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=1a73e8&color=fff&size=32`)}
                             alt="User"
                             style={{
                                 width: 32,
