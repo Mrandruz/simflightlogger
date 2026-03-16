@@ -4,11 +4,13 @@ import { db } from '../firebase';
 import { UserCheck, UserX, Clock, Mail, Shield, Trash2, Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function AdminPanel() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
+    const { askConfirm } = useConfirm();
 
     useEffect(() => {
         const q = query(collection(db, 'users'));
@@ -45,7 +47,16 @@ export default function AdminPanel() {
     };
 
     const handleDeleteUser = async (userId) => {
-        if (!window.confirm('Are you sure you want to delete this user trace? (Auth account must be deleted manually in Firebase Console)')) return;
+        const confirmed = await askConfirm({
+            title: 'Delete User Trace',
+            message: 'Are you sure you want to delete this user trace? The Auth account must be deleted manually in Firebase Console for complete removal.',
+            confirmText: 'Delete Trace',
+            confirmType: 'danger',
+            icon: 'trash'
+        });
+
+        if (!confirmed) return;
+        
         try {
             await deleteDoc(doc(db, 'users', userId));
             showToast('User trace deleted', 'success');

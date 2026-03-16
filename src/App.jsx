@@ -8,11 +8,12 @@ import Briefing from './components/Briefing';
 import NewFlight from './components/NewFlight';
 import FlightEditModal from './components/FlightEditModal';
 import LoginScreen from './components/LoginScreen';
-import ConfirmModal from './components/ConfirmModal';
-import Schedule from './components/Schedule';
-import AppSkeleton from './components/AppSkeleton';
 import AdminPanel from './components/AdminPanel';
 import DataRecovery from './components/DataRecovery';
+import Schedule from './components/Schedule';
+import AppSkeleton from './components/AppSkeleton';
+
+import { ConfirmProvider, useConfirm } from './context/ConfirmContext';
 
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
@@ -23,6 +24,7 @@ export default function App() {
     const { user, authLoading, logout, isAuthorized, isAdmin } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
     const { showToast } = useToast();
+    const { askConfirm } = useConfirm();
     const { 
         flights, 
         loading, 
@@ -34,7 +36,6 @@ export default function App() {
     } = useFlights(user);
 
     const [editingFlight, setEditingFlight] = useState(null);
-    const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, type: null, payload: null });
 
     const handleImport = (event) => {
         const file = event.target.files[0];
@@ -45,11 +46,18 @@ export default function App() {
             try {
                 const importedFlights = JSON.parse(e.target.result);
                 if (Array.isArray(importedFlights)) {
-                    setConfirmModalState({
-                        isOpen: true,
-                        type: 'import',
-                        payload: { importedFlights },
+                    const confirmed = await askConfirm({
+                        title: 'Import Database',
+                        message: 'Warning: importing a JSON file will MERGE these flights into your account. Do you want to proceed?',
+                        confirmText: 'Import & Merge',
+                        confirmType: 'primary',
+                        icon: 'database'
                     });
+
+                    if (confirmed) {
+                        await importFlights(importedFlights);
+                        showToast('Flights imported successfully', 'success');
+                    }
                 } else {
                     showToast("The file does not contain a valid flights format.", "error");
                 }
@@ -60,15 +68,6 @@ export default function App() {
         };
         reader.readAsText(file);
         event.target.value = '';
-    };
-
-    const confirmImport = async () => {
-        try {
-            await importFlights(confirmModalState.payload.importedFlights);
-            setConfirmModalState({ isOpen: false, type: null, payload: null });
-        } catch (error) {
-            showToast('Failed to import flights.', 'error');
-        }
     };
 
     const handleAddFlight = async (flight) => {
@@ -88,12 +87,22 @@ export default function App() {
         }
     };
 
-    const confirmDelete = async () => {
-        try {
-            await deleteFlight(confirmModalState.payload.id);
-            setConfirmModalState({ isOpen: false, type: null, payload: null });
-        } catch (error) {
-            showToast('Error deleting flight. Please try again.', 'error');
+    const handleDeleteClick = async (id) => {
+        const confirmed = await askConfirm({
+            title: 'Delete Flight',
+            message: 'Are you sure you want to completely remove this flight from your logbook? This action cannot be undone.',
+            confirmText: 'Delete Forever',
+            confirmType: 'danger',
+            icon: 'trash'
+        });
+
+        if (confirmed) {
+            try {
+                await deleteFlight(id);
+                showToast('Flight deleted', 'success');
+            } catch (error) {
+                showToast('Error deleting flight. Please try again.', 'error');
+            }
         }
     };
 
@@ -140,7 +149,7 @@ export default function App() {
                     }
                 >
                     <Route path="/" element={<Dashboard flights={flights} />} />
-                    <Route path="/logbook" element={<Logbook flights={flights} onDelete={(id) => setConfirmModalState({ isOpen: true, type: 'delete', payload: { id } })} onEdit={setEditingFlight} />} />
+                    <Route path="/logbook" element={<Logbook flights={flights} onDelete={handleDeleteClick} onEdit={setEditingFlight} />} />
                     <Route path="/briefing" element={<Briefing flights={flights} />} />
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} flights={flights} />} />
                     <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
@@ -157,21 +166,6 @@ export default function App() {
                     flights={flights}
                 />
             )}
-
-            <ConfirmModal
-                isOpen={confirmModalState.isOpen}
-                onClose={() => setConfirmModalState({ isOpen: false, type: null, payload: null })}
-                onConfirm={() => {
-                    if (confirmModalState.type === 'delete') confirmDelete();
-                    if (confirmModalState.type === 'import') confirmImport();
-                }}
-                title={confirmModalState.type === 'delete' ? "Delete Flight" : "Import Database"}
-                message={confirmModalState.type === 'delete'
-                    ? "Are you sure you want to completely remove this flight from your logbook? This action cannot be undone."
-                    : "Warning: importing a JSON file will OVERWRITE all flights currently on your dashboard. Do you want to proceed?"}
-                confirmText={confirmModalState.type === 'delete' ? "Delete" : "Overwrite & Import"}
-                confirmStyle={confirmModalState.type === 'delete' ? 'danger' : 'warning'}
-            />
         </>
     );
 }

@@ -22,7 +22,7 @@ export default function LoginScreen() {
         try {
             if (isRegistering) {
                 await registerWithEmail(formData.email, formData.password, formData.displayName);
-                showToast('Registration successful! Waiting for approval.', 'success');
+                showToast('Registration successful! Your account is pending approval.', 'success');
             } else {
                 await loginWithEmail(formData.email, formData.password);
                 showToast('Welcome back!', 'success');
@@ -73,9 +73,10 @@ export default function LoginScreen() {
                 <form onSubmit={handleSubmit} className="auth-form">
                     {isRegistering && (
                         <div className="form-group">
-                            <label><User size={16} /> Name</label>
+                            <label className="form-label"><User size={16} /> Name</label>
                             <input
                                 type="text"
+                                className="form-input"
                                 placeholder="Your Name"
                                 value={formData.displayName}
                                 onChange={(e) => setFormData({...formData, displayName: e.target.value})}
@@ -84,9 +85,10 @@ export default function LoginScreen() {
                         </div>
                     )}
                     <div className="form-group">
-                        <label><Mail size={16} /> Email</label>
+                        <label className="form-label"><Mail size={16} /> Email</label>
                         <input
                             type="email"
+                            className="form-input"
                             placeholder="pilot@example.com"
                             value={formData.email}
                             onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -94,9 +96,10 @@ export default function LoginScreen() {
                         />
                     </div>
                     <div className="form-group">
-                        <label><Lock size={16} /> Password</label>
+                        <label className="form-label"><Lock size={16} /> Password</label>
                         <input
                             type="password"
+                            className="form-input"
                             placeholder="••••••••"
                             value={formData.password}
                             onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -105,7 +108,7 @@ export default function LoginScreen() {
                     </div>
 
                     <button type="submit" className="login-submit-btn" disabled={loading}>
-                        {loading ? 'Processing...' : (isRegistering ? 'Register' : 'Login')}
+                        {loading ? 'Processing...' : (isRegistering ? 'Register Account' : 'Login to Dashboard')}
                         <ArrowRight size={18} />
                     </button>
                 </form>

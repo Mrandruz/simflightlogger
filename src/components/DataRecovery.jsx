@@ -4,12 +4,14 @@ import { db, auth } from '../firebase';
 import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Search, Database, ArrowRight, AlertTriangle, FileUp, ShieldAlert, History } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function DataRecovery() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [migrating, setMigrating] = useState(false);
     const { showToast } = useToast();
+    const { askConfirm } = useConfirm();
 
     // Helper for safe date exhibition
     const formatDate = (dateValue) => {
@@ -70,7 +72,15 @@ export default function DataRecovery() {
     const migrateData = async (sourceUid, targetUid, dataToMigrate = null) => {
         const count = dataToMigrate ? dataToMigrate.length : users.find(u => u.id === sourceUid)?.flightCount;
         
-        if (!window.confirm(`Are you sure you want to migrate ${count} flights to your current account? This will MERGE the data.`)) return;
+        const confirmed = await askConfirm({
+            title: 'Restore Data',
+            message: `Are you sure you want to migrate ${count} flights to your current account? This will MERGE the data into your logbook.`,
+            confirmText: 'Restore Now',
+            confirmType: 'primary',
+            icon: 'database'
+        });
+
+        if (!confirmed) return;
         
         setMigrating(true);
         try {
