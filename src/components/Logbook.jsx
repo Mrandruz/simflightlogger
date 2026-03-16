@@ -1,23 +1,30 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane, Map as MapIcon } from 'lucide-react';
+import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane, Map as MapIcon, Search, Calendar, MapPin, Clock, Hash, LayoutGrid, List, AlertCircle, Quote } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { findAirport } from '../utils/airportUtils';
 import FlightDetailsModal from './FlightDetailsModal';
 
+// Dynamic font size scaling based on value length
+const getStatFontSize = (value) => {
+    const len = value.toString().replace(/[^0-9]/g, '').length;
+    if (len <= 3) return 'clamp(2rem, 16cqw, 2.6rem)';
+    if (len <= 5) return 'clamp(1.7rem, 14cqw, 2.3rem)';
+    return 'clamp(1.4rem, 12cqw, 2rem)';
+};
 
 
 export default function Logbook({ flights, onDelete, onEdit }) {
     console.log('Logbook: Rendering with', flights.length, 'flights');
     const context = useOutletContext();
     const isDarkMode = context?.isDarkMode;
-    
+
     const [activeFilters, setActiveFilters] = useState({});
     const [selectedFlightDetails, setSelectedFlightDetails] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const flightsPerPage = 15;
-    
+
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markersGroupRef = useRef(null);
@@ -58,7 +65,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
     const mapData = useMemo(() => {
         const airportsMap = new Map();
         const routes = [];
-        
+
         filteredFlights.forEach((f, idx) => {
             if (f.departure && f.arrival) {
                 const depCode = f.departure.toUpperCase();
@@ -100,9 +107,9 @@ export default function Logbook({ flights, onDelete, onEdit }) {
 
     const fitToData = useCallback((animate = true) => {
         if (!mapInstance.current || mapData.airports.length === 0) return;
-        
+
         isProgrammaticChange.current = true;
-        
+
         const bounds = L.latLngBounds();
         mapData.airports.forEach(ap => {
             bounds.extend([ap.coordinates[1], ap.coordinates[0]]);
@@ -110,10 +117,10 @@ export default function Logbook({ flights, onDelete, onEdit }) {
 
         if (bounds.isValid()) {
             mapInstance.current.invalidateSize();
-            mapInstance.current.fitBounds(bounds, { 
-                padding: [30, 30], 
-                maxZoom: 10, 
-                animate 
+            mapInstance.current.fitBounds(bounds, {
+                padding: [30, 30],
+                maxZoom: 10,
+                animate
             });
 
             const timeout = animate ? 800 : 200;
@@ -181,10 +188,10 @@ export default function Logbook({ flights, onDelete, onEdit }) {
             renderer: L.canvas() // Use Canvas for high performance vector rendering
         });
 
-        const initialTileUrl = isDarkMode 
+        const initialTileUrl = isDarkMode
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
             : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-        
+
         tileLayerRef.current = L.tileLayer(initialTileUrl, {
             noWrap: true,
             bounds: [[-90, -180], [90, 180]]
@@ -219,11 +226,11 @@ export default function Logbook({ flights, onDelete, onEdit }) {
     // Theme Update Effect
     useEffect(() => {
         if (!mapInstance.current || !tileLayerRef.current) return;
-        
-        const newTileUrl = isDarkMode 
+
+        const newTileUrl = isDarkMode
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
             : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-            
+
         tileLayerRef.current.setUrl(newTileUrl);
     }, [isDarkMode]);
 
@@ -283,17 +290,17 @@ export default function Logbook({ flights, onDelete, onEdit }) {
             const isLatestDest = ap.icao === latestArr;
 
             if (isLatestOrigin || isLatestDest) {
-                L.marker(latLng, { 
-                    icon: isLatestOrigin ? originIcon : destIcon, 
-                    zIndexOffset: 1000 
+                L.marker(latLng, {
+                    icon: isLatestOrigin ? originIcon : destIcon,
+                    zIndexOffset: 1000
                 })
-                .addTo(markersGroupRef.current)
-                .bindTooltip(`${isLatestOrigin ? 'Latest Dep' : 'Latest Arr'}: ${ap.icao}`, { 
-                    direction: 'top', offset: [0, -5], sticky: false
-                });
+                    .addTo(markersGroupRef.current)
+                    .bindTooltip(`${isLatestOrigin ? 'Latest Dep' : 'Latest Arr'}: ${ap.icao}`, {
+                        direction: 'top', offset: [0, -5], sticky: false
+                    });
             } else {
                 L.marker(latLng, { icon: pointIcon })
-                .addTo(markersGroupRef.current);
+                    .addTo(markersGroupRef.current);
             }
         });
 
@@ -317,7 +324,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
         if (activeFilters.airline) parts.push(activeFilters.airline);
         if (activeFilters.aircraft) parts.push(activeFilters.aircraft);
         if (activeFilters.alliance) parts.push(activeFilters.alliance);
-        
+
         if (parts.length === 0) return "Global";
         return parts.join(' • ');
     }, [activeFilters]);
@@ -330,35 +337,84 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                 {/* Stats Sidebar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                     <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'var(--space-6)', background: 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-background) 100%)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                            <Plane size={16} /> Operational Statistics
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-text-primary)', marginBottom: '12px', fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-family-display)', flexWrap: 'wrap', lineHeight: 1.2 }}>
+                            <Plane size={24} style={{ color: 'var(--color-primary)' }} /> Operational Statistics
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-hint)', marginBottom: 'var(--space-4)', fontWeight: 500 }}>
-                            You see <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel === 'Global' ? 'global' : ''}</span> statistics {filterLabel !== 'Global' ? <>for <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel}</span></> : ''}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', marginBottom: 'var(--space-4)', fontWeight: 500 }}>
+                            {filterLabel === 'Global' ? (
+                                <>Showing&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>all flights</span></>
+                            ) : (
+                                <>Filtered by&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel}</span></>
+                            )}
                         </div>
-                        
+
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Total Flights</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.total}</div>
-                            </div>
-                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Total Hours</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.hours}h</div>
-                            </div>
-                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Nautical Miles</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.miles.toLocaleString()}</div>
-                            </div>
-                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Experience</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{stats.xp.toLocaleString()} <span style={{fontSize: '0.8rem'}}>XP</span></div>
-                            </div>
+                            {[
+                                { label: 'Total Flights', value: stats.total, color: 'var(--color-text-primary)' },
+                                { label: 'Total Hours', value: stats.hours, color: 'var(--color-text-primary)' },
+                                { label: 'Nautical Miles', value: stats.miles.toLocaleString(), color: 'var(--color-text-primary)' },
+                                { label: 'Experience (XP)', value: stats.xp.toLocaleString(), color: 'var(--color-primary)' },
+                            ].map(({ label, value, color }) => (
+                                <div key={label} style={{
+                                    padding: 'var(--space-4)',
+                                    backgroundColor: 'rgba(100,100,100,0.05)',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--color-border)',
+                                    containerType: 'inline-size'
+                                }}>
+                                    <div style={{
+                                        fontSize: '0.65rem',
+                                        color: 'var(--color-text-hint)',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        marginBottom: '4px'
+                                    }}>
+                                        {label}
+                                    </div>
+                                    <div style={{
+                                        fontSize: getStatFontSize(value),
+                                        fontWeight: 800,
+                                        color: color,
+                                        lineHeight: 1.2
+                                    }}>
+                                        {value}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        
-                        <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-4)', backgroundColor: 'rgba(30, 215, 96, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                                "Your wings already exist. All you have to do is fly."
+
+                        <div style={{
+                            marginTop: 'var(--space-6)',
+                            padding: 'var(--space-4)',
+                            backgroundColor: 'rgba(20, 106, 255, 0.03)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--color-border)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                        }}>
+                            {/* Watermark — piccolo, angolo in basso a destra */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                right: '10px',
+                                opacity: 0.08,
+                                color: 'var(--color-primary)',
+                                pointerEvents: 'none'
+                            }}>
+                                <Plane size={40} />
+                            </div>
+                            <div style={{
+                                fontSize: '0.9rem',
+                                color: 'var(--color-text-secondary)',
+                                fontStyle: 'italic',
+                                lineHeight: 1.5,
+                                position: 'relative',
+                                zIndex: 1,
+                                textAlign: 'center'
+                            }}>
+                                <div>"Your wings already exist.</div>
+                                <div>All you have to do is fly."</div>
                             </div>
                         </div>
                     </div>
@@ -367,7 +423,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                 {/* The Map */}
                 <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', height: '500px' }}>
                     <div ref={mapRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
-                    
+
                     <div style={{
                         position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
                         backgroundColor: 'var(--color-surface)', padding: '6px 12px',
@@ -392,7 +448,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                     )}
                 </div>
             </div>
-                <style>{`
+            <style>{`
                     .marker-dot {
                         width: 10px;
                         height: 10px;
