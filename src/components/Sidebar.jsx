@@ -56,15 +56,6 @@ export default function Sidebar({
                 </NavLink>
 
                 <NavLink
-                    to="/logbook"
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                >
-                    <Book size={24} aria-hidden="true" />
-                    <span className="link-text">Logbook</span>
-                    {!isExpanded && <span className="tooltip">Logbook</span>}
-                </NavLink>
-
-                <NavLink
                     to="/schedule"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
@@ -80,6 +71,15 @@ export default function Sidebar({
                     <MapPin size={24} aria-hidden="true" />
                     <span className="link-text">Briefing</span>
                     {!isExpanded && <span className="tooltip">Briefing</span>}
+                </NavLink>
+
+                <NavLink
+                    to="/logbook"
+                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                    <Book size={24} aria-hidden="true" />
+                    <span className="link-text">Logbook</span>
+                    {!isExpanded && <span className="tooltip">Logbook</span>}
                 </NavLink>
 
                 <div className="sidebar-divider"></div>

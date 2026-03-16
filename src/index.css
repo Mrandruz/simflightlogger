@@ -79,7 +79,7 @@
 
   --color-text-primary: #F7F7F9;
   --color-text-secondary: #A2A9B1;
-  --color-text-hint: #68727C;
+  --color-text-hint: #8A949D;
 
   --color-border: #293a4c;
   --color-divider: #293a4c;
@@ -224,7 +224,8 @@ body {
   width: 0;
   white-space: nowrap;
   transition: opacity 0.2s ease;
-  font-weight: 500;
+  font-family: var(--font-family-display);
+  font-weight: 600;
   font-size: 0.95rem;
 }
 
@@ -550,9 +551,25 @@ h4,
 h5,
 h6 {
   font-family: var(--font-family-display);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+.text-premium {
+  font-family: var(--font-family-display);
+}
+
+.text-technical {
+  font-family: var(--font-family-sans);
+}
+
+.icao-code,
+.icao,
+.data-mono {
+  font-family: var(--font-family-sans);
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .card {
@@ -743,7 +760,7 @@ h6 {
   gap: var(--space-2);
   padding: 10px 20px;
   border-radius: var(--radius-md);
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-family-display);
   font-size: 0.875rem;
   cursor: pointer;
@@ -821,21 +838,23 @@ h6 {
 }
 
 .kpi-label {
+  font-family: var(--font-family-display);
   font-size: 0.85rem;
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .kpi-value {
   font-size: 3.5rem;
   line-height: 1;
-  font-family: var(--font-family-display);
-  font-weight: 700;
+  font-family: var(--font-family-sans);
+  font-weight: 800;
   color: var(--color-primary);
   text-align: center;
   width: 100%;
+  letter-spacing: -0.02em;
 }
 
 /* Tables */
@@ -1263,6 +1282,7 @@ h6 {
 }
 
 .achievement-title {
+    font-family: var(--font-family-display);
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--color-text-primary);

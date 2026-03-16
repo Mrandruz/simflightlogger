@@ -6,9 +6,9 @@ export const RANKS = [
     { name: 'Cadet', minXp: 0, color: 'text-secondary' },
     { name: 'Junior F.O.', minXp: 5000, color: 'text-primary' },
     { name: 'First Officer', minXp: 15000, color: 'text-primary' },
-    { name: 'Captain', minXp: 50000, color: 'text-warning' },
-    { name: 'Senior Captain', minXp: 330000, color: 'text-warning' },
-    { name: 'Chief Captain', minXp: 600000, color: 'text-warning' }
+    { name: 'Captain', minXp: 75000, color: 'text-warning' },
+    { name: 'Senior Captain', minXp: 400000, color: 'text-warning' },
+    { name: 'Chief Captain', minXp: 700000, color: 'text-warning' }
 ];
 
 export const FUEL_CONSUMPTION_PER_NM = {
@@ -163,6 +163,16 @@ export function usePilotData(flights) {
             checkBonus(typeRatingMasterUnlockedDateMs);
 
             let flightXp = Math.floor((fMiles / 10) + (fTime * 50) + 250);
+            
+            // Apply "Active Pilot" multipliers for Short and Medium haul flights
+            // Short: < 1500nm (1.5x)
+            // Medium: 1500nm - 3000nm (1.25x)
+            if (fMiles > 0 && fMiles < 1500) {
+                flightXp = Math.round(flightXp * 1.5);
+            } else if (fMiles >= 1500 && fMiles < 3000) {
+                flightXp = Math.round(flightXp * 1.25);
+            }
+
             if (inBonusPeriod) {
                 flightXp *= 10;
             } else if (currentStreak >= 7) {

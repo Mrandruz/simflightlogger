@@ -168,16 +168,35 @@ export default function Schedule({ flights = [], user }) {
                     const durationHrs = best.distance / 450;
                     const h = Math.floor(durationHrs);
                     const m = Math.round((durationHrs - h) * 60);
-                    const xp = Math.floor((best.distance / 10) + (durationHrs * 50));
+                    const baseXP = Math.floor((best.distance / 10) + (durationHrs * 50) + 250);
+                    
+                    // Solution 1: XP Multipliers for Active Piloting (Logic now global, but kept here for UI preview)
+                    let xpMultiplier = 1;
+                    if (range.type === 'SHORT') xpMultiplier = 1.5;
+                    else if (range.type === 'MEDIUM') xpMultiplier = 1.25;
+                    
+                    const totalXP = Math.round(baseXP * xpMultiplier);
+                    const xpBoost = totalXP - baseXP;
+
+                    let achievement = null;
+                    if (range.type === 'LONG') {
+                        achievement = "Long Haul Ace ✈️";
+                    } else if (!analysis.visitedCountries.has(best.country)) {
+                        achievement = "World Traveler 🌍";
+                    } else if (!analysis.visitedAirports.has(best.icao)) {
+                        achievement = "New Discovery 📍";
+                    }
 
                     return {
                         ...range,
                         dest: best,
                         origin: originAp,
                         duration: `${h}h ${m}m`,
-                        xp,
-                        achievement: range.type === 'LONG' ? "Long Haul Ace ✈️" :
-                            (analysis.visitedAirports.has(best.icao) ? null : "World Traveler 🌍")
+                        baseXP,
+                        xpBoost,
+                        xp: totalXP,
+                        xpMultiplier,
+                        achievement
                     };
                 } catch (e) {
                     console.error(`Schedule: Range error (${range.type})`, e);
@@ -317,7 +336,10 @@ export default function Schedule({ flights = [], user }) {
                     const lastFlight = analysis.allianceLastFlights[alliance.name];
                     const allianceSuggestions = suggestions[alliance.name] || [];
                     const count = analysis.allianceFlightCounts[alliance.name];
-                    const totalXp = allianceSuggestions.reduce((acc, s) => acc + (s.xp || 0), 0);
+                    // Solution 5: Use Max XP instead of Sum
+                    const maxPossibleXp = allianceSuggestions.length > 0 
+                        ? Math.max(...allianceSuggestions.map(s => s.xp || 0)) 
+                        : 0;
 
                     if (!lastFlight) return null;
 
@@ -341,6 +363,12 @@ export default function Schedule({ flights = [], user }) {
                                     <div key={s.type} className="flight-suggestion-card card">
                                         <div className="card-top">
                                             <span className="type-badge" style={{ backgroundColor: s.color }}>{s.label}</span>
+                                            {/* Solution 2: Visual Merit Badges (with fallback for legacy data) */}
+                                            {(s.xpMultiplier > 1 || (!s.xpMultiplier && (s.type === 'SHORT' || s.type === 'MEDIUM'))) && (
+                                                <span className="intensity-badge">
+                                                    <Zap size={10} /> {s.xpMultiplier || (s.type === 'SHORT' ? 1.5 : 1.25)}x ACTIVE PILOT
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="route-container">
                                             <div className="airport-info has-tooltip">
@@ -358,9 +386,17 @@ export default function Schedule({ flights = [], user }) {
                                         <div className="flight-meta-grid">
                                             <div className="meta-item"><TrendingUp size={14} /><span>{s.dest.distance.toLocaleString()} nm</span></div>
                                             <div className="meta-item"><Plane size={14} /><span>{s.duration}</span></div>
-                                            <div className="meta-item xp"><Zap size={14} /><span>+{s.xp} XP</span></div>
+                                            <div className="meta-item xp has-tooltip">
+                                                <Zap size={14} />
+                                                <span>+{s.xp} XP</span>
+                                                {s.xpBoost > 0 && (
+                                                    <div className="tooltip-box">
+                                                        Base: {s.baseXP} + Boost: {s.xpBoost}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        {s.achievement && <div className="achievement-helper">Help: <strong>{s.achievement}</strong></div>}
+                                        {s.achievement && <div className="achievement-helper">Helps: <strong>{s.achievement}</strong></div>}
                                         <div className="card-actions">
                                             <button onClick={() => navigate('/new-flight', { state: { prefillData: { departure: s.origin.icao, arrival: s.dest.icao, airline: '', miles: s.dest.distance, alliance: alliance.name } } })} className="btn btn-primary add-button">
                                                 <Plus size={16} /> Add to Logbook
@@ -374,7 +410,7 @@ export default function Schedule({ flights = [], user }) {
                             </div>
 
                             <div className="alliance-footer">
-                                <div className="footer-info">Complete all 3 flights to earn up to <strong>{totalXp} XP</strong></div>
+                                <div className="footer-info">Select a flight to earn up to <strong>{maxPossibleXp} XP</strong></div>
                                 <button onClick={() => handleRegenerate(alliance.name)} className="btn regenerate-button">
                                     <RefreshCw size={14} /> Regenerate
                                 </button>
@@ -391,10 +427,7 @@ export default function Schedule({ flights = [], user }) {
                 </div>
             )}
 
-            <style>{`.schedule-page{animation:fadeIn .5s ease-out;max-width:1600px;margin:0 auto}.alliance-sections{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);margin-top:var(--space-8);align-items:start;width:100%}.alliance-section{display:flex;flex-direction:column;gap:var(--space-4);height:100%;min-width:0}.alliance-header{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border-left-width:6px;border-left-style:solid;min-width:0}.header-main{width:100%;min-width:0}.alliance-title{font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alliance-subtitle{font-size:.8rem;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--color-surface-hover);border-radius:var(--radius-full);font-size:.7rem;font-weight:600;color:var(--color-primary);border:1px solid var(--color-border);margin-top:8px}.flight-cards-grid{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}.flight-suggestion-card{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-width:0}.flight-suggestion-card:hover{transform:translateY(-2px);border-color:var(--color-primary);box-shadow:var(--shadow-md)}.card-top{display:flex;justify-content:space-between;align-items:center;min-width:0}.type-badge{font-size:.6rem;font-weight:800;color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.5px}.airline-tag{font-size:.7rem;font-weight:600;color:var(--color-text-hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-container{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);background:var(--color-surface-hover);border-radius:var(--radius-lg);min-width:0}.airport-info{display:flex;flex-direction:column;flex:1;min-width:0}.icao{font-family:var(--font-family-mono);font-weight:800;font-size:1.1rem;color:var(--color-text-primary)}.name{font-size:.65rem;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-arrow{color:var(--color-text-hint);font-weight:800;font-size:.9rem;flex-shrink:0}.flight-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:0}.meta-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.65rem;font-weight:600;color:var(--color-text-secondary);min-width:0}.meta-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.meta-item.xp{color:var(--color-success);background:rgba(var(--color-success-rgb),.05);border-color:rgba(var(--color-success-rgb),.2)}.achievement-helper{font-size:.7rem;text-align:center;padding:5px;background:rgba(var(--color-primary-rgb),.05);color:var(--color-primary);border-radius:var(--radius-md);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.add-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.85rem;font-weight:700;flex:2}.card-actions{display:flex;gap:var(--space-2);width:100%}.simbrief-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);text-decoration:none;transition:all .2s;flex:1}.simbrief-button:hover{color:var(--color-primary);border-color:var(--color-primary);background:rgba(var(--color-primary-rgb),.05)}
-.alliance-footer{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg);margin-top:auto;min-width:0}.footer-info{font-size:.8rem;color:var(--color-text-secondary);text-align:center}.regenerate-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s;width:100%}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}
-.persistence-loader{position:fixed;bottom:var(--space-12);right:var(--space-6);background:var(--color-surface);border:1px solid var(--color-border);padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);display:flex;align-items:center;gap:var(--space-2);font-size:.75rem;font-weight:600;color:var(--color-text-secondary);box-shadow:var(--shadow-lg);z-index:100}.spin{animation:spin 1s linear infinite}@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-@media (max-width:1200px){.alliance-sections{grid-template-columns:1fr;gap:var(--space-10)}}`}</style>
+            <style>{`.schedule-page{animation:fadeIn .5s ease-out;max-width:1600px;margin:0 auto}.alliance-sections{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);margin-top:var(--space-8);align-items:start;width:100%}.alliance-section{display:flex;flex-direction:column;gap:var(--space-4);height:100%;min-width:0}.alliance-header{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border-left-width:6px;border-left-style:solid;min-width:0}.header-main{width:100%;min-width:0}.alliance-title{font-family:var(--font-family-display);font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alliance-subtitle{font-size:.8rem;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--color-surface-hover);border-radius:var(--radius-full);font-size:.7rem;font-weight:600;color:var(--color-primary);border:1px solid var(--color-border);margin-top:8px}.flight-cards-grid{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}.flight-suggestion-card{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-width:0}.flight-suggestion-card:hover{transform:translateY(-2px);border-color:var(--color-primary);box-shadow:var(--shadow-md)}.card-top{display:flex;justify-content:space-between;align-items:center;min-width:0}.type-badge{font-family:var(--font-family-display);font-size:.6rem;font-weight:800;color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.5px}.airline-tag{font-size:.7rem;font-weight:600;color:var(--color-text-hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-container{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);background:var(--color-surface-hover);border-radius:var(--radius-lg);min-width:0}.airport-info{display:flex;flex-direction:column;flex:1;min-width:0}.icao{font-family:var(--font-family-sans);font-weight:800;font-size:1.1rem;color:var(--color-text-primary);letter-spacing:.5px}.name{font-size:.65rem;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.route-arrow{color:var(--color-text-hint);font-weight:800;font-size:.9rem;flex-shrink:0}.flight-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:0}.meta-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.65rem;font-weight:600;color:var(--color-text-secondary);min-width:0}.meta-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.meta-item.xp{color:var(--color-success);background:rgba(var(--color-success-rgb),.05);border-color:rgba(var(--color-success-rgb),.2)}.achievement-helper{font-size:.7rem;text-align:center;padding:8px;background:rgba(var(--color-primary-rgb),.03);color:var(--color-primary);border:1px dashed rgba(var(--color-primary-rgb),.2);border-radius:var(--radius-md);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.add-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.85rem;font-weight:700;flex:2;font-family:var(--font-family-display)}.card-actions{display:flex;gap:var(--space-2);width:100%}.simbrief-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);text-decoration:none;transition:all .2s;flex:1}.simbrief-button:hover{color:var(--color-primary);border-color:var(--color-primary);background:var(--color-primary-light)}.intensity-badge{display:flex;align-items:center;gap:4px;font-family:var(--font-family-display);font-size:.65rem;font-weight:800;color:var(--color-primary);background:var(--color-primary-light);padding:2px 8px;border-radius:var(--radius-full);letter-spacing:.3px;border:1px solid var(--color-primary)}.alliance-footer{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface-hover);border-radius:var(--radius-lg);margin-top:auto;min-width:0}.footer-info{font-size:.8rem;color:var(--color-text-secondary);text-align:center}.regenerate-button{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:.75rem;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-hint);transition:all .2s;width:100%;font-family:var(--font-family-display)}.regenerate-button:hover{color:var(--color-primary);border-color:var(--color-primary)}.persistence-loader{position:fixed;bottom:var(--space-12);right:var(--space-6);background:var(--color-surface);border:1px solid var(--color-border);padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);display:flex;align-items:center;gap:var(--space-2);font-size:.75rem;font-weight:600;color:var(--color-text-secondary);box-shadow:var(--shadow-lg);z-index:100}.spin{animation:spin 1s linear infinite}@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}@media (max-width:1200px){.alliance-sections{grid-template-columns:1fr;gap:var(--space-10)}}`}</style>
         </div>
     );
 }

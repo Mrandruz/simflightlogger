@@ -23,7 +23,7 @@ const AchievementBadge = ({ title, description, icon: Icon, data }) => {
     return (
         <div className={`achievement-card ${isCompleted ? 'completed' : ''}`}>
             <div className="achievement-tooltip">
-                <div style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>{description}</div>
+                <div style={{ fontSize: '0.75rem', lineHeight: '1.3', fontFamily: 'var(--font-family-display)' }}>{description}</div>
                 {extraInfo && !isCompleted && (
                     <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                         {extraInfo}
@@ -36,9 +36,9 @@ const AchievementBadge = ({ title, description, icon: Icon, data }) => {
                     <Icon size={16} />
                 </div>
                 <div style={{ width: '100%', zIndex: 1 }}>
-                    <div className="achievement-title">{title}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>
-                        {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>UNLOCKED!</span> : `${current} / ${goal}`}
+                    <div className="achievement-title" style={{ fontFamily: 'var(--font-family-display)', fontWeight: 700 }}>{title}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500, fontFamily: 'var(--font-family-sans)' }}>
+                        {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 800, fontFamily: 'var(--font-family-display)' }}>UNLOCKED!</span> : `${current} / ${goal}`}
                     </div>
                 </div>
             </div>
