@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -23,6 +23,18 @@ import { useToast } from './context/ToastContext';
 export default function App() {
     const { user, authLoading, logout, isAuthorized, isAdmin } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
+    const navigate = useNavigate();
+    const hasRedirected = useRef(false);
+
+    useEffect(() => {
+        if (!authLoading && user && !hasRedirected.current) {
+            hasRedirected.current = true;
+            navigate('/');
+        }
+        if (!user) {
+            hasRedirected.current = false;
+        }
+    }, [user, authLoading, navigate]);
     const { showToast } = useToast();
     const { askConfirm } = useConfirm();
     const { 

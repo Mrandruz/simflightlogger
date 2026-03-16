@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { Plane, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -6,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 
 export default function LoginScreen() {
     const { loginWithEmail, registerWithEmail } = useAuth();
+    const navigate = useNavigate();
     const { showToast } = useToast();
     const [isRegistering, setIsRegistering] = useState(false);
     const [loading, setLoading] = useState(false);
