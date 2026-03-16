@@ -1,23 +1,30 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
-import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
-import { geoCentroid, geoBounds, geoContains } from 'd3-geo';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { Trash2, Edit2, RotateCcw, Filter, X, Eye, ChevronLeft, ChevronRight, Plane, Map as MapIcon } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useOutletContext } from 'react-router-dom';
 import { findAirport } from '../utils/airportUtils';
 import FlightDetailsModal from './FlightDetailsModal';
 
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 export default function Logbook({ flights, onDelete, onEdit }) {
+    console.log('Logbook: Rendering with', flights.length, 'flights');
+    const context = useOutletContext();
+    const isDarkMode = context?.isDarkMode;
+    
     const [activeFilters, setActiveFilters] = useState({});
-    const [hoveredAirport, setHoveredAirport] = useState(null);
-    const [mapZoom, setMapZoom] = useState(1);
-    const [mapCenter, setMapCenter] = useState([0, 10]);
-    const [selectedCountry, setSelectedCountry] = useState(null);
     const [selectedFlightDetails, setSelectedFlightDetails] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const flightsPerPage = 15;
-    const geographiesRef = useRef([]);
+    
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const markersGroupRef = useRef(null);
+    const routesGroupRef = useRef(null);
+
+    const [isManualZoom, setIsManualZoom] = useState(false);
+    const isProgrammaticChange = useRef(false);
 
     const uniqueAirlines = useMemo(() => [...new Set(flights.map(f => f.airline).filter(Boolean))].sort(), [flights]);
     const uniqueAircraft = useMemo(() => [...new Set(flights.map(f => f.aircraft).filter(Boolean))].sort(), [flights]);
@@ -31,28 +38,103 @@ export default function Logbook({ flights, onDelete, onEdit }) {
         return [...codes].sort();
     }, [flights]);
 
-    const handleCountryClick = useCallback((geo) => {
-        const centroid = geoCentroid(geo);
-        const bounds = geoBounds(geo);
-        const dx = bounds[1][0] - bounds[0][0];
-        const dy = bounds[1][1] - bounds[0][1];
-        const maxSpan = Math.max(dx, dy);
-        const zoom = Math.min(12, Math.max(2, 120 / maxSpan));
-        setMapCenter(centroid);
-        setMapZoom(zoom);
-        setSelectedCountry(geo.rsmKey);
-    }, []);
+    const filteredFlights = useMemo(() => {
+        let filtered = [...flights];
+        const activeKeys = Object.keys(activeFilters);
 
-    const handleMarkerClick = useCallback((coordinates) => {
-        const geo = geographiesRef.current.find(g => geoContains(g, coordinates));
-        if (geo) handleCountryClick(geo);
-    }, [handleCountryClick]);
+        if (activeKeys.length > 0) {
+            filtered = filtered.filter(f => {
+                return activeKeys.every(key => {
+                    if (key === 'icao') {
+                        return f.departure === activeFilters[key] || f.arrival === activeFilters[key];
+                    }
+                    return f[key] === activeFilters[key];
+                });
+            });
+        }
+        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [flights, activeFilters]);
+
+    const mapData = useMemo(() => {
+        const airportsMap = new Map();
+        const routes = [];
+        
+        filteredFlights.forEach((f, idx) => {
+            if (f.departure && f.arrival) {
+                const depCode = f.departure.toUpperCase();
+                const arrCode = f.arrival.toUpperCase();
+                const depAp = findAirport(depCode);
+                const arrAp = findAirport(arrCode);
+
+                const isDepValid = depAp && typeof depAp.latitude === 'number' && typeof depAp.longitude === 'number';
+                const isArrValid = arrAp && typeof arrAp.latitude === 'number' && typeof arrAp.longitude === 'number';
+
+                if (isDepValid) {
+                    airportsMap.set(depCode, {
+                        icao: depCode,
+                        coordinates: [depAp.longitude, depAp.latitude],
+                        name: depAp.name || depCode
+                    });
+                }
+                if (isArrValid) {
+                    airportsMap.set(arrCode, {
+                        icao: arrCode,
+                        coordinates: [arrAp.longitude, arrAp.latitude],
+                        name: arrAp.name || arrCode
+                    });
+                }
+
+                if (isDepValid && isArrValid) {
+                    routes.push({
+                        id: `${depCode}-${arrCode}-${f.date}-${idx}`,
+                        from: [depAp.longitude, depAp.latitude],
+                        to: [arrAp.longitude, arrAp.latitude]
+                    });
+                }
+            }
+        });
+
+        const airports = Array.from(airportsMap.values());
+        return { airports, routes };
+    }, [filteredFlights]);
+
+    const fitToData = useCallback((animate = true) => {
+        if (!mapInstance.current || mapData.airports.length === 0) return;
+        
+        isProgrammaticChange.current = true;
+        
+        const bounds = L.latLngBounds();
+        mapData.airports.forEach(ap => {
+            bounds.extend([ap.coordinates[1], ap.coordinates[0]]);
+        });
+
+        if (bounds.isValid()) {
+            mapInstance.current.invalidateSize();
+            mapInstance.current.fitBounds(bounds, { 
+                padding: [30, 30], 
+                maxZoom: 10, 
+                animate 
+            });
+
+            const timeout = animate ? 800 : 200;
+            setTimeout(() => {
+                if (mapInstance.current && mapInstance.current.getZoom() < 2) {
+                    mapInstance.current.setZoom(2, { animate: false });
+                }
+                setTimeout(() => {
+                    isProgrammaticChange.current = false;
+                }, 200);
+            }, timeout);
+
+            setIsManualZoom(prev => prev ? false : prev);
+        } else {
+            isProgrammaticChange.current = false;
+        }
+    }, [mapData.airports]);
 
     const handleZoomReset = useCallback(() => {
-        setMapZoom(1);
-        setMapCenter([0, 10]);
-        setSelectedCountry(null);
-    }, []);
+        fitToData(true);
+    }, [fitToData]);
 
     const handleFilterClick = (type, value) => {
         setActiveFilters(prev => {
@@ -72,173 +154,274 @@ export default function Logbook({ flights, onDelete, onEdit }) {
         setCurrentPage(1);
     };
 
-    const filteredFlights = useMemo(() => {
-        let filtered = [...flights];
-        const activeKeys = Object.keys(activeFilters);
-
-        if (activeKeys.length > 0) {
-            filtered = filtered.filter(f => {
-                return activeKeys.every(key => {
-                    if (key === 'icao') {
-                        return f.departure === activeFilters[key] || f.arrival === activeFilters[key];
-                    }
-                    return f[key] === activeFilters[key];
-                });
-            });
-        }
-        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [flights, activeFilters]);
-
     const totalPages = Math.ceil(filteredFlights.length / flightsPerPage);
     const paginatedFlights = useMemo(() => {
         const startIndex = (currentPage - 1) * flightsPerPage;
         return filteredFlights.slice(startIndex, startIndex + flightsPerPage);
     }, [filteredFlights, currentPage]);
 
-    const mappedAirports = useMemo(() => {
-        const visitedCodes = new Set();
-        filteredFlights.forEach(f => {
-            if (f.departure) visitedCodes.add(f.departure.toUpperCase());
-            if (f.arrival) visitedCodes.add(f.arrival.toUpperCase());
-        });
-
-        const points = [];
-        visitedCodes.forEach(code => {
-            const ap = findAirport(code);
-            if (ap) {
-                points.push({
-                    icao: code,
-                    coordinates: [ap.longitude, ap.latitude],
-                    name: ap.name
-                });
-            }
-        });
-        return points;
-    }, [filteredFlights]);
-
-    const mappedRoutes = useMemo(() => {
-        const routes = [];
-        filteredFlights.forEach(f => {
-            if (f.departure && f.arrival) {
-                const depCode = f.departure.toUpperCase();
-                const arrCode = f.arrival.toUpperCase();
-                const depAp = findAirport(depCode);
-                const arrAp = findAirport(arrCode);
-
-                if (depAp && arrAp) {
-                    routes.push({
-                        id: `${depCode}-${arrCode}-${Math.random()}`,
-                        from: [depAp.longitude, depAp.latitude],
-                        to: [arrAp.longitude, arrAp.latitude]
-                    });
-                }
-            }
-        });
-        return routes;
-    }, [filteredFlights]);
-
     const formatDate = (isoStr) => {
+        if (!isoStr) return '';
         const date = new Date(isoStr);
-        return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+        return isNaN(date.getTime()) ? '' : date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
     };
+
+    const tileLayerRef = useRef(null);
+
+    // Map Initialization (Once)
+    useEffect(() => {
+        if (!mapRef.current || mapInstance.current) return;
+
+        const map = L.map(mapRef.current, {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            zoomControl: false,
+            attributionControl: false,
+            renderer: L.canvas() // Use Canvas for high performance vector rendering
+        });
+
+        const initialTileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        tileLayerRef.current = L.tileLayer(initialTileUrl, {
+            noWrap: true,
+            bounds: [[-90, -180], [90, 180]]
+        }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        mapInstance.current = map;
+        markersGroupRef.current = L.layerGroup().addTo(map);
+        routesGroupRef.current = L.layerGroup().addTo(map);
+
+        // Interaction listeners
+        map.on('zoomend moveend', () => {
+            if (!isProgrammaticChange.current) {
+                setIsManualZoom(true);
+            }
+        });
+
+        // Trigger initial fit with a slight delay
+        const fitTimer = setTimeout(() => {
+            if (mapInstance.current) fitToData(false);
+        }, 800);
+
+        return () => {
+            clearTimeout(fitTimer);
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
+            }
+        };
+    }, []); // Run ONLY once on mount
+
+    // Theme Update Effect
+    useEffect(() => {
+        if (!mapInstance.current || !tileLayerRef.current) return;
+        
+        const newTileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            
+        tileLayerRef.current.setUrl(newTileUrl);
+    }, [isDarkMode]);
+
+    // Map Updates (Markers & Routes)
+    useEffect(() => {
+        if (!mapInstance.current || !markersGroupRef.current || !routesGroupRef.current) return;
+
+        // Clear existing layers
+        markersGroupRef.current.clearLayers();
+        routesGroupRef.current.clearLayers();
+
+        // Custom Icons
+        const originIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [20, 32],
+            iconAnchor: [10, 32],
+            popupAnchor: [1, -34],
+            shadowSize: [32, 32]
+        });
+
+        const destIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [20, 32],
+            iconAnchor: [10, 32],
+            popupAnchor: [1, -34],
+            shadowSize: [32, 32]
+        });
+
+        const pointIcon = L.divIcon({
+            className: 'custom-map-marker',
+            html: `<div class="marker-dot"></div>`,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+
+        // Add Routes
+        mapData.routes.forEach(route => {
+            L.polyline([[route.from[1], route.from[0]], [route.to[1], route.to[0]]], {
+                color: isDarkMode ? '#1ed760' : '#1db954',
+                weight: 1.5,
+                opacity: 0.4,
+                dashArray: '5, 10'
+            }).addTo(routesGroupRef.current);
+        });
+
+        // Identify latest flight for pin highlighting
+        const latest = filteredFlights[0];
+        const latestDep = latest?.departure?.toUpperCase();
+        const latestArr = latest?.arrival?.toUpperCase();
+
+        // Add Markers
+        mapData.airports.forEach(ap => {
+            const latLng = [ap.coordinates[1], ap.coordinates[0]];
+            const isLatestOrigin = ap.icao === latestDep;
+            const isLatestDest = ap.icao === latestArr;
+
+            if (isLatestOrigin || isLatestDest) {
+                L.marker(latLng, { 
+                    icon: isLatestOrigin ? originIcon : destIcon, 
+                    zIndexOffset: 1000 
+                })
+                .addTo(markersGroupRef.current)
+                .bindTooltip(`${isLatestOrigin ? 'Latest Dep' : 'Latest Arr'}: ${ap.icao}`, { 
+                    direction: 'top', offset: [0, -5], sticky: false
+                });
+            } else {
+                L.marker(latLng, { icon: pointIcon })
+                .addTo(markersGroupRef.current);
+            }
+        });
+
+        // Auto fitting
+        if (mapData.airports.length > 0 && !isManualZoom) {
+            fitToData(false);
+        }
+    }, [mapData, fitToData, isDarkMode, filteredFlights, isManualZoom]);
+
+    const stats = useMemo(() => {
+        const total = filteredFlights.length;
+        const miles = Math.round(filteredFlights.reduce((acc, f) => acc + (f.miles || 0), 0));
+        const hours = Math.round(filteredFlights.reduce((acc, f) => acc + (f.flightTime || 0), 0));
+        const xp = filteredFlights.reduce((acc, f) => acc + (Math.floor(((f.miles || 0) / 10) + ((f.flightTime || 0) * 50))), 0);
+        return { total, miles, hours, xp };
+    }, [filteredFlights]);
+
+    const filterLabel = useMemo(() => {
+        const parts = [];
+        if (activeFilters.icao) parts.push(activeFilters.icao);
+        if (activeFilters.airline) parts.push(activeFilters.airline);
+        if (activeFilters.aircraft) parts.push(activeFilters.aircraft);
+        if (activeFilters.alliance) parts.push(activeFilters.alliance);
+        
+        if (parts.length === 0) return "Global";
+        return parts.join(' • ');
+    }, [activeFilters]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
 
-            {/* Interactive Global Map */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: 'var(--space-6)', paddingBottom: 0 }}>
-                    <h3 className="card-title">Flights Global View</h3>
+            {/* Global Dashboard Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 350px) 1fr', gap: 'var(--space-6)' }}>
+                {/* Stats Sidebar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'var(--space-6)', background: 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-background) 100%)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                            <Plane size={16} /> Operational Statistics
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-hint)', marginBottom: 'var(--space-4)', fontWeight: 500 }}>
+                            You see <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel === 'Global' ? 'global' : ''}</span> statistics {filterLabel !== 'Global' ? <>for <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel}</span></> : ''}
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Total Flights</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.total}</div>
+                            </div>
+                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Total Hours</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.hours}h</div>
+                            </div>
+                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Nautical Miles</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.miles.toLocaleString()}</div>
+                            </div>
+                            <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(100,100,100,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase' }}>Experience</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{stats.xp.toLocaleString()} <span style={{fontSize: '0.8rem'}}>XP</span></div>
+                            </div>
+                        </div>
+                        
+                        <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-4)', backgroundColor: 'rgba(30, 215, 96, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                                "Your wings already exist. All you have to do is fly."
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div style={{ width: '100%', height: '450px', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                    {mapZoom > 1 && (
-                        <button onClick={handleZoomReset} aria-label="Reset map to global view" className="has-tooltip" style={{
-                            position: 'absolute', top: '12px', right: '12px', zIndex: 10,
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '8px 14px', borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)',
-                            color: 'var(--color-text-primary)', cursor: 'pointer',
-                            boxShadow: 'var(--shadow-sm)', fontSize: '0.8rem', fontWeight: 500,
-                            fontFamily: 'var(--font-family-sans)', transition: 'background-color 0.2s'
+
+                {/* The Map */}
+                <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', height: '500px' }}>
+                    <div ref={mapRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+                    
+                    <div style={{
+                        position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
+                        backgroundColor: 'var(--color-surface)', padding: '6px 12px',
+                        borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+                        boxShadow: 'var(--shadow-sm)', fontSize: '0.7rem', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)',
+                        textTransform: 'uppercase', letterSpacing: '0.5px'
+                    }}>
+                        <MapIcon size={14} /> Global Network
+                    </div>
+
+                    {isManualZoom && (
+                        <button onClick={handleZoomReset} className="btn btn-secondary btn-sm" style={{
+                            position: 'absolute', bottom: '12px', left: '12px', zIndex: 1000,
+                            backgroundColor: 'var(--color-surface)',
+                            boxShadow: 'var(--shadow-md)',
+                            padding: '8px 12px',
+                            fontSize: '0.75rem'
                         }}>
-                            <RotateCcw size={14} aria-hidden="true" /> Global View
-                            <span className="tooltip-box">Reset map to global view</span>
+                            <RotateCcw size={14} /> Reset View
                         </button>
                     )}
-
-                    {mapZoom <= 1 && (
-                        <div style={{
-                            position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                            zIndex: 10, fontSize: '0.75rem', color: 'var(--color-text-hint)',
-                            backgroundColor: 'var(--color-surface)', padding: '4px 12px',
-                            borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)',
-                            boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap'
-                        }}>
-                            Click on a country or an airport to zoom in
-                        </div>
-                    )}
-
-                    <ComposableMap projectionConfig={{ scale: 170, center: [0, 10] }} width={900} height={400}>
-                        <defs>
-                            <filter id="glow">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        <ZoomableGroup zoom={mapZoom} center={mapCenter} maxZoom={12} onMoveEnd={({ coordinates, zoom }) => { setMapCenter(coordinates); setMapZoom(zoom); }}>
-                            <Geographies geography={geoUrl}>
-                                {({ geographies }) => {
-                                    geographiesRef.current = geographies;
-                                    return geographies.map((geo) => (
-                                        <Geography
-                                            key={geo.rsmKey}
-                                            geography={geo}
-                                            onClick={() => handleCountryClick(geo)}
-                                            fill={selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : 'var(--color-divider)'}
-                                            stroke="var(--color-surface)"
-                                            strokeWidth={0.5}
-                                            style={{
-                                                default: { outline: "none", cursor: "pointer" },
-                                                hover: { fill: selectedCountry === geo.rsmKey ? 'var(--color-primary-light)' : '#c8cdd2', outline: "none", cursor: "pointer" },
-                                                pressed: { outline: "none" },
-                                            }}
-                                        />
-                                    ));
-                                }}
-                            </Geographies>
-
-                            {mappedRoutes.map((route) => (
-                                <Line key={route.id} from={route.from} to={route.to} stroke="var(--color-primary)" strokeWidth={1.5} strokeLinecap="round" strokeDasharray="6 4" className="animated-route" style={{ opacity: 0.6 }} />
-                            ))}
-
-                            {mappedAirports.map(({ icao, name, coordinates }) => (
-                                <Marker key={icao} coordinates={coordinates} onMouseEnter={() => setHoveredAirport(icao)} onMouseLeave={() => setHoveredAirport(null)} onClick={() => handleMarkerClick(coordinates)} style={{ cursor: 'pointer' }}>
-                                    <circle r={10} fill="var(--color-primary)" opacity={0} className="map-pulse-ring" />
-                                    <circle r={hoveredAirport === icao ? 6 : 4} fill="var(--color-primary)" stroke={hoveredAirport === icao ? '#fff' : 'var(--color-map-stroke)'} strokeWidth={hoveredAirport === icao ? 2 : 1.5} filter={hoveredAirport === icao ? 'url(#glow)' : 'none'} style={{ transition: 'r 0.2s ease, stroke-width 0.2s ease' }} />
-                                    <text textAnchor="middle" y={-14} style={{ fontFamily: "var(--font-family-sans)", fill: hoveredAirport === icao ? 'var(--color-primary)' : 'var(--color-text-primary)', fontSize: hoveredAirport === icao ? '10px' : '9px', fontWeight: 600, textShadow: "1px 1px 0 var(--color-map-shadow), -1px -1px 0 var(--color-map-shadow), 1px -1px 0 var(--color-map-shadow), -1px 1px 0 var(--color-map-shadow)", transition: 'font-size 0.2s ease, fill 0.2s ease' }}>
-                                        {icao}
-                                    </text>
-                                    {hoveredAirport === icao && (
-                                        <g>
-                                            <rect x={-name.length * 3.2} y={10} width={name.length * 6.4} height={20} rx={4} fill="var(--color-primary)" opacity={0.9} />
-                                            <text textAnchor="middle" y={24} style={{ fontFamily: "var(--font-family-sans)", fill: "#fff", fontSize: "10px", fontWeight: 500 }}>{name}</text>
-                                        </g>
-                                    )}
-                                </Marker>
-                            ))}
-                        </ZoomableGroup>
-                    </ComposableMap>
                 </div>
-                <style>{`
-                    @keyframes pulse-ring { 0% { r: 4; opacity: 0.6; } 100% { r: 16; opacity: 0; } }
-                    @keyframes dash-flow { to { stroke-dashoffset: -20; } }
-                    .map-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
-                    .animated-route { animation: dash-flow 1.5s linear infinite; }
-                `}</style>
             </div>
+                <style>{`
+                    .marker-dot {
+                        width: 10px;
+                        height: 10px;
+                        background-color: var(--color-primary);
+                        border: 2px solid #fff;
+                        border-radius: 50%;
+                        box-shadow: 0 0 12px var(--color-primary);
+                        transition: transform 0.2s, box-shadow 0.2s;
+                    }
+                    .custom-map-marker:hover .marker-dot {
+                        transform: scale(1.4);
+                        box-shadow: 0 0 20px var(--color-primary);
+                        z-index: 1000;
+                    }
+                    .map-tooltip {
+                        background: var(--color-surface) !important;
+                        color: var(--color-text-primary) !important;
+                        border: 1px solid var(--color-border) !important;
+                        border-radius: var(--radius-md) !important;
+                        box-shadow: var(--shadow-md) !important;
+                        font-family: var(--font-family-sans) !important;
+                        font-weight: 600 !important;
+                        font-size: 0.75rem !important;
+                        padding: 4px 8px !important;
+                    }
+                    .leaflet-container {
+                        background: var(--color-background) !important;
+                    }
+                `}</style>
 
             {/* List */}
             <div className="card">

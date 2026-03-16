@@ -24,20 +24,27 @@ export function useFlights(user) {
         }
 
         const fetchFlights = async () => {
+            console.log('useFlights: Starting fetch for user', user.uid);
             setLoading(true);
             try {
                 const userFlightsCol = collection(db, 'users', user.uid, 'flights');
                 const snapshot = await getDocs(userFlightsCol);
                 const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+                console.log('useFlights: Successfully fetched', data.length, 'flights');
                 setFlights(data);
             } catch (error) {
-                console.error('Error loading flights from Firestore:', error);
+                console.error('useFlights: Error loading flights from Firestore:', error);
                 const saved = localStorage.getItem('simFlights');
                 if (saved) {
-                    try { setFlights(JSON.parse(saved)); } catch (e) { /* ignore */ }
+                    try { 
+                        const data = JSON.parse(saved);
+                        console.log('useFlights: Falling back to localStorage, found', data.length, 'flights');
+                        setFlights(data); 
+                    } catch (e) { /* ignore */ }
                 }
             } finally {
                 setLoading(false);
+                console.log('useFlights: Loading finished');
             }
         };
         fetchFlights();
