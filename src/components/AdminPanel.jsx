@@ -30,7 +30,20 @@ export default function AdminPanel() {
         return () => unsubscribe();
     }, []);
 
-    const handleStatusUpdate = async (userId, newStatus) => {
+    const handleStatusUpdate = async (userId, newStatus, targetEmail) => {
+        // Safety check: Require password for main admin account
+        if (targetEmail?.toLowerCase() === 'and977@gmail.com') {
+            const confirmed = await askConfirm({
+                title: 'Security Verification',
+                message: 'You are modifying a fundamental administrator account. Please verify your identity.',
+                confirmText: 'Verify & Update',
+                confirmType: 'primary',
+                icon: 'alert',
+                requirePassword: 'ADMIN' // Simple safety word for now
+            });
+            if (!confirmed) return;
+        }
+
         try {
             await updateDoc(doc(db, 'users', userId), {
                 status: newStatus
@@ -46,13 +59,14 @@ export default function AdminPanel() {
         }
     };
 
-    const handleDeleteUser = async (userId) => {
+    const handleDeleteUser = async (userId, targetEmail) => {
         const confirmed = await askConfirm({
             title: 'Delete User Trace',
             message: 'Are you sure you want to delete this user trace? The Auth account must be deleted manually in Firebase Console for complete removal.',
             confirmText: 'Delete Trace',
             confirmType: 'danger',
-            icon: 'trash'
+            icon: 'trash',
+            requirePassword: targetEmail?.toLowerCase() === 'and977@gmail.com' ? 'ADMIN' : null
         });
 
         if (!confirmed) return;
@@ -73,9 +87,29 @@ export default function AdminPanel() {
     return (
         <div className="admin-container">
             <header className="admin-header">
-                <h1><Shield size={24} /> Admin User Management</h1>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <p>Manage access requests and authorized pilots.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h1><Shield size={24} /> Admin User Management</h1>
+                        <p>Manage access requests and authorized pilots.</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ 
+                            background: 'rgba(26, 115, 232, 0.1)', 
+                            color: 'var(--color-primary)',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <div style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%' }}></div>
+                            Logged in as Andrea (admin)
+                        </div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: 'var(--space-2)' }}>
                     <Link to="/admin/recovery" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', textDecoration: 'none' }}>
                         <Database size={16} /> Data Recovery
                     </Link>
@@ -96,14 +130,14 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="user-actions">
                                     <button 
-                                        onClick={() => handleStatusUpdate(user.id, 'approved')}
+                                        onClick={() => handleStatusUpdate(user.id, 'approved', user.email)}
                                         className="btn-approve"
                                         title="Approve"
                                     >
                                         <UserCheck size={18} /> Approve
                                     </button>
                                     <button 
-                                        onClick={() => handleStatusUpdate(user.id, 'rejected')}
+                                        onClick={() => handleStatusUpdate(user.id, 'rejected', user.email)}
                                         className="btn-reject"
                                         title="Reject"
                                     >
@@ -127,16 +161,18 @@ export default function AdminPanel() {
                             </div>
                             <div className="user-actions">
                                 <button 
-                                    onClick={() => handleStatusUpdate(user.id, 'pending')}
+                                    onClick={() => handleStatusUpdate(user.id, 'pending', user.email)}
                                     className="btn-revoke"
                                     title="Revoke Access"
+                                    disabled={user.email?.toLowerCase() === 'and977@gmail.com'}
                                 >
                                     Revoke
                                 </button>
                                 <button 
-                                    onClick={() => handleDeleteUser(user.id)}
+                                    onClick={() => handleDeleteUser(user.id, user.email)}
                                     className="btn-delete"
                                     title="Delete trace"
+                                    disabled={user.email?.toLowerCase() === 'and977@gmail.com'}
                                 >
                                     <Trash2 size={16} />
                                 </button>
