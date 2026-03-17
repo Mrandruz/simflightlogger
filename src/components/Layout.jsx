@@ -8,7 +8,7 @@ import PilotProfileCard from './PilotProfileCard';
 const StatusBar = () => (
     <div className="status-bar">
         <div className="status-bar-section">
-            <span>v1.4.0 • Premium Update</span>
+            <span>v1.11.1 • Elite Hangar Update</span>
             <span style={{ marginLeft: 'var(--space-1)', opacity: 0.7 }}>•</span>
             <div className="has-tooltip" style={{ marginLeft: 'var(--space-1)' }}>
                 <span className="hover-opacity" style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}>Credits</span>
