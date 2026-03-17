@@ -92,6 +92,15 @@ const customAirports = [
         latitude: 22.3080,
         longitude: 113.9185,
         iata: "HKG"
+    },
+    {
+        icao: "SPJC",
+        name: "Jorge Chávez International Airport",
+        city: "Lima",
+        country: "Peru",
+        latitude: -12.0219,
+        longitude: -77.1143,
+        iata: "LIM"
     }
 ];
 
