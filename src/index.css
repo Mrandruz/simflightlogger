@@ -601,6 +601,137 @@ h6 {
   border-color: var(--color-primary-light);
 }
 
+/* Glassmorphism Styles */
+.glass-surface {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .glass-surface {
+    background: rgba(22, 36, 51, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hangar Redesign Styles */
+.hangar-list-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hangar-list-item:hover {
+    transform: translateX(4px);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.hangar-list-item.active {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.hangar-list-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: var(--color-primary);
+    border-radius: 0 4px 4px 0;
+}
+
+.achievement-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(var(--color-primary-rgb), 0.1);
+    border: 1px solid var(--color-primary);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-primary);
+    animation: fadeSlideUp 0.3s ease-out;
+}
+
+.route-stat-bar-container {
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Hangar Specific Styles */
+.hangar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-6);
+}
+
+.aircraft-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    padding: 0;
+}
+
+.aircraft-card-image {
+    height: 120px;
+    width: 100%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    opacity: 0.1;
+    position: relative;
+}
+
+.aircraft-card-content {
+    padding: var(--space-5);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.maintenance-bar-wrapper {
+    height: 6px;
+    background: var(--color-divider);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: var(--space-4);
+}
+
+.maintenance-bar-fill {
+    height: 100%;
+    transition: width 0.5s ease-in-out, background-color 0.3s ease;
+}
+
+.card-stat-label {
+    font-size: 0.7rem;
+    color: var(--color-text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.card-stat-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
 /* Custom visual utilities */
 .data-mono {
   font-family: var(--font-family-mono);
@@ -1575,12 +1706,14 @@ h6 {
     letter-spacing: -0.03em;
     background: linear-gradient(to bottom, var(--color-text-primary), var(--color-text-secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 [data-theme="dark"] .login-title {
     background: linear-gradient(to bottom, #fff, #a2a9b1);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -1826,4 +1959,73 @@ h6 {
 
 .admin-card.approved {
     border-left: 4px solid var(--color-success);
+}
+
+/* Hangar Pro Features (v1.7.0) */
+.hangar-container {
+    --airline-color: var(--color-primary);
+    --airline-bg: var(--color-primary-light);
+}
+
+/* Dynamic Livery Theming - Robust Selectors */
+.hangar-container[data-airline="Lufthansa"] { --airline-color: #ffcc00; --airline-bg: rgba(255, 204, 0, 0.1); }
+.hangar-container[data-airline="KLM"] { --airline-color: #00a1de; --airline-bg: rgba(0, 161, 222, 0.1); }
+.hangar-container[data-airline="Air-France"] { --airline-color: #ed2939; --airline-bg: rgba(237, 41, 57, 0.1); }
+.hangar-container[data-airline="British-Airways"] { --airline-color: #002366; --airline-bg: rgba(0, 35, 102, 0.1); }
+.hangar-container[data-airline="United-Airlines"] { --airline-color: #0056b3; --airline-bg: rgba(0, 86, 179, 0.1); }
+.hangar-container[data-airline="Delta"] { --airline-color: #e3132c; --airline-bg: rgba(227, 19, 44, 0.1); }
+.hangar-container[data-airline="American-Airlines"] { --airline-color: #0078d2; --airline-bg: rgba(0, 120, 210, 0.1); }
+.hangar-container[data-airline="Emirates"] { --airline-color: #d71920; --airline-bg: rgba(215, 25, 32, 0.1); }
+.hangar-container[data-airline="Ita-Airways"] { --airline-color: #0054a6; --airline-bg: rgba(0, 84, 166, 0.1); }
+.hangar-container[data-airline="Ryanair"] { --airline-color: #003580; --airline-bg: rgba(0, 53, 128, 0.1); }
+.hangar-container[data-airline="EasyJet"] { --airline-color: #ff6600; --airline-bg: rgba(255, 102, 0, 0.1); }
+
+.hangar-container .color-primary { color: var(--airline-color) !important; }
+.hangar-container .achievement-badge { border-color: var(--airline-color); color: var(--airline-color); background: var(--airline-bg); }
+.hangar-container .active { background: var(--airline-bg) !important; border-color: var(--airline-color) !important; }
+
+/* Milestone Grid Styles */
+.milestone-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.milestone-card.achieved {
+    border-color: var(--airline-color) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 0 15px var(--airline-bg);
+}
+
+.milestone-card.achieved:hover {
+    transform: translateY(-4px) scale(1.02);
+}
+
+.milestone-card.locked {
+    filter: grayscale(1);
+    border-style: dashed;
+}
+
+/* Maintenance Log Progress Bars Animation */
+@keyframes progressFill {
+    from { width: 0; }
+}
+
+.maintenance-progress-fill {
+    animation: progressFill 1.5s cubic-bezier(0.1, 0, 0.2, 1);
+}
+
+/* Sparkline Glow Effect */
+.sparkline-svg polyline {
+    filter: drop-shadow(0 0 2px var(--airline-color));
+}
+
+/* Responsive Grid for Detailed Stats */
+.hangar-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: var(--space-8);
+}
+
+@media (max-width: 1200px) {
+    .hangar-detail-grid {
+        grid-template-columns: 1fr;
+    }
 }
