@@ -777,6 +777,138 @@ const AircraftComparison = ({ typeA, dataA, typeB, dataB, onClose }) => {
     );
 };
 
+const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => {
+    const [showAll, setShowAll] = useState(false);
+    const displayed = showAll ? allFlights : flights;
+    const hasMore = allFlights.length > 5;
+
+    // Empty state when the active time filter returns no flights
+    if (allFlights.length === 0 && timeFilter !== 'all') {
+        const filterLabel = timeFilter === '30d' ? 'ultimi 30 giorni' : 'ultimi 6 mesi';
+        return (
+            <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
+                    <History size={18} className="color-primary" />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Recent Missions</span>
+                </div>
+                <div style={{ textAlign: 'center', padding: 'var(--space-8) var(--space-4)' }}>
+                    <div style={{ fontSize: '1.8rem', marginBottom: 'var(--space-3)', opacity: 0.25 }}>✈</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
+                        Nessun volo negli {filterLabel}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--color-text-hint)', marginBottom: 'var(--space-5)' }}>
+                        Questo aereo non ha missioni registrate nel periodo selezionato.
+                    </div>
+                    <button
+                        onClick={() => onChangeFilter('all')}
+                        style={{
+                            padding: '7px 16px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--color-primary)',
+                            background: 'rgba(var(--color-primary-rgb), 0.08)',
+                            color: 'var(--color-primary)',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        Mostra tutta la storia →
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const flightRow = (f, i) => (
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-surface)', gap: '12px' }}>
+            {/* Left: flight number badge + route */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                {f.flightNumber ? (
+                    <span style={{
+                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 800,
+                        fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)',
+                        background: 'rgba(var(--color-primary-rgb), 0.08)',
+                        border: '1px solid rgba(var(--color-primary-rgb), 0.2)',
+                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.5px',
+                    }}>
+                        {f.flightNumber}
+                    </span>
+                ) : (
+                    <span style={{
+                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 700,
+                        color: 'var(--color-text-hint)', background: 'var(--color-divider)',
+                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.5px',
+                    }}>—</span>
+                )}
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                        {f.departure} → {f.arrival}
+                    </div>
+                    {f.airline && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {f.airline}
+                        </div>
+                    )}
+                </div>
+            </div>
+            {/* Right: distance + duration + date */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                {f.miles > 0 && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
+                        {Math.round(f.miles)} nm
+                    </span>
+                )}
+                <span style={{
+                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-family-mono)',
+                    color: 'var(--color-text-secondary)', background: 'var(--color-divider)',
+                    borderRadius: '4px', padding: '2px 6px',
+                }}>
+                    {typeof f.flightTime === 'number'
+                        ? `${Math.floor(f.flightTime)}h ${String(Math.round((f.flightTime % 1) * 60)).padStart(2, '0')}m`
+                        : `${f.flightTime}h`}
+                </span>
+                <span style={{ color: 'var(--color-text-hint)', fontSize: '0.72rem', minWidth: '56px', textAlign: 'right' }}>
+                    {new Date(f.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+                </span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
+                <History size={18} className="color-primary" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                    {showAll ? 'All Missions' : 'Recent Missions'}
+                </span>
+                {hasMore && (
+                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>
+                        {allFlights.length} total
+                    </span>
+                )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--color-divider)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                {displayed.map(flightRow)}
+            </div>
+            {hasMore && (
+                <button
+                    onClick={() => setShowAll(v => !v)}
+                    style={{
+                        marginTop: 'var(--space-3)', width: '100%', padding: '7px 0',
+                        background: 'none', border: '1px solid var(--color-divider)',
+                        borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                        fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-hint)',
+                        transition: 'all 0.15s ease',
+                    }}
+                >
+                    {showAll ? '↑ Show less' : `↓ Show all ${allFlights.length} missions`}
+                </button>
+            )}
+        </div>
+    );
+};
+
 export default function Hangar() {
     const { flights, isDarkMode } = useOutletContext();
     const [selectedType, setSelectedType] = useState(null);
@@ -910,6 +1042,7 @@ export default function Hangar() {
 
         Object.keys(stats).forEach(type => {
             stats[type].recentFlights.sort((a, b) => new Date(b.date) - new Date(a.date));
+            stats[type].allFlights = stats[type].recentFlights; // full sorted list
             stats[type].recentFlights = stats[type].recentFlights.slice(0, 5);
             
             stats[type].visitedAirports = Array.from(stats[type].visitedAirports);
@@ -1235,84 +1368,12 @@ export default function Hangar() {
                                     <PersonalRecords stats={selectedData} />
 
                                     {/* Recent Missions */}
-                                    <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
-                                            <History size={18} className="color-primary" />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Recent Missions</span>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--color-divider)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                                            {selectedData.recentFlights.map((f, i) => (
-                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-surface)', gap: '12px' }}>
-                                                    {/* Left: flight number badge + route */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                                        {f.flightNumber ? (
-                                                            <span style={{
-                                                                flexShrink: 0,
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 800,
-                                                                fontFamily: 'var(--font-family-mono)',
-                                                                color: 'var(--color-primary)',
-                                                                background: 'rgba(var(--color-primary-rgb), 0.08)',
-                                                                border: '1px solid rgba(var(--color-primary-rgb), 0.2)',
-                                                                borderRadius: '4px',
-                                                                padding: '2px 6px',
-                                                                letterSpacing: '0.5px',
-                                                            }}>
-                                                                {f.flightNumber}
-                                                            </span>
-                                                        ) : (
-                                                            <span style={{
-                                                                flexShrink: 0,
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 700,
-                                                                color: 'var(--color-text-hint)',
-                                                                background: 'var(--color-divider)',
-                                                                borderRadius: '4px',
-                                                                padding: '2px 6px',
-                                                                letterSpacing: '0.5px',
-                                                            }}>
-                                                                —
-                                                            </span>
-                                                        )}
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <div style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                                                                {f.departure} → {f.arrival}
-                                                            </div>
-                                                            {f.airline && (
-                                                                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {f.airline}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {/* Right: duration + distance + date */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                                                        {f.miles > 0 && (
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
-                                                                {Math.round(f.miles)} nm
-                                                            </span>
-                                                        )}
-                                                        <span style={{
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 700,
-                                                            fontFamily: 'var(--font-family-mono)',
-                                                            color: 'var(--color-text-secondary)',
-                                                            background: 'var(--color-divider)',
-                                                            borderRadius: '4px',
-                                                            padding: '2px 6px',
-                                                        }}>
-                                                            {typeof f.flightTime === 'number'
-                                                                ? `${Math.floor(f.flightTime)}h ${String(Math.round((f.flightTime % 1) * 60)).padStart(2, '0')}m`
-                                                                : `${f.flightTime}h`}
-                                                        </span>
-                                                        <span style={{ color: 'var(--color-text-hint)', fontSize: '0.72rem', minWidth: '56px', textAlign: 'right' }}>
-                                                            {new Date(f.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <RecentMissions
+                                        flights={selectedData.recentFlights}
+                                        allFlights={selectedData.allFlights ?? selectedData.recentFlights}
+                                        timeFilter={timeFilter}
+                                        onChangeFilter={setTimeFilter}
+                                    />
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
