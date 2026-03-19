@@ -42,12 +42,14 @@ export default defineConfig({
         enabled: true
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5000000 // Increase to 5MB
+        maximumFileSizeToCacheInBytes: 5000000,
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/checklists\/.+\.pdf$/],
       }
     })
   ],
   build: {
-    chunkSizeWarningLimit: 4000 // Increase warning limit to 4MB
+    chunkSizeWarningLimit: 4000
   },
   server: {
     proxy: {
