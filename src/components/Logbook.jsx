@@ -194,7 +194,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                     borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary)',
                     flexWrap: 'wrap', animation: 'fadeSlideUp 0.3s ease'
                 }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderRight: '1px solid var(--color-primary)', paddingRight: 'var(--space-3)', marginRight: '4px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.07em', borderRight: '1px solid var(--color-primary)', paddingRight: 'var(--space-3)', marginRight: '4px' }}>
                         Active Filters
                     </div>
                     {Object.entries(activeFilters).map(([key, value]) => (
@@ -202,7 +202,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                             display: 'flex', alignItems: 'center', gap: '6px',
                             backgroundColor: 'var(--color-surface)', padding: '4px 10px',
                             borderRadius: 'var(--radius-full)', border: '1px solid var(--color-primary)',
-                            fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)'
+                            fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-primary)'
                         }}>
                             <span style={{ color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>{key}:</span>
                             {value}
@@ -306,8 +306,8 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                                 <span style={{ 
                                                     fontSize: '0.65rem', backgroundColor: 'var(--color-primary)', 
                                                     color: 'white', padding: '2px 6px', borderRadius: '4px', 
-                                                    fontWeight: 800, letterSpacing: '0.5px' 
-                                                }}>LATEST</span>
+                                                    fontWeight: 500, letterSpacing: '0.07em' 
+                                                }}>Latest</span>
                                             )}
                                         </div>
                                     </td>
@@ -327,7 +327,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                     <td className="data-mono">{f.miles} nm</td>
                                     <td className="data-mono">{f.flightTime} h</td>
                                     <td>
-                                        <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                                        <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.85rem' }}>
                                             {Math.floor(((f.miles || 0) / 10) + ((f.flightTime || 0) * 50))}
                                         </span>
                                     </td>
@@ -385,7 +385,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                         </button>
 
                         <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
-                            Page <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{currentPage}</span> of {totalPages}
+                            Page <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{currentPage}</span> of {totalPages}
                         </div>
 
                         <button

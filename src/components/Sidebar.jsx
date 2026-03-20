@@ -177,7 +177,7 @@ export default function Sidebar({
                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                 <p style={{ 
                                     fontSize: '0.85rem', 
-                                    fontWeight: 600, 
+                                    fontWeight: 500, 
                                     margin: 0, 
                                     whiteSpace: 'nowrap', 
                                     overflow: 'hidden', 

@@ -149,9 +149,9 @@ export default function LogbookMap({ mapData, isDarkMode, filteredFlights }) {
                 position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
                 backgroundColor: 'var(--color-surface)', padding: '6px 12px',
                 borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
-                boxShadow: 'var(--shadow-sm)', fontSize: '0.7rem', fontWeight: 700,
+                boxShadow: 'var(--shadow-sm)', fontSize: '0.7rem', fontWeight: 500,
                 display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)',
-                textTransform: 'uppercase', letterSpacing: '0.5px'
+                textTransform: 'uppercase', letterSpacing: '0.07em'
             }}>
                 <MapIcon size={14} /> Global Network
             </div>

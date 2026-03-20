@@ -90,7 +90,7 @@ export default function Dashboard() {
         if (active && payload && payload.length) {
             return (
                 <div className="card" style={{ padding: 'var(--space-3)', minWidth: '120px', borderRadius: 'var(--radius-md)' }}>
-                    <p style={{ margin: '0 0 8px 0', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-secondary)', borderBottom: '1px solid var(--color-divider)', paddingBottom: '4px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: 500, fontSize: '0.85rem', color: 'var(--color-text-secondary)', borderBottom: '1px solid var(--color-divider)', paddingBottom: '4px' }}>
                         {label || (payload[0] && payload[0].payload.name)}
                     </p>
                     {payload.map((entry, index) => (
@@ -164,7 +164,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value">{kpis.totalFlights}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 500 }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 400 }}>
                             {kpis.flightsThisMonth > 0 ? `↑ ${kpis.flightsThisMonth} this month` : (kpis.daysSinceLastFlight !== null ? `Last flight: ${kpis.daysSinceLastFlight}d ago` : 'Start logging!')}
                         </span>
                     </div>
@@ -178,7 +178,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value text-success">{kpis.totalMiles.toLocaleString()}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 500 }}>Nautical Miles logged</span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 400 }}>Nautical Miles logged</span>
                     </div>
                 </div>
 
@@ -190,7 +190,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--space-1)' }}>
                         <span className="kpi-value text-warning">{kpis.totalHours}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 500 }}>Block hours flown</span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '4px', fontWeight: 400 }}>Block hours flown</span>
                     </div>
                 </div>
             </div>

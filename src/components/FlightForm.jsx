@@ -74,7 +74,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
                 display: 'flex', 
                 justifyContent: 'space-between',
                 color: name === 'departure' ? 'var(--color-success)' : 'var(--color-danger)',
-                fontWeight: 700,
+                fontWeight: 500,
                 letterSpacing: '0.05em',
                 fontSize: '0.75rem',
                 textTransform: 'uppercase'
@@ -98,7 +98,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
                         textTransform: 'uppercase',
                         borderColor: (query.length > 0 && !isValid) ? 'var(--color-danger)' : undefined,
                         fontSize: '1.25rem',
-                        fontWeight: 700,
+                        fontWeight: 500,
                         padding: '10px 12px',
                         height: 'auto',
                         letterSpacing: '0.02em',
@@ -123,7 +123,7 @@ const AirportAutocomplete = ({ label, value, name, onChange, placeholder }) => {
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                            <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{ap.icao} {ap.iata ? `(${ap.iata})` : ''}</div>
+                            <div style={{ fontWeight: 500, color: 'var(--color-primary)' }}>{ap.icao} {ap.iata ? `(${ap.iata})` : ''}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {ap.name} {ap.city ? `- ${ap.city}` : ''}
                             </div>
@@ -225,7 +225,7 @@ export default function FlightForm({ onAddFlight, initialData, onCancel, flights
         <div className="card" style={{ height: 'fit-content' }}>
             <div style={{ marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <PlusCircle size={28} className="text-primary" aria-hidden="true" />
-                <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 800 }}>
+                <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 500 }}>
                     {isEditing ? 'Edit Flight' : 'New Flight'}
                 </h1>
             </div>
@@ -300,7 +300,7 @@ export default function FlightForm({ onAddFlight, initialData, onCancel, flights
                             onChange={handleChange} 
                             className="form-input" 
                             placeholder="e.g. 350" 
-                            style={{ fontSize: '1.25rem', fontWeight: 700 }}
+                            style={{ fontSize: '1.25rem', fontWeight: 500 }}
                         />
                     </div>
                     <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
@@ -315,7 +315,7 @@ export default function FlightForm({ onAddFlight, initialData, onCancel, flights
                             onChange={handleChange} 
                             className="form-input" 
                             placeholder="e.g. 1.5" 
-                            style={{ fontSize: '1.25rem', fontWeight: 700 }}
+                            style={{ fontSize: '1.25rem', fontWeight: 500 }}
                         />
                     </div>
                 </div>

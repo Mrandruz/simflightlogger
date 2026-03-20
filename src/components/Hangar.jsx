@@ -118,7 +118,7 @@ const ChecklistViewer = ({ aircraftType, pdfUrl, onClose }) => {
                 }}>
                     <FileText size={16} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>
                             {aircraftType} — Checklist
                         </div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: '1px' }}>
@@ -191,8 +191,8 @@ const MetricBlock = ({ label, value, icon: Icon, color = 'var(--color-primary)' 
             <Icon size={20} aria-hidden="true" />
         </div>
         <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-text-primary)' }} className="data-mono">{value}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '2px' }}>{label}</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--color-text-primary)' }} className="data-mono">{value}</div>
         </div>
     </div>
 );
@@ -329,7 +329,7 @@ const Sparkline = ({ data, color = 'var(--color-primary)', tooltip }) => {
                     padding: '6px 10px',
                     borderRadius: '6px',
                     fontSize: '0.7rem',
-                    fontWeight: 700,
+                    fontWeight: 500,
                     whiteSpace: 'nowrap',
                     boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                     border: '1px solid rgba(255,255,255,0.1)',
@@ -355,7 +355,7 @@ const MaintenanceStatus = ({ totalHours }) => {
 
     return (
         <div className="card glass-surface" style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', border: '1px solid var(--color-divider)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                 <Wrench size={14} />
                 Digital Tech Log
             </div>
@@ -369,9 +369,9 @@ const MaintenanceStatus = ({ totalHours }) => {
                         <div key={label}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.75rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{label}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{label}</span>
                                     {isDue && (
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--color-danger)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 500, color: 'var(--color-danger)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                                             Due Soon
                                         </span>
                                     )}
@@ -395,11 +395,11 @@ const AnalyticsBar = ({ label, value, subValue, percentage, color = 'var(--color
     <div style={{ marginBottom: 'var(--space-4)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{label}</span>
-                {subValue && <span style={{ fontSize: '0.65rem', color: 'var(--color-text-hint)', fontWeight: 600, textTransform: 'uppercase' }}>{subValue}</span>}
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>{label}</span>
+                {subValue && <span style={{ fontSize: '0.65rem', color: 'var(--color-text-hint)', fontWeight: 500, textTransform: 'uppercase' }}>{subValue}</span>}
             </div>
             <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: color }}>{value}</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: color }}>{value}</span>
             </div>
         </div>
         <div style={{ height: '8px', background: 'var(--color-divider)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
@@ -514,7 +514,7 @@ const MilestoneGrid = ({ stats, color = 'var(--color-primary)' }) => {
                             <m.icon size={16} style={{ color: achieved ? tierColor : 'var(--color-text-hint)' }} />
                             {achieved && (
                                 <span style={{
-                                    fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.5px',
+                                    fontSize: '0.6rem', fontWeight: 500, letterSpacing: '0.07em',
                                     color: tierColor,
                                     background: tierColor + '18',
                                     border: `1px solid ${tierColor}40`,
@@ -526,8 +526,8 @@ const MilestoneGrid = ({ stats, color = 'var(--color-primary)' }) => {
                             )}
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>{m.label}</div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: achieved ? tierColor : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>{m.label}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: achieved ? tierColor : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)', marginTop: '2px' }}>
                                 {m.format(m.value)}
                             </div>
                         </div>
@@ -542,7 +542,7 @@ const MilestoneGrid = ({ stats, color = 'var(--color-primary)' }) => {
                                     transition: 'width 1s ease-out',
                                 }} />
                             </div>
-                            <div style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', marginTop: '3px', fontWeight: 600 }}>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', marginTop: '3px', fontWeight: 500 }}>
                                 {nextThreshold !== null
                                     ? `Next: ${m.format(nextThreshold)}`
                                     : '✦ Max tier reached'}
@@ -569,9 +569,9 @@ const TopRoutes = ({ allRoutes = [] }) => {
         <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
                 <Route size={18} className="color-primary" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Top Network Pairs</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Top Network Pairs</span>
                 {hasMore && (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>
                         {allRoutes.length} routes total
                     </span>
                 )}
@@ -598,7 +598,7 @@ const TopRoutes = ({ allRoutes = [] }) => {
                         borderRadius: 'var(--radius-sm)',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        fontWeight: 700,
+                        fontWeight: 500,
                         color: 'var(--color-text-hint)',
                         transition: 'all 0.15s ease',
                     }}
@@ -685,7 +685,7 @@ const PersonalRecords = ({ stats }) => {
         <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-5)' }}>
                 <Award size={18} className="color-primary" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Personal Records</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Personal Records</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--color-divider)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
                 {records.map((rec, i) => (
@@ -698,13 +698,13 @@ const PersonalRecords = ({ stats }) => {
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <rec.icon size={13} style={{ color: rec.highlight ? 'var(--color-primary)' : 'var(--color-text-hint)', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                                 {rec.label}
                             </span>
                         </div>
                         <div style={{
                             fontSize: '1.1rem',
-                            fontWeight: 800,
+                            fontWeight: 500,
                             fontFamily: 'var(--font-family-mono)',
                             color: rec.highlight ? 'var(--color-primary)' : 'var(--color-text-primary)',
                             lineHeight: 1.1,
@@ -712,7 +712,7 @@ const PersonalRecords = ({ stats }) => {
                             {rec.value}
                         </div>
                         {rec.sub && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>
                                 {rec.sub}
                             </div>
                         )}
@@ -730,11 +730,11 @@ const CompareRow = ({ label, valA, valB, unit = '', higherIsBetter = true }) => 
     const bWins = higherIsBetter ? b > a : b < a;
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 1fr', gap: '12px', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--color-divider)' }}>
-            <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 800, color: aWins ? 'var(--color-primary)' : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
+            <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 500, color: aWins ? 'var(--color-primary)' : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
                 {valA}{unit}{aWins && b !== a && <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>▲</span>}
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-            <div style={{ textAlign: 'left', fontSize: '1rem', fontWeight: 800, color: bWins ? 'var(--color-primary)' : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
+            <div style={{ textAlign: 'center', fontSize: '0.68rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</div>
+            <div style={{ textAlign: 'left', fontSize: '1rem', fontWeight: 500, color: bWins ? 'var(--color-primary)' : 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
                 {valB}{unit}{bWins && <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>▲</span>}
             </div>
         </div>
@@ -747,20 +747,20 @@ const AircraftComparison = ({ typeA, dataA, typeB, dataB, onClose }) => {
         <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)', animation: 'fadeSlideUp 0.25s ease-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-6)' }}>
                 <LayoutGrid size={16} className="color-primary" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', flex: 1 }}>Head-to-Head Comparison</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)', flex: 1 }}>Head-to-Head Comparison</span>
                 <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-hint)', display: 'flex', alignItems: 'center' }}>
                     <X size={16} />
                 </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 1fr', gap: '12px', marginBottom: 'var(--space-4)' }}>
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--color-primary)' }}>{typeA}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>{dataA.topAirlines[0]?.[0] || 'Private'}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--color-primary)' }}>{typeA}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>{dataA.topAirlines[0]?.[0] || 'Private'}</div>
                 </div>
-                <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-hint)', alignSelf: 'center' }}>vs</div>
+                <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-hint)', alignSelf: 'center' }}>vs</div>
                 <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>{typeB}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>{dataB.topAirlines[0]?.[0] || 'Private'}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{typeB}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>{dataB.topAirlines[0]?.[0] || 'Private'}</div>
                 </div>
             </div>
             <CompareRow label="Missions"       valA={dataA.count}                                    valB={dataB.count}                                    higherIsBetter={true} />
@@ -789,11 +789,11 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
             <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
                     <History size={18} className="color-primary" />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Recent Missions</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Recent Missions</span>
                 </div>
                 <div style={{ textAlign: 'center', padding: 'var(--space-8) var(--space-4)' }}>
                     <div style={{ fontSize: '1.8rem', marginBottom: 'var(--space-3)', opacity: 0.25 }}>✈</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                         Nessun volo negli {filterLabel}
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--color-text-hint)', marginBottom: 'var(--space-5)' }}>
@@ -808,7 +808,7 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
                             background: 'rgba(var(--color-primary-rgb), 0.08)',
                             color: 'var(--color-primary)',
                             fontSize: '0.78rem',
-                            fontWeight: 700,
+                            fontWeight: 500,
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                         }}
@@ -826,23 +826,23 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 {f.flightNumber ? (
                     <span style={{
-                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 800,
+                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 500,
                         fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)',
                         background: 'rgba(var(--color-primary-rgb), 0.08)',
                         border: '1px solid rgba(var(--color-primary-rgb), 0.2)',
-                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.5px',
+                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.07em',
                     }}>
                         {f.flightNumber}
                     </span>
                 ) : (
                     <span style={{
-                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 700,
+                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 500,
                         color: 'var(--color-text-hint)', background: 'var(--color-divider)',
-                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.5px',
+                        borderRadius: '4px', padding: '2px 6px', letterSpacing: '0.07em',
                     }}>—</span>
                 )}
                 <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                         {f.departure} → {f.arrival}
                     </div>
                     {f.airline && (
@@ -860,7 +860,7 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
                     </span>
                 )}
                 <span style={{
-                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-family-mono)',
+                    fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)',
                     color: 'var(--color-text-secondary)', background: 'var(--color-divider)',
                     borderRadius: '4px', padding: '2px 6px',
                 }}>
@@ -879,11 +879,11 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
         <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
                 <History size={18} className="color-primary" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>
                     {showAll ? 'All Missions' : 'Recent Missions'}
                 </span>
                 {hasMore && (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>
                         {allFlights.length} total
                     </span>
                 )}
@@ -898,7 +898,7 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
                         marginTop: 'var(--space-3)', width: '100%', padding: '7px 0',
                         background: 'none', border: '1px solid var(--color-divider)',
                         borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                        fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-hint)',
+                        fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-hint)',
                         transition: 'all 0.15s ease',
                     }}
                 >
@@ -1129,11 +1129,11 @@ export default function Hangar() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 'var(--space-4)' }}>
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.72rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                         <Zap size={16} aria-hidden="true" />
                         Fleet Operations
                     </div>
-                    <h2 style={{ fontSize: '2.2rem', margin: 0, fontWeight: 800 }}>The Hangar</h2>
+                    <h2 style={{ fontSize: '2.2rem', margin: 0, fontWeight: 500 }}>The Hangar</h2>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-surface)', border: '1px solid var(--color-divider)', borderRadius: 'var(--radius-md)', padding: '4px' }}>
                     {[{ key: '30d', label: '30 days' }, { key: '6m', label: '6 months' }, { key: 'all', label: 'All time' }].map(({ key, label }) => (
@@ -1146,7 +1146,7 @@ export default function Hangar() {
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontSize: '0.75rem',
-                                fontWeight: 700,
+                                fontWeight: 500,
                                 transition: 'all 0.15s ease',
                                 background: timeFilter === key ? 'var(--color-primary)' : 'none',
                                 color: timeFilter === key ? '#fff' : 'var(--color-text-hint)',
@@ -1206,7 +1206,7 @@ export default function Hangar() {
                                     <Plane size={20} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: selectedType === type ? 'var(--color-primary-dark)' : 'var(--color-text-primary)' }}>{type}</div>
+                                    <div style={{ fontSize: '1rem', fontWeight: 500, color: selectedType === type ? 'var(--color-primary-dark)' : 'var(--color-text-primary)' }}>{type}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)' }}>{stats.count} Missions</div>
                                 </div>
                                 <Sparkline 
@@ -1221,7 +1221,7 @@ export default function Hangar() {
                                         style={{
                                             flexShrink: 0,
                                             fontSize: '0.62rem',
-                                            fontWeight: 800,
+                                            fontWeight: 500,
                                             padding: '3px 7px',
                                             borderRadius: '4px',
                                             border: `1px solid ${compareType === type ? 'var(--color-primary)' : 'var(--color-divider)'}`,
@@ -1229,7 +1229,7 @@ export default function Hangar() {
                                             color: compareType === type ? '#fff' : 'var(--color-text-hint)',
                                             cursor: 'pointer',
                                             textTransform: 'uppercase',
-                                            letterSpacing: '0.4px',
+                                            letterSpacing: '0.07em',
                                             transition: 'all 0.15s ease',
                                         }}
                                     >
@@ -1254,25 +1254,25 @@ export default function Hangar() {
                                 <div style={{ position: 'relative', zIndex: 1 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
                                         <div>
-                                            <h1 style={{ fontSize: '3.5rem', margin: '0', fontWeight: 900, letterSpacing: '-2px', color: 'var(--color-text-primary)' }}>
+                                            <h1 style={{ fontSize: '3.5rem', margin: '0', fontWeight: 500, letterSpacing: '-2px', color: 'var(--color-text-primary)' }}>
                                                 {selectedType}
                                             </h1>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     <Building2 size={16} className="color-primary" />
-                                                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-secondary)' }}>
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
                                                         {selectedData.topAirlines[0]?.[0] || 'Private'}
                                                     </span>
                                                 </div>
                                                 <div style={{ height: '4px', width: '4px', borderRadius: '50%', background: 'var(--color-divider)' }} />
-                                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-hint)' }}>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-hint)' }}>
                                                     {selectedData.count} Flights Total
                                                 </div>
                                             </div>
                                         </div>
                                         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Fleet Status</div>
-                                            <div style={{ color: 'var(--color-success)', fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.65rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fleet Status</div>
+                                            <div style={{ color: 'var(--color-success)', fontSize: '1rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
                                                 <div style={{ height: '8px', width: '8px', borderRadius: '50%', background: 'var(--color-success)', boxShadow: '0 0 8px var(--color-success)' }} />
                                                 Active / Ready
                                             </div>
@@ -1281,31 +1281,31 @@ export default function Hangar() {
                                     
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-8)', marginBottom: 'var(--space-8)' }}>
                                         <div>
-                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Total Flight Time</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 900 }}>{selectedData.totalHours.toFixed(1)}<span style={{ fontSize: '1rem', color: 'var(--color-text-hint)', marginLeft: '4px' }}>h</span></div>
+                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.65rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Total Flight Time</div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 500 }}>{selectedData.totalHours.toFixed(1)}<span style={{ fontSize: '1rem', color: 'var(--color-text-hint)', marginLeft: '4px' }}>h</span></div>
                                         </div>
                                         <div>
-                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Total Fuel</div>
+                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.65rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Total Fuel</div>
                                             {selectedData.fuelRate !== null && selectedData.fuelRate !== undefined ? (
                                                 <div>
-                                                    <div style={{ fontSize: '2rem', fontWeight: 900 }}>
+                                                    <div style={{ fontSize: '2rem', fontWeight: 500 }}>
                                                         {Math.round(selectedData.totalFuel).toLocaleString()}
                                                         <span style={{ fontSize: '1rem', color: 'var(--color-text-hint)', marginLeft: '4px' }}>kg</span>
                                                     </div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: '4px', fontWeight: 600 }}>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: '4px', fontWeight: 500 }}>
                                                         {selectedData.fuelRate.toFixed(1)} kg/nm avg
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-text-hint)' }}>
+                                                <div style={{ fontSize: '1.4rem', fontWeight: 500, color: 'var(--color-text-hint)' }}>
                                                     N/A
-                                                    <span style={{ fontSize: '0.7rem', display: 'block', marginTop: '2px', fontWeight: 600 }}>type not mapped</span>
+                                                    <span style={{ fontSize: '0.7rem', display: 'block', marginTop: '2px', fontWeight: 500 }}>type not mapped</span>
                                                 </div>
                                             )}
                                         </div>
                                         <div>
-                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Last Mission</div>
-                                            <div style={{ fontSize: '2rem', fontWeight: 900 }}>
+                                            <div style={{ color: 'var(--color-text-hint)', fontSize: '0.65rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Last Mission</div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 500 }}>
                                                 {selectedData.lastFlight ? new Date(selectedData.lastFlight).toLocaleDateString() : 'N/A'}
                                             </div>
                                         </div>
@@ -1341,15 +1341,15 @@ export default function Hangar() {
                                                     <FileText size={18} />
                                                 </div>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-primary)', marginBottom: '2px' }}>
+                                                    <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-primary)', marginBottom: '2px' }}>
                                                         {selectedType} — Operational checklist
                                                     </div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 600 }}>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>
                                                         Pre-flight · Engine Start · Taxi · Takeoff · Cruise · Landing · Shutdown
                                                     </div>
                                                 </div>
                                                 <div style={{
-                                                    fontSize: '0.72rem', fontWeight: 800,
+                                                    fontSize: '0.72rem', fontWeight: 500,
                                                     color: 'var(--color-primary)',
                                                     display: 'flex', alignItems: 'center', gap: '4px',
                                                     flexShrink: 0,
@@ -1360,7 +1360,7 @@ export default function Hangar() {
                                                 </div>
                                             </button>
                                         )}
-                                        <div style={{ color: 'var(--color-text-hint)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--space-4)' }}>Aircraft Milestones</div>
+                                        <div style={{ color: 'var(--color-text-hint)', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 'var(--space-4)' }}>Aircraft Milestones</div>
                                         <MilestoneGrid stats={selectedData} />
                                     </div>
                                 </div>
@@ -1384,7 +1384,7 @@ export default function Hangar() {
                                     <div className="card glass-surface" style={{ padding: 'var(--space-4)', border: '1px solid var(--color-divider)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)', paddingLeft: 'var(--space-2)' }}>
                                             <MapIcon size={16} className="color-primary" />
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase' }}>Operational Network</span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Operational Network</span>
                                         </div>
                                         <OperationalMap airports={selectedData.visitedAirports} routes={selectedData.routes} isDarkMode={isDarkMode} />
                                     </div>
@@ -1412,7 +1412,7 @@ export default function Hangar() {
                                     <div className="card glass-surface" style={{ padding: 'var(--space-6)', border: '1px solid var(--color-divider)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
                                             <Building2 size={18} className="color-primary" />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}>Livery Distribution</span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Livery Distribution</span>
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             {selectedData.topAirlines.map(([airline, hours], i) => (

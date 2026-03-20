@@ -25,7 +25,7 @@ const AchievementBadge = ({ title, description, icon: Icon, data }) => {
             <div className="achievement-tooltip">
                 <div style={{ fontSize: '0.75rem', lineHeight: '1.3', fontFamily: 'var(--font-family-display)' }}>{description}</div>
                 {extraInfo && !isCompleted && (
-                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 500, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
                         {extraInfo}
                     </div>
                 )}
@@ -36,9 +36,9 @@ const AchievementBadge = ({ title, description, icon: Icon, data }) => {
                     <Icon size={16} />
                 </div>
                 <div style={{ width: '100%', zIndex: 1 }}>
-                    <div className="achievement-title" style={{ fontFamily: 'var(--font-family-display)', fontWeight: 700 }}>{title}</div>
+                    <div className="achievement-title" style={{ fontFamily: 'var(--font-family-display)', fontWeight: 500 }}>{title}</div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500, fontFamily: 'var(--font-family-sans)' }}>
-                        {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 800, fontFamily: 'var(--font-family-display)' }}>UNLOCKED!</span> : `${current} / ${goal}`}
+                        {isCompleted ? <span style={{ color: 'var(--color-success)', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Unlocked!</span> : `${current} / ${goal}`}
                     </div>
                 </div>
             </div>
@@ -75,7 +75,7 @@ export default function PilotProfileCard({ flights, user }) {
                             onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || "User")}&background=1a73e8&color=fff&size=80` }}
                         />
                         <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
                                 {getGreeting()} {user?.displayName?.split(' ')[0] || "Pilot"}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -87,14 +87,14 @@ export default function PilotProfileCard({ flights, user }) {
                                 </h2>
                             </div>
                             <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
-                                <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{stats.totalXp.toLocaleString()}</span> XP &bull; <span className="data-mono">{stats.totalHours.toFixed(1)}</span> h
+                                <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{stats.totalXp.toLocaleString()}</span> XP &bull; <span className="data-mono">{stats.totalHours.toFixed(1)}</span> h
                                 {stats.isMasterBonusActive ? (
-                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 600, color: '#ff6b35', backgroundColor: 'rgba(255, 107, 53, 0.15)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(255, 107, 53, 0.3)' }}>
+                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 500, color: '#ff6b35', backgroundColor: 'rgba(255, 107, 53, 0.15)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(255, 107, 53, 0.3)' }}>
                                         <Flame size={12} />
                                         10x XP Active
                                     </span>
                                 ) : stats.achievements.dailyStreak.unlocked && (
-                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
+                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
                                         2x XP Active
                                     </span>
                                 )}
@@ -105,7 +105,7 @@ export default function PilotProfileCard({ flights, user }) {
                     <div style={{ marginTop: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.75rem' }}>
                             <span style={{ fontWeight: 500, color: 'var(--color-text-secondary)' }}>XP Progression</span>
-                            <span style={{ fontWeight: 600 }} className="data-mono">{Math.round(stats.progress)}%</span>
+                            <span style={{ fontWeight: 500 }} className="data-mono">{Math.round(stats.progress)}%</span>
                         </div>
 
                         {/* Progress Bar background */}
@@ -167,7 +167,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Favorite Hub</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.favoriteAirport}</div>
+                                <div style={{ fontWeight: 500 }} className="data-mono">{stats.favoriteAirport}</div>
                             </div>
                         </div>
 
@@ -178,7 +178,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Latest Flight</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">
+                                <div style={{ fontWeight: 500 }} className="data-mono">
                                     {stats.latestFlight
                                         ? <>{stats.latestFlight.departure}→{stats.latestFlight.arrival} <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({new Date(stats.latestFlight.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})</span></>
                                         : 'None'
@@ -194,7 +194,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Longest Flight</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">
+                                <div style={{ fontWeight: 500 }} className="data-mono">
                                     {stats.longestFlight.miles > 0
                                         ? <>{stats.longestFlight.miles.toLocaleString()} nm <span style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', fontWeight: 400, fontFamily: 'var(--font-family-sans)' }}>({stats.longestFlight.departure}→{stats.longestFlight.arrival})</span></>
                                         : 'N/A'
@@ -213,7 +213,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Hours / Flight</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgTime} h</div>
+                                <div style={{ fontWeight: 500 }} className="data-mono">{stats.avgTime} h</div>
                             </div>
                         </div>
 
@@ -224,7 +224,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Avg Distance / Flight</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.avgMiles} nm</div>
+                                <div style={{ fontWeight: 500 }} className="data-mono">{stats.avgMiles} nm</div>
                             </div>
                         </div>
 
@@ -235,7 +235,7 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Estimated Fuel</div>
-                                <div style={{ fontWeight: 600 }} className="data-mono">{stats.totalFuel.toLocaleString()} kg</div>
+                                <div style={{ fontWeight: 500 }} className="data-mono">{stats.totalFuel.toLocaleString()} kg</div>
                             </div>
                         </div>
                     </div>

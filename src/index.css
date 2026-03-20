@@ -61,6 +61,16 @@
   /* Typography */
   --font-family-mono: 'JetBrains Mono', monospace;
 
+  /* Typography scale — Skydeck design system */
+  /* Titles: Poppins 500, no uppercase */
+  /* Labels: Inter 500, uppercase 0.07em */
+  /* Data/numbers: JetBrains Mono 500 */
+  /* Body: Inter 400 */
+  --type-title-weight: 500;
+  --type-label-weight: 500;
+  --type-label-spacing: 0.07em;
+  --type-value-weight: 500;
+
   /* Sidebar */
   --sidebar-width-collapsed: 72px;
   --sidebar-width-expanded: 240px;
@@ -551,7 +561,7 @@ h4,
 h5,
 h6 {
   font-family: var(--font-family-display);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
@@ -565,11 +575,16 @@ h6 {
 }
 
 .icao-code,
-.icao,
+.icao {
+  font-family: var(--font-family-display);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+}
+
 .data-mono {
-  font-family: var(--font-family-sans);
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-family: var(--font-family-mono);
+  font-weight: 500;
+  letter-spacing: -0.5px;
 }
 
 .card {
@@ -654,9 +669,9 @@ h6 {
     border: 1px solid var(--color-primary);
     border-radius: 20px;
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.07em;
     color: var(--color-primary);
     animation: fadeSlideUp 0.3s ease-out;
 }
@@ -723,13 +738,15 @@ h6 {
     font-size: 0.7rem;
     color: var(--color-text-hint);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.07em;
+    font-weight: 500;
     margin-bottom: 2px;
 }
 
 .card-stat-value {
     font-size: 1rem;
-    font-weight: 600;
+    font-family: var(--font-family-display);
+    font-weight: 500;
 }
 
 /* Custom visual utilities */
@@ -891,7 +908,7 @@ h6 {
   gap: var(--space-2);
   padding: 10px 20px;
   border-radius: var(--radius-md);
-  font-weight: 600;
+  font-weight: 500;
   font-family: var(--font-family-display);
   font-size: 0.875rem;
   cursor: pointer;
@@ -969,23 +986,23 @@ h6 {
 }
 
 .kpi-label {
-  font-family: var(--font-family-display);
-  font-size: 0.85rem;
+  font-family: var(--font-family-sans);
+  font-size: 0.75rem;
   color: var(--color-text-secondary);
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
 }
 
 .kpi-value {
   font-size: 3.5rem;
   line-height: 1;
-  font-family: var(--font-family-sans);
-  font-weight: 800;
+  font-family: var(--font-family-display);
+  font-weight: 300;
   color: var(--color-primary);
   text-align: center;
   width: 100%;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 /* Tables */
@@ -1019,8 +1036,8 @@ h6 {
   font-weight: 500;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
   background-color: var(--color-surface-hover);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);

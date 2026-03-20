@@ -76,23 +76,23 @@ const MiniMetar = ({ icao }) => {
         }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <Gauge size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Pres</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.altim ? `${Math.round(metar.altim)}` : '--'}</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pres</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{metar.altim ? `${Math.round(metar.altim)}` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <Wind size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Wind</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.wdir !== undefined ? `${metar.wdir}°` : '--'}/{metar.wspd !== undefined ? `${metar.wspd}k` : '--'}</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wind</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{metar.wdir !== undefined ? `${metar.wdir}°` : '--'}/{metar.wspd !== undefined ? `${metar.wspd}k` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <Thermometer size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Temp</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.temp !== undefined ? `${Math.round(metar.temp)}°` : '--'}</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Temp</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{metar.temp !== undefined ? `${Math.round(metar.temp)}°` : '--'}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <Droplets size={14} style={{ color: 'var(--color-text-hint)', marginBottom: '2px' }} aria-hidden="true" />
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Dew</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{metar.dewp !== undefined ? `${Math.round(metar.dewp)}°` : '--'}</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dew</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{metar.dewp !== undefined ? `${Math.round(metar.dewp)}°` : '--'}</span>
             </div>
         </div>
     );
@@ -355,11 +355,11 @@ const SimBriefBriefing = () => {
             {/* Header & Mission Status */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        <Zap size={16} aria-hidden="true" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '4px', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        <Zap size={14} aria-hidden="true" />
                         Flight Control
                     </div>
-                    <h1 style={{ fontSize: '2rem', margin: 0 }}>Briefing & Dispatch</h1>
+                    <h1 style={{ fontSize: '1.75rem', margin: 0, fontFamily: 'var(--font-family-display)', fontWeight: 500 }}>Briefing & Dispatch</h1>
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -384,7 +384,7 @@ const SimBriefBriefing = () => {
             {showSettings && (
                 <div className="card" style={{ padding: 'var(--space-4)', border: '1px solid var(--color-primary)', animation: 'fadeSlideUp 0.3s ease-out', backgroundColor: 'var(--color-primary-light)' }}>
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-primary)' }}>SimBrief Configuration:</span>
+                        <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--color-primary)' }}>SimBrief Configuration:</span>
                         <IdentifierToggle identifier={identifier} onTypeChange={handleTypeChange} />
                         <input type="text" className="form-input" value={identifier.value} onChange={handleIdentifierChange} style={{ width: '200px', height: '36px', fontSize: '0.9rem' }} placeholder="Enter ID/Username..." />
                     </div>
@@ -399,42 +399,42 @@ const SimBriefBriefing = () => {
                             <div style={{ padding: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-divider)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-success)', marginBottom: '4px' }}>ORIGIN</div>
-                                        <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>{data.origin.icao}</div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>{data.origin.name}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 600 }}>{formatZulu(data.departureTime)}</div>
-                                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-hint)', marginTop: '2px' }}>
+                                        <div style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-success)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Origin</div>
+                                        <div style={{ fontSize: '2.5rem', fontWeight: 300, lineHeight: 1, fontFamily: 'var(--font-family-display)', letterSpacing: '-0.03em' }}>{data.origin.icao}</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 400 }}>{data.origin.name}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{formatZulu(data.departureTime)}</div>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-text-hint)', marginTop: '2px' }}>
                                             RWY {data.departureRunway} • {data.sid}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--color-text-hint)' }}>
-                                        <div style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: '2px' }}>{data.duration}</div>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 500, marginBottom: '2px', fontFamily: 'var(--font-family-mono)' }}>{data.duration}</div>
                                         <div style={{ width: '100px', height: '2px', backgroundColor: 'currentColor', position: 'relative' }}>
                                             <Plane size={14} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'var(--color-surface)', padding: '0 4px' }} aria-hidden="true" />
                                         </div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-danger)', marginBottom: '4px' }}>DESTINATION</div>
-                                        <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>{data.destination.icao}</div>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 500 }}>{data.destination.name}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 600 }}>{formatZulu(data.arrivalTime)}</div>
-                                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-hint)', marginTop: '2px' }}>
+                                        <div style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-danger)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Destination</div>
+                                        <div style={{ fontSize: '2.5rem', fontWeight: 300, lineHeight: 1, fontFamily: 'var(--font-family-display)', letterSpacing: '-0.03em' }}>{data.destination.icao}</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px', fontWeight: 400 }}>{data.destination.name}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', marginTop: '6px', fontWeight: 500, fontFamily: 'var(--font-family-mono)' }}>{formatZulu(data.arrivalTime)}</div>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-text-hint)', marginTop: '2px' }}>
                                             RWY {data.arrivalRunway} • {data.star}
                                         </div>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>{data.callsign}</div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{data.aircraft} • {data.airlineName || 'Private'}</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{data.callsign}</div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{data.aircraft} · {data.airlineName || 'Private'}</div>
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                                  <div style={{ padding: 'var(--space-4) var(--space-6)', borderRight: '1px solid var(--color-divider)' }}>
-                                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Origin Weather</span>
+                                     <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Origin Weather</span>
                                      <MiniMetar icao={data.origin.icao} />
                                  </div>
                                  <div style={{ padding: 'var(--space-4) var(--space-6)' }}>
-                                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Dest Weather</span>
+                                     <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Dest Weather</span>
                                      <MiniMetar icao={data.destination.icao} />
                                  </div>
                             </div>
@@ -455,7 +455,7 @@ const SimBriefBriefing = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Route size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
-                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ATC Route</span>
+                                    <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>ATC Route</span>
                                 </div>
                                 <button onClick={handleCopyRoute} className={`btn ${routeCopied ? '' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: routeCopied ? 'var(--color-success-bg)' : undefined, color: routeCopied ? 'var(--color-success)' : undefined }}>
                                     {routeCopied ? 'COPIED' : 'COPY ROUTE'}
@@ -472,7 +472,7 @@ const SimBriefBriefing = () => {
                         <div style={{ flex: 1, minHeight: '500px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
                              <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 1 }} />
                              <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, display: 'flex', gap: '8px' }}>
-                                <div style={{ backgroundColor: 'var(--color-surface)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+                                <div style={{ backgroundColor: 'var(--color-surface)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 500, border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)', fontFamily: 'var(--font-family-mono)' }}>
                                     {data.distance} NM
                                 </div>
                              </div>
@@ -500,8 +500,8 @@ const MetricBlock = ({ label, value, icon: Icon }) => (
             <Icon size={18} aria-hidden="true" />
         </div>
         <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{value}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '2px' }}>{label}</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-display)' }}>{value}</div>
         </div>
     </div>
 );
@@ -519,12 +519,12 @@ const InfoBlock = ({ icon: Icon, label, value, color, children }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', position: 'relative' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.07em' }}>
                 <Icon size={12} style={{ color: color || 'var(--color-primary)' }} aria-hidden="true" />
                 {label}
             </span>
             <div style={{ position: 'relative', cursor: isTruncated ? 'help' : 'default' }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-                <span ref={spanRef} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                <span ref={spanRef} style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                     {value}
                 </span>
                 {isHovered && isTruncated && (

@@ -11,20 +11,20 @@ const getStatFontSize = (value) => {
 export default function LogbookStats({ stats, filterLabel, narrative }) {
     return (
         <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'var(--space-6)', background: 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-background) 100%)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-text-primary)', marginBottom: '8px', fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-family-display)', flexWrap: 'wrap', lineHeight: 1.2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-text-primary)', marginBottom: '8px', fontSize: '1.6rem', fontWeight: 500, fontFamily: 'var(--font-family-display)', flexWrap: 'wrap', lineHeight: 1.2 }}>
                 <Plane size={24} style={{ color: 'var(--color-primary)' }} /> Operational Statistics
             </div>
             
             <div style={{ marginBottom: 'var(--space-4)' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', fontWeight: 500, marginBottom: '2px' }}>
                     {filterLabel === 'Global' ? (
-                        <>Showing&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>all flights</span></>
+                        <>Showing&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>all flights</span></>
                     ) : (
-                        <>Filtered by&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{filterLabel}</span></>
+                        <>Filtered by&nbsp;&nbsp;<span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{filterLabel}</span></>
                     )}
                 </div>
                 {narrative && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600, opacity: 0.9, fontFamily: 'var(--font-family-display)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 500, opacity: 0.9, fontFamily: 'var(--font-family-display)' }}>
                         {narrative}
                     </div>
                 )}
@@ -47,16 +47,16 @@ export default function LogbookStats({ stats, filterLabel, narrative }) {
                         <div style={{
                             fontSize: '0.65rem',
                             color: 'var(--color-text-hint)',
-                            fontWeight: 600,
+                            fontWeight: 500,
                             textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
+                            letterSpacing: '0.07em',
                             marginBottom: '4px'
                         }}>
                             {label}
                         </div>
                         <div style={{
                             fontSize: getStatFontSize(value),
-                            fontWeight: 800,
+                            fontWeight: 500,
                             color: color,
                             lineHeight: 1.2
                         }}>
