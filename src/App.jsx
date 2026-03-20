@@ -13,6 +13,7 @@ import DataRecovery from './components/DataRecovery';
 import Schedule from './components/Schedule';
 import AppSkeleton from './components/AppSkeleton';
 import Hangar from './components/Hangar';
+import FlightCopilot from './components/FlightCopilot';
 
 import { ConfirmProvider, useConfirm } from './context/ConfirmContext';
 
@@ -180,6 +181,8 @@ export default function App() {
                     flights={flights}
                 />
             )}
+
+            <FlightCopilot flights={flights} isDarkMode={isDarkMode} />
         </>
     );
 }
