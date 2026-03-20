@@ -36,21 +36,16 @@ const formatZuluShort = (val) => {
     return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}z`;
 };
 
-const NextFlightPill = ({ isDarkMode }) => {
+const NextFlightPill = () => {
     const navigate = useNavigate();
     const { data, loading, error } = useSimBrief();
     const [hovered, setHovered] = React.useState(false);
 
-    const border      = isDarkMode ? '#293a4c' : 'var(--color-border)';
-    const bg          = isDarkMode ? 'rgba(255,255,255,0.04)' : 'var(--color-background)';
-    const mutedColor  = isDarkMode ? '#5a7a9a' : 'var(--color-text-hint)';
-    const strongColor = isDarkMode ? '#f0f4f8' : 'var(--color-text-primary)';
-
     const pillBase = {
         display: 'flex', alignItems: 'center', gap: '10px',
         padding: '7px 14px',
-        background: bg,
-        border: `1px solid ${border}`,
+        background: 'var(--color-background)',
+        border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-md)',
         flexShrink: 0,
         height: '40px',
@@ -59,8 +54,8 @@ const NextFlightPill = ({ isDarkMode }) => {
     if (loading) {
         return (
             <div style={{ ...pillBase }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: border }} />
-                <div style={{ width: '110px', height: '12px', borderRadius: '3px', background: border }} />
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-border)' }} />
+                <div style={{ width: '110px', height: '12px', borderRadius: '3px', background: 'var(--color-border)' }} />
             </div>
         );
     }
@@ -115,22 +110,22 @@ const NextFlightPill = ({ isDarkMode }) => {
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#146AFF', flexShrink: 0 }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 500, color: mutedColor, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
+                <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
                     Next flight
                 </span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: strongColor, fontFamily: 'var(--font-family-mono)', lineHeight: 1.2 }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)', lineHeight: 1.2 }}>
                     {data.origin?.icao} → {data.destination?.icao}
                 </span>
             </div>
 
-            <div style={{ width: '1px', height: '24px', background: border, flexShrink: 0 }} />
+            <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', alignItems: 'flex-end' }}>
-                <span style={{ fontSize: '12px', fontWeight: 500, color: strongColor, lineHeight: 1.2 }}>
+                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
                     {data.aircraft}
                 </span>
                 {depTime && (
-                    <span style={{ fontSize: '11px', color: mutedColor, lineHeight: 1 }}>{depTime}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-hint)', lineHeight: 1 }}>{depTime}</span>
                 )}
             </div>
 
@@ -146,8 +141,8 @@ export default function Header() {
     const { isDarkMode } = useTheme();
     const quote = getTodayQuote();
 
-    const divider    = isDarkMode ? '#293a4c' : 'var(--color-border)';
-    const quoteColor = isDarkMode ? '#5a7a9a' : 'var(--color-text-hint)';
+    const divider    = 'var(--color-border)';
+    const quoteColor = 'var(--color-text-hint)';
 
     return (
         <header style={{
@@ -185,7 +180,7 @@ export default function Header() {
 
                 <div style={{ width: '1px', height: '24px', background: divider, flexShrink: 0 }} />
 
-                <NextFlightPill isDarkMode={isDarkMode} />
+                <NextFlightPill />
             </div>
         </header>
     );
