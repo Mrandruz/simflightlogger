@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { fetchSimBriefData, parseSimBriefData } from '../services/simbriefService';
 
 const CACHE_KEY = 'simBriefCache';
-const CACHE_TTL = 30 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
 // Stesso default hardcoded di SimBriefBriefing
 const DEFAULT_IDENTIFIER = { type: 'username', value: 'mrandruz' };
 
 export function useSimBrief() {
-    const [data, setData]       = useState(null);
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError]     = useState(null);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -23,7 +23,7 @@ export function useSimBrief() {
                     const parsed = JSON.parse(saved);
                     if (parsed?.value?.trim()) identifier = parsed;
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             console.log('[useSimBrief] using identifier:', identifier);
 
@@ -38,7 +38,7 @@ export function useSimBrief() {
                         return;
                     }
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             // Fetch
             try {
@@ -47,7 +47,7 @@ export function useSimBrief() {
                     : { username: identifier.value.trim() };
 
                 console.log('[useSimBrief] fetching with opts:', opts);
-                const raw    = await fetchSimBriefData(opts);
+                const raw = await fetchSimBriefData(opts);
                 const parsed = parseSimBriefData(raw);
                 console.log('[useSimBrief] parsed:', parsed);
 
@@ -55,7 +55,7 @@ export function useSimBrief() {
                     localStorage.setItem(CACHE_KEY, JSON.stringify({
                         ts: Date.now(), id: identifier.value, payload: parsed,
                     }));
-                } catch (_) {}
+                } catch (_) { }
 
                 if (!cancelled) { setData(parsed); setError(null); }
             } catch (err) {
