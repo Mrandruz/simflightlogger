@@ -1,0 +1,26 @@
+<svg width="220" height="52" viewBox="0 0 220 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon 48x48, centrato verticalmente -->
+  <!-- Esagono: sfondo bianco, bordo grigio sottile — coerente con le card del sito -->
+  <polygon points="24,3 41,12.5 41,31.5 24,41 7,31.5 7,12.5"
+    fill="#ffffff" stroke="#E6E8EB" stroke-width="1.2"/>
+  <!-- Zona cielo: tinta primaria leggera nel triangolo superiore -->
+  <polygon points="24,3 41,12.5 41,22 7,22 7,12.5"
+    fill="#146AFF" fill-opacity="0.08"/>
+  <!-- Linea orizzonte -->
+  <line x1="10" y1="23" x2="38" y2="23" stroke="#E6E8EB" stroke-width="1"/>
+  <!-- Rotta: due punti + linea in blu primario -->
+  <circle cx="14" cy="17.5" r="2.8" fill="#146AFF"/>
+  <circle cx="33" cy="13.5" r="2.8" fill="#146AFF"/>
+  <line x1="17" y1="16.8" x2="30" y2="14.2"
+    stroke="#146AFF" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Wordmark -->
+  <text x="52" y="29"
+    font-family="'Poppins', 'Inter', -apple-system, sans-serif"
+    font-size="22" font-weight="600" letter-spacing="-0.4"
+    fill="#162433">Skydeck</text>
+  <text x="53" y="43"
+    font-family="'Inter', -apple-system, sans-serif"
+    font-size="9" font-weight="500" letter-spacing="1.6"
+    fill="#A2A9B1">FLIGHT LOGGER</text>
+</svg>

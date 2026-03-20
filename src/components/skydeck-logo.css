@@ -1,0 +1,42 @@
+.skydeck-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.skydeck-logo__text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.skydeck-logo__name {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.3px !important;
+    color: #111827 !important;
+    line-height: 1.15 !important;
+    display: block;
+}
+
+.skydeck-logo__tagline {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 8.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: 1.8px !important;
+    color: #9ba8b5 !important;
+    margin-top: 3px;
+    display: block;
+}
+
+[data-theme="dark"] .skydeck-logo__name {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .skydeck-logo__tagline {
+    color: #68727C !important;
+}
