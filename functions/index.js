@@ -41,6 +41,9 @@ const buildPrompt = (s) => [
   `- Ultimo volo: ${s.lastFlight}`,
   `- Prossimo volo pianificato (SimBrief): ${s.nextFlight || "non disponibile"}`,
   s.lastFlightDetail ? `- Dettaglio ultimo volo: ${s.lastFlightDetail}` : "",
+  "",
+  "Logbook dettagliato per aereo (voli, ore, nm, ultimo volo, rotta top):",
+  s.aircraftLogbook || "nessun dato",
 ].join("\n").trim();
 
 exports.askCopilot = https.onRequest(

@@ -23,12 +23,14 @@ const aggregateStats = (flights) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Contatori
     const aircraftCount = {};
     const airportCount = {};
     const airlineCount = {};
     const routeCount = {};
     const monthlyCount = {};
+
+    // Indice per aereo — raccoglie dati dettagliati per ogni tipo
+    const aircraftIndex = {};
 
     let totalHours = 0;
     let totalMiles = 0;
@@ -48,7 +50,30 @@ const aggregateStats = (flights) => {
             longestFlight = f;
         }
 
-        if (f.aircraft) aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
+        if (f.aircraft) {
+            aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
+
+            // Costruisce l'indice per aereo
+            if (!aircraftIndex[f.aircraft]) {
+                aircraftIndex[f.aircraft] = {
+                    count: 0, hours: 0, miles: 0,
+                    lastFlight: null, routes: {},
+                };
+            }
+            const idx = aircraftIndex[f.aircraft];
+            idx.count++;
+            idx.hours += f.flightTime || 0;
+            idx.miles += f.miles || 0;
+            // Il primo volo incontrato (sorted desc) è l'ultimo cronologicamente
+            if (!idx.lastFlight) {
+                idx.lastFlight = `${f.departure}→${f.arrival} il ${f.date}`;
+            }
+            if (f.departure && f.arrival) {
+                const r = `${f.departure}→${f.arrival}`;
+                idx.routes[r] = (idx.routes[r] || 0) + 1;
+            }
+        }
+
         if (f.departure) airportCount[f.departure] = (airportCount[f.departure] || 0) + 1;
         if (f.arrival) airportCount[f.arrival] = (airportCount[f.arrival] || 0) + 1;
         if (f.airline) airlineCount[f.airline] = (airlineCount[f.airline] || 0) + 1;
@@ -57,7 +82,7 @@ const aggregateStats = (flights) => {
             routeCount[key] = (routeCount[key] || 0) + 1;
         }
         if (f.date) {
-            const month = f.date.slice(0, 7); // YYYY-MM
+            const month = f.date.slice(0, 7);
             monthlyCount[month] = (monthlyCount[month] || 0) + 1;
         }
     });
@@ -70,6 +95,20 @@ const aggregateStats = (flights) => {
             .join(', ');
 
     const last = sorted[0];
+
+    // Serializza l'indice aereo in una stringa compatta per il prompt
+    const aircraftLogbook = Object.entries(aircraftIndex)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .map(([type, d]) => {
+            const topRoute = Object.entries(d.routes)
+                .sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
+            return `${type}: ${d.count} voli, ` +
+                `${d.hours.toFixed(1)}h, ` +
+                `${Math.round(d.miles)} nm, ` +
+                `ultimo: ${d.lastFlight || '—'}, ` +
+                `rotta top: ${topRoute}`;
+        })
+        .join(' | ');
 
     return {
         totalFlights: flights.length,
@@ -100,6 +139,7 @@ const aggregateStats = (flights) => {
             `Compagnia: ${last.airline || '—'}, Durata: ${last.flightTime || '—'}h, ` +
             `Distanza: ${last.miles || '—'} nm, Data: ${last.date}`
             : null,
+        aircraftLogbook,
     };
 };
 
