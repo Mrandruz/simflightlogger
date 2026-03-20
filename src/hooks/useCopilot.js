@@ -8,6 +8,7 @@
  *   const { send, messages, loading, clear } = useCopilot(flights);
  */
 import { useState, useCallback, useMemo } from 'react';
+import { useSimBrief } from './useSimBrief';
 
 // URL della tua Cloud Function — sostituisci con il tuo progetto Firebase
 const FUNCTION_URL =
@@ -23,11 +24,11 @@ const aggregateStats = (flights) => {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Contatori
-    const aircraftCount  = {};
-    const airportCount   = {};
-    const airlineCount   = {};
-    const routeCount     = {};
-    const monthlyCount   = {};
+    const aircraftCount = {};
+    const airportCount = {};
+    const airlineCount = {};
+    const routeCount = {};
+    const monthlyCount = {};
 
     let totalHours = 0;
     let totalMiles = 0;
@@ -49,8 +50,8 @@ const aggregateStats = (flights) => {
 
         if (f.aircraft) aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
         if (f.departure) airportCount[f.departure] = (airportCount[f.departure] || 0) + 1;
-        if (f.arrival)   airportCount[f.arrival]   = (airportCount[f.arrival]   || 0) + 1;
-        if (f.airline)   airlineCount[f.airline]   = (airlineCount[f.airline]   || 0) + 1;
+        if (f.arrival) airportCount[f.arrival] = (airportCount[f.arrival] || 0) + 1;
+        if (f.airline) airlineCount[f.airline] = (airlineCount[f.airline] || 0) + 1;
         if (f.departure && f.arrival) {
             const key = `${f.departure}→${f.arrival}`;
             routeCount[key] = (routeCount[key] || 0) + 1;
@@ -71,23 +72,23 @@ const aggregateStats = (flights) => {
     const last = sorted[0];
 
     return {
-        totalFlights:        flights.length,
-        totalHours:          totalHours.toFixed(1),
-        totalMiles:          Math.round(totalMiles).toLocaleString(),
-        topAircraft:         Object.entries(aircraftCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
-        topAirport:          Object.entries(airportCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
-        topAirline:          Object.entries(airlineCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
-        topRoute:            Object.entries(routeCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
+        totalFlights: flights.length,
+        totalHours: totalHours.toFixed(1),
+        totalMiles: Math.round(totalMiles).toLocaleString(),
+        topAircraft: Object.entries(aircraftCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topAirport: Object.entries(airportCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topAirline: Object.entries(airlineCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topRoute: Object.entries(routeCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
         flightsLastMonth,
-        avgHours:            (totalHours / flights.length).toFixed(1),
-        longestFlight:       longestFlight
+        avgHours: (totalHours / flights.length).toFixed(1),
+        longestFlight: longestFlight
             ? `${longestFlight.departure}→${longestFlight.arrival} (${Math.round(longestFlight.miles || 0)} nm)`
             : '—',
-        topAircraftList:     top(aircraftCount),
-        topAirportList:      top(airportCount),
-        topRouteList:        top(routeCount),
+        topAircraftList: top(aircraftCount),
+        topAirportList: top(airportCount),
+        topRouteList: top(routeCount),
         monthlyDistribution: Object.entries(monthlyCount)
-            .sort(([a],[b]) => a.localeCompare(b))
+            .sort(([a], [b]) => a.localeCompare(b))
             .slice(-6)
             .map(([m, c]) => `${m}: ${c}`)
             .join(', '),
@@ -96,8 +97,8 @@ const aggregateStats = (flights) => {
             : '—',
         lastFlightDetail: last
             ? `Rotta: ${last.departure}→${last.arrival}, Aereo: ${last.aircraft}, ` +
-              `Compagnia: ${last.airline || '—'}, Durata: ${last.flightTime || '—'}h, ` +
-              `Distanza: ${last.miles || '—'} nm, Data: ${last.date}`
+            `Compagnia: ${last.airline || '—'}, Durata: ${last.flightTime || '—'}h, ` +
+            `Distanza: ${last.miles || '—'} nm, Data: ${last.date}`
             : null,
     };
 };
@@ -107,10 +108,44 @@ const aggregateStats = (flights) => {
 // ---------------------------------------------------------------------------
 export function useCopilot(flights) {
     const [messages, setMessages] = useState([]);
-    const [loading, setLoading]   = useState(false);
-    const [error, setError]       = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [onAction, setOnAction] = useState(null);
 
-    const stats = useMemo(() => aggregateStats(flights), [flights]);
+    const { data: simbrief } = useSimBrief();
+
+    const stats = useMemo(() => {
+        const base = aggregateStats(flights);
+        if (!base) return null;
+
+        // Aggiunge il prossimo volo pianificato da SimBrief se disponibile
+        if (simbrief) {
+            const formatZulu = (val) => {
+                if (!val) return null;
+                const d = !isNaN(Number(val)) && String(val).length >= 10
+                    ? new Date(Number(val) * 1000)
+                    : new Date(val);
+                if (isNaN(d.getTime())) return null;
+                return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}z`;
+            };
+
+            base.nextFlight = [
+                `${simbrief.origin?.icao} → ${simbrief.destination?.icao}`,
+                simbrief.aircraft ? `aereo: ${simbrief.aircraft}` : '',
+                simbrief.airlineName ? `compagnia: ${simbrief.airlineName}` : '',
+                simbrief.callsign ? `callsign: ${simbrief.callsign}` : '',
+                simbrief.departureTime ? `partenza: ${formatZulu(simbrief.departureTime)}` : '',
+                simbrief.arrivalTime ? `arrivo stimato: ${formatZulu(simbrief.arrivalTime)}` : '',
+                simbrief.distance ? `distanza: ${simbrief.distance} nm` : '',
+                simbrief.cruiseAltitude ? `livello di crociera: FL${Math.round(simbrief.cruiseAltitude / 100)}` : '',
+                simbrief.fuel ? `carburante: ${simbrief.fuel} kg` : '',
+            ].filter(Boolean).join(', ');
+        } else {
+            base.nextFlight = 'nessun piano di volo SimBrief disponibile';
+        }
+
+        return base;
+    }, [flights, simbrief]);
 
     const send = useCallback(
         async (userMessage) => {
@@ -138,7 +173,7 @@ export function useCopilot(flights) {
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                const reader  = res.body.getReader();
+                const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
 
@@ -165,7 +200,7 @@ export function useCopilot(flights) {
                                 };
                                 return updated;
                             });
-                        } catch (_) {}
+                        } catch (_) { }
                     }
                 }
             } catch (err) {
@@ -175,12 +210,30 @@ export function useCopilot(flights) {
                 setMessages((prev) => prev.slice(0, -1));
             } finally {
                 setLoading(false);
+                // Dopo la risposta completa, controlla se il modello ha segnalato
+                // un'azione di apertura checklist tramite il tag speciale
+                setMessages((prev) => {
+                    const last = prev[prev.length - 1];
+                    if (!last || last.role !== 'assistant') return prev;
+                    const match = last.content.match(/\[OPEN_CHECKLIST:([^\]]+)\]/);
+                    if (match) {
+                        setOnAction({ type: 'open_checklist', aircraft: match[1].trim() });
+                        // Rimuove il tag dalla risposta visibile
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            ...last,
+                            content: last.content.replace(/\[OPEN_CHECKLIST:[^\]]+\]/, '').trim(),
+                        };
+                        return updated;
+                    }
+                    return prev;
+                });
             }
         },
         [flights, loading, messages, stats]
     );
 
-    const clear = useCallback(() => setMessages([]), []);
+    const clear = useCallback(() => { setMessages([]); setOnAction(null); }, []);
 
-    return { send, messages, loading, error, clear, hasData: !!stats };
+    return { send, messages, loading, error, clear, hasData: !!stats, onAction };
 }

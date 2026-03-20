@@ -4,10 +4,24 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const ANTHROPIC_KEY = defineSecret("ANTHROPIC_API_KEY");
 
+const AVAILABLE_CHECKLISTS = [
+  "Airbus A350", "Airbus A330", "Airbus A320",
+  "Airbus A319", "Airbus A321", "Airbus A380",
+  "Boeing 777", "Boeing 787",
+];
+
 const buildPrompt = (s) => [
   "Sei Skydeck Copilot, assistente di analisi volo personale.",
   "Rispondi SEMPRE in italiano, in modo conciso.",
   "Usa solo dati reali, non inventare cifre.",
+  "",
+  "AZIONE SPECIALE — APERTURA CHECKLIST:",
+  "Se l'utente chiede di aprire, vedere o accedere alla checklist di un aereo,",
+  "rispondi con una frase breve e aggiungi in fondo il tag:",
+  "[OPEN_CHECKLIST:Nome Esatto Aereo]",
+  "Esempio: 'Apro subito la checklist del Boeing 777 per te. [OPEN_CHECKLIST:Boeing 777]'",
+  `Checklist disponibili: ${AVAILABLE_CHECKLISTS.join(", ")}.`,
+  "Se l'aereo richiesto non è in lista, comunicalo senza usare il tag.",
   "",
   "Dati volo utente:",
   `- Voli totali: ${s.totalFlights}`,
@@ -25,7 +39,8 @@ const buildPrompt = (s) => [
   `- Top 5 rotte: ${s.topRouteList}`,
   `- Trend mensile: ${s.monthlyDistribution}`,
   `- Ultimo volo: ${s.lastFlight}`,
-  s.lastFlightDetail ? `- Dettaglio: ${s.lastFlightDetail}` : "",
+  `- Prossimo volo pianificato (SimBrief): ${s.nextFlight || "non disponibile"}`,
+  s.lastFlightDetail ? `- Dettaglio ultimo volo: ${s.lastFlightDetail}` : "",
 ].join("\n").trim();
 
 exports.askCopilot = https.onRequest(

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { Plane, Fuel, Map as MapIcon, Clock, Wrench, RefreshCw, AlertTriangle, Zap, Route, ArrowUp, Gauge, LayoutGrid, Award, History, Building2, FileText, X, ExternalLink } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -911,6 +911,7 @@ const RecentMissions = ({ flights, allFlights, timeFilter, onChangeFilter }) => 
 
 export default function Hangar() {
     const { flights, isDarkMode } = useOutletContext();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [selectedType, setSelectedType] = useState(null);
     const [checklistUrl, setChecklistUrl] = useState(null);
     const [checklistAircraft, setChecklistAircraft] = useState(null);
@@ -921,6 +922,30 @@ export default function Hangar() {
         const url = AIRCRAFT_CHECKLISTS[type];
         if (url) { setChecklistUrl(url); setChecklistAircraft(type); }
     };
+
+    // Apre automaticamente la checklist se arriva da Copilot via ?checklist=Boeing+777
+    useEffect(() => {
+        const requested = searchParams.get('checklist');
+        if (!requested) return;
+
+        // Cerca corrispondenza esatta o parziale nel registry
+        const exactMatch = Object.keys(AIRCRAFT_CHECKLISTS).find(
+            (k) => k.toLowerCase() === requested.toLowerCase()
+        );
+        const partialMatch = !exactMatch && Object.keys(AIRCRAFT_CHECKLISTS).find(
+            (k) => k.toLowerCase().includes(requested.toLowerCase()) ||
+                   requested.toLowerCase().includes(k.toLowerCase())
+        );
+        const match = exactMatch || partialMatch;
+
+        if (match) {
+            // Seleziona anche l'aereo nella sidebar
+            setSelectedType(match);
+            openChecklist(match);
+        }
+        // Rimuove il param dalla URL dopo l'apertura
+        setSearchParams({});
+    }, []);
 
     const filterCutoff = useMemo(() => {
         const now = new Date();

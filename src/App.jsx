@@ -39,14 +39,14 @@ export default function App() {
     }, [user, authLoading, navigate]);
     const { showToast } = useToast();
     const { askConfirm } = useConfirm();
-    const { 
-        flights, 
-        loading, 
-        addFlight, 
-        updateFlight, 
-        deleteFlight, 
-        importFlights, 
-        exportFlights 
+    const {
+        flights,
+        loading,
+        addFlight,
+        updateFlight,
+        deleteFlight,
+        importFlights,
+        exportFlights
     } = useFlights(user);
 
     const [editingFlight, setEditingFlight] = useState(null);
@@ -182,7 +182,7 @@ export default function App() {
                 />
             )}
 
-            <FlightCopilot flights={flights} isDarkMode={isDarkMode} />
+            <FlightCopilot flights={flights} isDarkMode={isDarkMode} user={user} />
         </>
     );
 }
