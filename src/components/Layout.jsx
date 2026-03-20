@@ -1,41 +1,73 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Activity, Wifi, Cpu, Zap, Heart } from 'lucide-react';
+import { Activity, Wifi, Clock } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import PilotProfileCard from './PilotProfileCard';
 
-const StatusBar = () => (
+const useZuluClock = () => {
+    const [time, setTime] = React.useState('');
+    React.useEffect(() => {
+        const tick = () => {
+            const now = new Date();
+            const h = String(now.getUTCHours()).padStart(2, '0');
+            const m = String(now.getUTCMinutes()).padStart(2, '0');
+            const s = String(now.getUTCSeconds()).padStart(2, '0');
+            setTime(`${h}:${m}:${s}z`);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, []);
+    return time;
+};
+
+const StatusBar = () => {
+    const zuluTime = useZuluClock();
+    return (
     <div className="status-bar">
         <div className="status-bar-section">
-            <span>v1.11.1 • Elite Hangar Update</span>
-            <span style={{ marginLeft: 'var(--space-1)', opacity: 0.7 }}>•</span>
-            <div className="has-tooltip" style={{ marginLeft: 'var(--space-1)' }}>
-                <span className="hover-opacity" style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}>Credits</span>
-                <div className="tooltip-box">
+            <span style={{ fontFamily: 'var(--font-family-mono)', fontSize: '0.65rem', letterSpacing: '0.02em' }}>
+                <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>v1.11.1</span>
+            </span>
+            <span style={{ opacity: 0.3, margin: '0 4px' }}>·</span>
+            <div className="has-tooltip" style={{ position: 'relative', display: 'inline-flex' }}>
+                <span style={{ 
+                    fontFamily: 'var(--font-family-mono)', 
+                    fontSize: '0.65rem', 
+                    color: 'var(--color-text-secondary)', 
+                    cursor: 'pointer',
+                    transition: 'color 0.15s'
+                }}>Credits</span>
+                <div className="tooltip-box" style={{ minWidth: '220px' }}>
                     <div style={{ 
                         fontFamily: 'var(--font-family-mono)', 
                         fontSize: '0.7rem', 
-                        lineHeight: '1.8',
-                        letterSpacing: '0'
+                        lineHeight: '2',
+                        letterSpacing: '0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', fontWeight: 'bold', marginBottom: '4px' }}>
-                            A project by Andrea Lana
-                            <img src="/avatar.jpg" alt="AL" style={{ height: '14px', width: '14px', borderRadius: '50%', objectFit: 'cover' }} />
+                        {/* Line 1: A project by Andrea L */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', fontWeight: 500 }}>
+                            A project by Andrea L.
+                            <img src="/avatar.jpg" alt="AL" style={{ height: '14px', width: '14px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.8 }}>
-                            Coded with Antigravity
-                            <img src="/antigravity-icon.png" alt="AG" style={{ height: '12px', width: '12px' }} />
-                            &nbsp;+ Gemini 3
-                            <img 
-                                src={`/gemini-icon.png?v=${Date.now()}`} 
-                                alt="G3" 
-                                style={{ 
-                                    height: '14px', 
-                                    width: 'auto', 
-                                    objectFit: 'contain'
-                                }} 
-                            />
+                        {/* Line 2: Coded by Antigravity & Claude */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)' }}>
+                            Coded with
+                            <img src="/antigravity-icon.png" alt="Antigravity" style={{ height: '12px', width: '12px', flexShrink: 0 }} />
+                            Antigravity &amp;
+                            {/* Claude icon — circle D + asterisk B */}
+                            <svg width="13" height="13" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+                                <circle cx="16" cy="16" r="15" fill="#D97757"/>
+                                <line x1="16" y1="7"    x2="16" y2="25"   stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                                <line x1="7"  y1="16"   x2="25" y2="16"   stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                                <line x1="9.5" y1="9.5"  x2="22.5" y2="22.5" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                                <line x1="22.5" y1="9.5" x2="9.5"  y2="22.5" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                            </svg>
+                            Claude
                         </div>
                     </div>
                 </div>
@@ -62,9 +94,14 @@ const StatusBar = () => (
                 <span>Navigraph</span>
                 <div className="status-dot pulse"></div>
             </div>
+            <div className="status-item">
+                <Clock size={12} className="status-icon" />
+                <span style={{ fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: '0.04em' }}>{zuluTime}</span>
+            </div>
         </div>
     </div>
-);
+    );
+};
 
 export default function Layout({
     isDarkMode,
