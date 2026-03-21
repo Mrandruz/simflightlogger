@@ -1,9 +1,285 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriangle, Wind, Thermometer, Gauge, Droplets, Radio, ExternalLink, Map, Settings, BookOpen, CheckCircle } from 'lucide-react';
+import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriangle, Wind, Thermometer, Gauge, Droplets, Radio, ExternalLink, Map, Settings, BookOpen, CheckCircle, FileText, X } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchSimBriefData, parseSimBriefData } from '../services/simbriefService';
+
+/* ── OFP PDF Viewer Modal ── */
+function OFPViewer({ url }) {
+    const [open, setOpen] = useState(false);
+    // Use PDF directly — SimBrief doesn't block iframe embedding
+    // #pagemode=thumbs shows the sidebar with page thumbnails
+    const viewerUrl = `${url}#toolbar=1&navpanes=1&scrollbar=1&pagemode=thumbs`;
+
+    return (
+        <>
+            <button
+                className="btn btn-secondary"
+                onClick={() => setOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: 'var(--space-3)', fontSize: '0.82rem', width: '100%' }}
+            >
+                <FileText size={15} />
+                View Full OFP (Operational Flight Plan)
+            </button>
+
+            {open && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        onClick={() => setOpen(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, animation: 'fadeIn 0.15s ease-out' }}
+                    />
+                    {/* Panel */}
+                    <div style={{
+                        position: 'fixed',
+                        top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 'min(900px, 95vw)',
+                        height: 'min(90vh, 980px)',
+                        background: 'var(--color-surface)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-divider)',
+                        boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+                        zIndex: 1001,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        animation: 'fadeSlideUp 0.2s ease-out',
+                    }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', borderBottom: '1px solid var(--color-divider)', flexShrink: 0 }}>
+                            <FileText size={16} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 500, fontFamily: 'var(--font-family-display)' }}>Operational Flight Plan</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', marginTop: 1 }}>SimBrief OFP</div>
+                            </div>
+                            <a href={url} target="_blank" rel="noopener noreferrer" title="Open PDF directly"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, color: 'var(--color-text-hint)', background: 'none', border: '1px solid var(--color-divider)', cursor: 'pointer', textDecoration: 'none', flexShrink: 0 }}>
+                                <ExternalLink size={14} />
+                            </a>
+                            <button onClick={() => setOpen(false)} title="Close"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, color: 'var(--color-text-hint)', background: 'none', border: '1px solid var(--color-divider)', cursor: 'pointer', flexShrink: 0 }}>
+                                <X size={14} />
+                            </button>
+                        </div>
+                        {/* iframe via Google Docs Viewer */}
+                        <iframe
+                            key={url}
+                            src={viewerUrl}
+                            title="Operational Flight Plan"
+                            style={{ flex: 1, border: 'none', width: '100%' }}
+                        />
+                    </div>
+                </>
+            )}
+        </>
+    );
+}
+
+/* ── AI Briefing Narrative ── */
+const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
+const TTS_FUNCTION_URL     = 'https://europe-west1-simflightlogger.cloudfunctions.net/textToSpeech';
+
+function BriefingNarrative({ data }) {
+    const [narrative, setNarrative]       = useState('');
+    const [loading, setLoading]           = useState(false);
+    const [generated, setGenerated]       = useState(false);
+    const [audioUrl, setAudioUrl]         = useState(null);
+    const [audioLoading, setAudioLoading] = useState(false);
+    const [usingTTS, setUsingTTS]         = useState(null); // 'elevenlabs' | 'webspeech' | null
+    const audioRef = useRef(null);
+
+    useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
+
+    // Reset audio when narrative changes
+    useEffect(() => {
+        window.speechSynthesis?.cancel();
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+        setAudioUrl(null);
+        setUsingTTS(null);
+    }, [narrative]);
+
+    const speakWithBrowser = (text) => {
+        window.speechSynthesis?.cancel();
+        const utter    = new SpeechSynthesisUtterance(text);
+        utter.lang     = 'en-US';
+        utter.rate     = 0.92;
+        utter.pitch    = 1.0;
+        const voices   = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.lang.startsWith('en') && /daniel|alex|fred|male/i.test(v.name))
+            || voices.find(v => v.lang.startsWith('en')) || voices[0];
+        if (preferred) utter.voice = preferred;
+        window.speechSynthesis.speak(utter);
+        setUsingTTS('webspeech');
+    };
+
+    const handleListen = async () => {
+        if (!narrative || audioLoading) return;
+        if (usingTTS === 'webspeech') {
+            if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+            else if (window.speechSynthesis.speaking) window.speechSynthesis.pause();
+            else speakWithBrowser(narrative);
+            return;
+        }
+        if (usingTTS === 'elevenlabs' && audioRef.current) {
+            if (audioRef.current.paused) audioRef.current.play();
+            else audioRef.current.pause();
+            return;
+        }
+        setAudioLoading(true);
+        try {
+            const res = await fetch(TTS_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: narrative }),
+            });
+            if (!res.ok) { speakWithBrowser(narrative); return; }
+            const blob = await res.blob();
+            if (blob.size === 0) { speakWithBrowser(narrative); return; }
+            const url = URL.createObjectURL(blob);
+            setAudioUrl(url);
+            setUsingTTS('elevenlabs');
+            setTimeout(() => audioRef.current?.play(), 100);
+        } catch {
+            speakWithBrowser(narrative);
+        } finally {
+            setAudioLoading(false);
+        }
+    };
+
+    const handleStop = () => {
+        window.speechSynthesis?.cancel();
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+        setUsingTTS(null);
+    };
+
+    const buildStats = () => ({
+        totalFlights: '—', totalHours: '—', totalMiles: '—',
+        topAircraft: data.aircraft || '—', topAirport: data.origin?.icao || '—',
+        topAirline: data.airlineName || '—',
+        topRoute: `${data.origin?.icao}→${data.destination?.icao}`,
+        flightsLastMonth: '—', avgHours: '—', longestFlight: '—',
+        topAircraftList: data.aircraft || '—', topAirportList: '—',
+        topRouteList: '—', monthlyDistribution: '—', lastFlight: '—',
+        nextFlight: [
+            `${data.origin?.icao} → ${data.destination?.icao}`,
+            data.aircraft        ? `aircraft: ${data.aircraft}`                       : '',
+            data.airlineName     ? `airline: ${data.airlineName}`                     : '',
+            data.callsign        ? `callsign: ${data.callsign}`                       : '',
+            data.duration        ? `duration: ${data.duration}`                       : '',
+            data.distance        ? `distance: ${data.distance} nm`                    : '',
+            data.cruiseAltitude  ? `cruise: FL${Math.round(data.cruiseAltitude/100)}` : '',
+            data.fuel            ? `fuel: ${data.fuel} kg`                            : '',
+            data.route           ? `route: ${data.route}`                             : '',
+            data.sid             ? `SID: ${data.sid}`                                 : '',
+            data.star            ? `STAR: ${data.star}`                               : '',
+            data.departureRunway ? `dep rwy: ${data.departureRunway}`                 : '',
+            data.arrivalRunway   ? `arr rwy: ${data.arrivalRunway}`                   : '',
+            data.costIndex       ? `cost index: ${data.costIndex}`                    : '',
+            data.passengers      ? `pax: ${data.passengers}`                          : '',
+            data.zfw             ? `ZFW: ${data.zfw} kg`                             : '',
+        ].filter(Boolean).join(', '),
+        aircraftLogbook: '',
+    });
+
+    const generate = async () => {
+        if (loading || !data) return;
+        setLoading(true); setNarrative(''); setGenerated(true);
+        const prompt = `Write a concise pre-flight briefing narrative for the following flight plan. Write it as a professional flight dispatcher or senior captain would — factual, precise, aviation-toned. Cover: route overview, cruise level, key waypoints if available, fuel load, expected duration, and any notable operational considerations. Keep it to 3-4 short paragraphs. Do not use bullet points.`;
+        try {
+            const res = await fetch(COPILOT_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: prompt, stats: buildStats(), history: [] }),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n'); buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const raw = line.slice(6).trim();
+                    if (raw === '[DONE]') break;
+                    try { const { text } = JSON.parse(raw); if (text) setNarrative(p => p + text); } catch (_) {}
+                }
+            }
+        } catch (e) {
+            setNarrative('Unable to generate briefing narrative. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const isPlaying = usingTTS === 'webspeech'
+        ? window.speechSynthesis?.speaking && !window.speechSynthesis?.paused
+        : usingTTS === 'elevenlabs' && audioRef.current && !audioRef.current.paused;
+
+    return (
+        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={18} style={{ color: 'var(--color-primary)' }} />
+                    <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>AI Flight Briefing</span>
+                    {usingTTS && <span style={{ fontSize: '0.65rem', color: 'var(--color-text-hint)', background: 'var(--color-surface-hover)', padding: '2px 8px', borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)' }}>
+                        {usingTTS === 'elevenlabs' ? '🎙️ ElevenLabs' : '🔊 Browser TTS'}
+                    </span>}
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    {narrative && !loading && (
+                        <>
+                            <button className="btn btn-secondary" onClick={handleListen} disabled={audioLoading}
+                                style={{ padding: '6px 14px', fontSize: '0.75rem', gap: 6 }}>
+                                {audioLoading ? <><RefreshCw size={13} className="spin" /> Loading…</>
+                                    : isPlaying ? <>⏸ Pause</>
+                                    : usingTTS   ? <>▶ Resume</>
+                                    : <>🎧 Listen</>}
+                            </button>
+                            {usingTTS && (
+                                <button className="btn btn-secondary" onClick={handleStop}
+                                    style={{ padding: '6px 10px', fontSize: '0.75rem' }}>
+                                    ⏹
+                                </button>
+                            )}
+                        </>
+                    )}
+                    <button className={`btn ${generated ? 'btn-secondary' : 'btn-primary'}`}
+                        onClick={generate} disabled={loading}
+                        style={{ padding: '6px 14px', fontSize: '0.75rem', gap: 6 }}>
+                        {loading ? <><RefreshCw size={13} className="spin" /> Generating…</>
+                            : generated ? <><RefreshCw size={13} /> Regenerate</>
+                            : <>✦ Generate Briefing</>}
+                    </button>
+                </div>
+            </div>
+
+            {audioUrl && <audio ref={audioRef} src={audioUrl} controls style={{ width: '100%', height: 36, borderRadius: 'var(--radius-md)' }} />}
+
+            {!generated && !loading && (
+                <div style={{ padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)', textAlign: 'center', color: 'var(--color-text-hint)', fontSize: '0.8rem' }}>
+                    Click "Generate Briefing" for an AI narrative of this flight plan.
+                </div>
+            )}
+            {(generated || loading) && (
+                <div style={{ fontSize: '0.85rem', lineHeight: 1.75, color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap' }}>
+                    {loading && !narrative && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-hint)' }}>
+                            <div style={{ width: 13, height: 13, border: '2px solid var(--color-primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                            Drafting your briefing…
+                        </div>
+                    )}
+                    {narrative}
+                    {loading && narrative && <span style={{ opacity: 0.35 }}>▋</span>}
+                </div>
+            )}
+        </div>
+    );
+}
 
 /* ── SimBrief aircraft code → FlightForm aircraft label ── */
 const SIMBRIEF_AIRCRAFT_MAP = {
@@ -610,6 +886,102 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
                             <MetricBlock label="Cost Index" value={data.costIndex} icon={Zap} />
                         </div>
 
+                        {/* ── Weights ── */}
+                        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-1)' }}>
+                                <Gauge size={16} style={{ color: 'var(--color-primary)' }} />
+                                <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>Weight Summary</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
+                                {[
+                                    { label: 'Est. ZFW',  value: data.zfw,    max: data.maxZfw, unit: 'kg' },
+                                    { label: 'Est. TOW',  value: data.tow,    max: data.maxTow, unit: 'kg' },
+                                    { label: 'Est. LDW',  value: data.ldw,    max: data.maxLdw, unit: 'kg' },
+                                ].map(({ label, value, max, unit }) => {
+                                    const pct = max && Number(max) > 0 ? Math.round((Number(value) / Number(max)) * 100) : null;
+                                    const color = pct > 95 ? 'var(--color-danger)' : pct > 85 ? 'var(--color-warning, #f59e0b)' : 'var(--color-success)';
+                                    return (
+                                        <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-display)' }}>{Number(value).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 400 }}>{unit}</span></span>
+                                            {max && Number(max) > 0 && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                    <div style={{ height: 4, borderRadius: 2, background: 'var(--color-border)', overflow: 'hidden' }}>
+                                                        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 2, transition: 'width .4s' }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.6rem', color: color, fontWeight: 600 }}>{pct}% of max ({Number(max).toLocaleString()} kg)</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* ── Fuel Breakdown ── */}
+                        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-1)' }}>
+                                <Fuel size={16} style={{ color: 'var(--color-primary)' }} />
+                                <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>Fuel Breakdown</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-3)' }}>
+                                {[
+                                    { label: 'Ramp (Total)', value: data.fuel,          color: 'var(--color-primary)'  },
+                                    { label: 'Trip',         value: data.fuelTrip,       color: 'var(--color-success)'  },
+                                    { label: 'Reserve',      value: data.fuelReserve,    color: 'var(--color-warning, #f59e0b)' },
+                                    { label: 'Alternate',    value: data.fuelAlternate,  color: 'var(--color-text-secondary)' },
+                                ].map(({ label, value, color }) => (
+                                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+                                        <span style={{ fontSize: '1rem', fontWeight: 600, color, fontFamily: 'var(--font-family-display)' }}>{Number(value).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 400, color: 'var(--color-text-hint)' }}>kg</span></span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* ── Wind & Step Climbs ── */}
+                        {(data.avgWindDir || data.stepclimb) && (
+                            <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-1)' }}>
+                                    <Wind size={16} style={{ color: 'var(--color-primary)' }} />
+                                    <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>Wind & Profile</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                    {data.avgWindDir && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
+                                            {[
+                                                { label: 'Avg Wind Dir', value: `${data.avgWindDir}°` },
+                                                { label: 'Avg Wind Spd', value: `${data.avgWindSpd} kt` },
+                                                { label: 'Wind Component', value: (() => {
+                                                    const comp = Number(data.avgWindComp);
+                                                    if (isNaN(comp)) return '—';
+                                                    return comp >= 0
+                                                        ? <span style={{ color: 'var(--color-success)' }}>+{comp} kt ↑ Tail</span>
+                                                        : <span style={{ color: 'var(--color-danger)' }}>{comp} kt ↓ Head</span>;
+                                                })() },
+                                            ].map(({ label, value }) => (
+                                                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                    <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-display)' }}>{value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {data.stepclimb && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Step Climbs</span>
+                                            <span style={{ fontSize: '0.82rem', fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-primary)', background: 'var(--color-background)', padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                                                {data.stepclimb}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── OFP Viewer ── */}
+                        {data.ofpUrl && <OFPViewer url={data.ofpUrl} />}
+
                         {/* Route Operations */}
                         <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -694,7 +1066,7 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
                         {/* Map View */}
-                        <div style={{ flex: 1, minHeight: '500px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
+                        <div style={{ height: '500px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
                              <div ref={mapRef} style={{ height: '100%', width: '100%', zIndex: 1 }} />
                              <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, display: 'flex', gap: '8px' }}>
                                 <div style={{ backgroundColor: 'var(--color-surface)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 500, border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)', fontFamily: 'var(--font-family-mono)' }}>
@@ -702,6 +1074,9 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
                                 </div>
                              </div>
                         </div>
+
+                        {/* AI Briefing Narrative */}
+                        <BriefingNarrative data={data} />
                     </div>
                 </div>
             )}

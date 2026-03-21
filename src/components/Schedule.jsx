@@ -1,11 +1,14 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Calendar, RefreshCw, ExternalLink, Zap, MapPin, Wind, Gauge, Thermometer, Droplets } from 'lucide-react';
+import { Calendar, RefreshCw, ExternalLink, Zap, MapPin, Wind, Gauge, Thermometer, Droplets, Sparkles, Send, RotateCcw } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { findAirport } from '../utils/airportUtils';
+import airports from 'airport-data';
+
+const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
 
 const ALLIANCE_MAP = {
     'United Airlines':'Star Alliance','Lufthansa':'Star Alliance','Air Canada':'Star Alliance',
@@ -34,28 +37,57 @@ const haversineNm = (lat1, lon1, lat2, lon2) => {
     return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
 };
 
+// Top 414 airports worldwide by passenger traffic
+// Source: gettocenter.com/airports/top-100-airports-in-world/1000
 const MAJOR_DESTINATIONS = [
-    'KATL','KLAX','KORD','KDFW','KDEN','KJFK','KSFO','KLAS','KMIA','KIAH',
-    'KEWR','KSEA','KBOS','KPHX','KMCO','KFLL','KIAD','CYYZ','CYVR','CYUL',
-    'MMMX','MMUN','EGLL','LFPG','EHAM','EDDF','LEMD','LEBL','LIRF','LSZH',
-    'EDDM','LOWW','EKCH','ESSA','ENGM','EFHK','LPPT','LGAV','LTFM','LIMC',
-    'EIDW','EGKK','EGCC','EDDL','EDDB','EBBR','EPWA','LKPR','LHBP','UUEE',
-    'OMDB','OERK','OTHH','OMAA','LLBG','ZBAA','ZSPD','ZGGG','VHHH','RCTP',
-    'RJTT','RJAA','RKSI','WSSS','VTBS','RPLL','WIII','WMKK','VIDP','VABB',
-    'YSSY','YMML','NZAA','FAOR','HECA','GMMN','HKJK',
-    'SBGR','SCEL','SAEZ','SKBO','SEQM','SPJC',
-    'KMSP','KDTW','KPHL','KBWI','KSLC','KPDX','KMDW','KCLT','KCLE',
-    'CYC','CYYC','CYEG','LFMN','LFSB','LSGG','EDDS','EDDH','EDDV',
-    'LIPE','LICC','LEPA','LEMG','LPPR','LIME','LIRQ','LEZL','LIML',
-    'OEJN','OKBK','OBBI','ZGSZ','ZUCK','VMMC','VVTS','VTCC',
-    'RPVM','WABD','WAAA','WSAP','YBBN','YPPH','NZCH','NZQN',
-    'KATK','PHNL','PANC','PAFA','SBGL','SBRJ','SUMU','SPQU',
+    'KATL','ZBAA','OMDB','KLAX','KORD','EGLL','RJTT','VHHH','ZSPD','LFPG',
+    'EHAM','KDFW','ZGGG','EDDF','LTFM','VIDP','WIII','WSSS','RKSI','KDEN',
+    'VTBS','KJFK','WMKK','KSFO','LEMD','ZUUU','KLAS','LEBL','VABB','CYYZ',
+    'KSEA','KCLT','EGKK','ZGSZ','RCTP','MMMX','ZPPP','EDDM','KMCO','KMIA',
+    'KPHX','YSSY','KEWR','RPLL','ZSSS','ZLXY','LIRF','KIAH','RJAA','UUEE',
+    'ZUCK','VTBD','KMSP','SBGR','KBOS','VVTS','OTHH','ZSHC','KDTW','OEJN',
+    'YMML','KFLL','LTFJ','SKBO','UUDD','RKPC','KLGA','KPHL','EIDW','LSZH',
+    'EKCH','RJBB','LEPA','EGCC','ENGM','LPPT','ESSA','KBWI','LTAI','EGSS',
+    'ZSNJ','RKSS','VOBL','OERK','EBBR','EDDL','ZSAM','LOWW','ZHCC','KSLC',
+    'CYVR','KDCA','ZGHA','OMAA','MMUN','RJFF','ZSQD','YBBN','ZHHH','VVNB',
+    'RJCC','KIAD','WADD','ZJHK','KMDW','SCEL','KSAN','LIMC','SPJC','WARR',
+    'SBSP','LGAV','ZWWW','FAOR','ZJSY','LLBG','ZBTJ','ROAH','EDDT','VECC',
+    'PHNL','KTPA','VOMM','KPDX','NZAA','EFHK','ZYHB','LEMG','CYUL','UUWW',
+    'ZUGY','EDDH','ZYTL','OIII','LSGG','ZYYY','VOHS','SBBR','VTSP','RKPK',
+    'CYYC','SBGL','ULLI','LTAC','EGGW','EPWA','MPTO','KDAL','LKPR','KSTL',
+    'RJOO','ZSJN','KBNA','ZGNN','KAUS','SABE','YPPH','LEAL','KHOU','EGPH',
+    'LFMN','LHBP','GCLP','KOAK','EGBB','ZBYN','EDDB','LTBJ','ZLLL','MMGL',
+    'LROP','KSJC','ZSFZ','EDDK','LIME','WIMM','KMSY','ZYCC','WAAA','KRDU',
+    'KMCI','OMSJ','GCTS','ZSCN','HECA','ZBHH','EDDS','KSMF','VVDN','LPPR',
+    'FACT','UKBB','ZBSJ','OIMM','KSNA','LIPZ','SAEZ','LFLL','VOCI','VTCC',
+    'RJGG','SBCF','RPVM','EGPF','MMMY','ZSOF','LIML','ZGSD','ZSNB','GMMN',
+    'SBKP','ZSWZ','LFBO','SBRJ','KCLE','LICC','KSAT','LFML','KPIT','HAAB',
+    'OIIE','KRSW','KIND','LPFR','WARJ','ZLIC','BIKF','LIPE','LIRN','EGGD',
+    'YPAD','SBPA','WBKK','WIHH','LEIB','LFSB','ZGKL','KCVG','VAPO','CYEG',
+    'SBRF','SBSV','EBCI','WALL','DAAG','KCMH','LGIR','VAAH','GCRR','WMKP',
+    'ZPLJ','MMTJ','HKJK','VAGO','ESGG','LEVC','SBCT','ZSWX','NZCH','ZSYT',
+    'LBSF','RCKH','YBCG','KBDL','LGTS','DNMM','WIDD','KPBI','OEMA','LFBD',
+    'RCSS','ZSQZ','ENBR','EVRA','GCFV','NZWN','LMML','ZBNY','SBFZ','VYYY',
+    'LIRA','EDDV','EGAA','EPKK','LICJ','MUHA','URSS','DTTA','WIPP','EHEH',
+    'ZLXN','LTAF','KJAX','FADU','LFRS','USSS','EGNT','LYBE','LGRP','LIRP',
+    'RJFK','UKFF','LEZL','WBGG','UNNT','LEBB','PANC','KABQ','EGGP','YBCS',
+    'EGNX','VVCR','ZGOW','CYOW','KBUF','GCXO','LIBD','KOMA','EPGD','EGLC',
+    'WIBB','ENVA','LTBS','MROC','VTSS','GMMX','VIJP','CYWG','VILK','VEGT',
+    'WARS','KONT','EDDN','ENZV','LIEE','UMMS','CYHZ','VTSG','EGNM','HEGN',
+    'VOTV','ZPJH','KPVD','WIPT','EPKT','LTFE','SBFL','DTMB','ZULS','WICC',
+    'WRLC','WAMM','WAOO','FIMP','RKTN','RPMD','ZUMY','OISS','URKK','DNAA',
+    'WIOO','LEMH','LTCG','KMKE','SBBE','RJFT','SPZO','LPMA','UGTB','RJSS',
+    'WMKJ','RJFU','LDZA','PHKO','SBGO','SBVT','ELLX','VVPQ','YSCB','MSLP',
+    'RJFM','OIAW','OIBK','VEBS','VOCL','SBCY','WMSA','RJOM','KLGB','PHLI',
+    'LDSP','UWUU','KELP','CYTZ','OIFM','VEPT','WMKL','URRR','SACO','KSFB',
+    'RKTU','RPVK','RJOA','UWWW','SBEG','LEST','UWKD','MGGT','DGAA','EDDW',
+    'WAJJ','ZSCG','HESH','VTCT',
 ];
 
 const HAUL_TYPES = [
     { key:'SHORT',  label:'Short haul',  color:'#10b981', rgb:'16,185,129',  min:300,  max:1500, xpMult:1.5  },
     { key:'MEDIUM', label:'Medium haul', color:'#3b82f6', rgb:'59,130,246',  min:1500, max:3000, xpMult:1.25 },
-    { key:'LONG',   label:'Long haul',   color:'#f59e0b', rgb:'245,158,11',  min:3000, max:9000, xpMult:1.0  },
+    { key:'LONG',   label:'Long haul',   color:'#f59e0b', rgb:'245,158,11',  min:3000, max:7000, xpMult:1.0  },
 ];
 
 const ALLIANCES = [
@@ -288,6 +320,227 @@ function buildSimbriefUrl(suggestion, airline, aircraft) {
     return `${baseUrl}?${params.toString()}`;
 }
 
+/* ── AI helpers ── */
+function buildScheduleStats(flights, allianceName) {
+    if (!flights?.length) return null;
+    const alFlights = flights.filter(f => {
+        let al = f.alliance;
+        if (!al) al = ALLIANCE_MAP[f.airline];
+        return al === allianceName;
+    });
+    const airlineCount = {}, routeCount = {}, destCount = {}, monthCount = {};
+    let totalMiles = 0;
+    alFlights.forEach(f => {
+        if (f.airline) airlineCount[f.airline] = (airlineCount[f.airline] || 0) + 1;
+        if (f.departure && f.arrival) {
+            const r = `${f.departure}→${f.arrival}`;
+            routeCount[r] = (routeCount[r] || 0) + 1;
+            destCount[f.arrival] = (destCount[f.arrival] || 0) + 1;
+        }
+        if (f.date) { const m = f.date.slice(0, 7); monthCount[m] = (monthCount[m] || 0) + 1; }
+        totalMiles += Number(f.miles || 0);
+    });
+    const top = (obj, n = 5) => Object.entries(obj).sort(([,a],[,b]) => b-a).slice(0,n).map(([k,v]) => `${k}(${v})`).join(', ');
+    const sorted = [...alFlights].sort((a,b) => new Date(b.date)-new Date(a.date));
+    const last = sorted[0];
+    return {
+        totalFlights: alFlights.length,
+        totalHours: alFlights.reduce((a,f) => a + (Number(f.flightTime)||0), 0).toFixed(1),
+        totalMiles: Math.round(totalMiles).toLocaleString(),
+        topAirline: Object.entries(airlineCount).sort(([,a],[,b])=>b-a)[0]?.[0] || '—',
+        topAirlineList: top(airlineCount),
+        topRouteList: top(routeCount, 8),
+        topDestList: top(destCount, 8),
+        monthlyDistribution: Object.entries(monthCount).sort(([a],[b])=>a.localeCompare(b)).slice(-6).map(([m,c])=>`${m}:${c}`).join(', '),
+        lastFlight: last ? `${last.departure}→${last.arrival} on ${last.date} (${last.aircraft||'?'})` : '—',
+        aircraftLogbook: top(alFlights.reduce((acc,f) => { if(f.aircraft) acc[f.aircraft]=(acc[f.aircraft]||0)+1; return acc; }, {}), 5),
+        flightsLastMonth: alFlights.filter(f => f.date >= new Date(Date.now()-30*86400000).toISOString().slice(0,10)).length,
+        avgHours: alFlights.length ? (alFlights.reduce((a,f)=>a+(Number(f.flightTime)||0),0)/alFlights.length).toFixed(1) : '0',
+        longestFlight: alFlights.reduce((best,f) => (Number(f.miles)||0) > (Number(best?.miles)||0) ? f : best, null)
+            ? (() => { const b = alFlights.reduce((best,f) => (Number(f.miles)||0) > (Number(best?.miles)||0) ? f : best, alFlights[0]); return `${b.departure}→${b.arrival}(${b.miles}nm)`; })() : '—',
+        nextFlight: last ? `Last was ${last.departure}→${last.arrival}` : 'no data',
+    };
+}
+
+async function callCopilot(message, flights, allianceName) {
+    const stats = buildScheduleStats(flights, allianceName);
+    const res = await fetch(COPILOT_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, stats: stats || {
+            totalFlights:0, totalHours:'0', totalMiles:'0', topAirline:'—',
+            topAirlineList:'—', topRouteList:'—', topDestList:'—',
+            monthlyDistribution:'—', lastFlight:'—', aircraftLogbook:'—',
+            flightsLastMonth:0, avgHours:'0', longestFlight:'—', nextFlight:'—',
+        }, history: [] }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res;
+}
+
+/* ── Option B: RouteInsight — per-card AI explanation ── */
+function RouteInsight({ suggestion, flights, allianceName, haulColor }) {
+    const [insight, setInsight] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [shown, setShown]     = useState(false);
+
+    const handleGenerate = async (e) => {
+        e.stopPropagation();
+        if (loading || insight) return;
+        setLoading(true); setShown(true);
+        const origin = suggestion.origin.icao;
+        const dest   = suggestion.dest.icao;
+        const visitCount = suggestion.visitCount || 0;
+        const prompt = `In 2 sentences max, explain why ${origin}→${dest} is a good next flight suggestion for this ${allianceName} pilot. They have flown this route ${visitCount} time(s). Be specific, concise, aviation-toned. No bullet points.`;
+        try {
+            const res = await callCopilot(prompt, flights, allianceName);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n'); buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const raw = line.slice(6).trim();
+                    if (raw === '[DONE]') break;
+                    try { const { text } = JSON.parse(raw); if (text) setInsight(p => p + text); } catch (_) {}
+                }
+            }
+        } catch (e) {
+            setInsight('Could not generate insight.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fcard-insight" onClick={e => e.stopPropagation()}>
+            {!shown ? (
+                <button className="insight-trigger" onClick={handleGenerate} style={{'--haul-c': haulColor}}>
+                    <Sparkles size={11}/> Why this route?
+                </button>
+            ) : (
+                <div className="insight-body">
+                    <Sparkles size={11} style={{ color: haulColor, flexShrink: 0, marginTop: 2 }}/>
+                    <span>
+                        {loading && !insight && <span className="insight-loading">Analyzing…</span>}
+                        {insight}
+                        {loading && insight && <span style={{ opacity: 0.4 }}>▋</span>}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── Option C: ScheduleChat ── */
+function ScheduleChat({ flights, allianceName }) {
+    const [query, setQuery]   = useState('');
+    const [answer, setAnswer] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [asked, setAsked]   = useState(false);
+    const inputRef = useRef(null);
+
+    const SUGGESTIONS = [
+        'What long haul should I do next?',
+        'Which destinations have I never visited?',
+        'Suggest a route for this weekend',
+        'What\'s my most flown route in this alliance?',
+    ];
+
+    const handleQuery = async (q) => {
+        const text = (q || query).trim();
+        if (!text || loading) return;
+        setLoading(true); setAnswer(''); setAsked(true);
+        try {
+            const res = await callCopilot(text, flights, allianceName);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n'); buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const raw = line.slice(6).trim();
+                    if (raw === '[DONE]') break;
+                    try { const { text: chunk } = JSON.parse(raw); if (chunk) setAnswer(p => p + chunk); } catch (_) {}
+                }
+            }
+        } catch {
+            setAnswer('Could not get an answer. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReset = () => {
+        setQuery(''); setAnswer(''); setAsked(false);
+        setTimeout(() => inputRef.current?.focus(), 50);
+    };
+
+    return (
+        <div className="card sched-chat">
+            <div className="sched-chat-header">
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div className="sched-chat-icon"><Sparkles size={14} color="#fff"/></div>
+                    <div>
+                        <div className="sched-chat-title">Schedule Assistant</div>
+                        <div className="sched-chat-sub">Ask anything about your {allianceName} flights</div>
+                    </div>
+                </div>
+            </div>
+
+            {!asked ? (
+                <>
+                    <div className="sched-chat-input-row">
+                        <input ref={inputRef} type="text" className="form-input sched-chat-input"
+                            placeholder="e.g. What long haul should I do next?"
+                            value={query} onChange={e => setQuery(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleQuery()} />
+                        <button className="btn btn-primary sched-chat-send"
+                            onClick={() => handleQuery()} disabled={!query.trim() || loading}>
+                            <Send size={14}/>
+                        </button>
+                    </div>
+                    <div className="sched-chat-pills">
+                        {SUGGESTIONS.map(s => (
+                            <button key={s} className="sched-chat-pill"
+                                onClick={() => { setQuery(s); handleQuery(s); }}>
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="sched-chat-answer-wrap">
+                    <div className="sched-chat-question">"{query}"</div>
+                    <div className="sched-chat-answer">
+                        {loading && !answer && (
+                            <div className="sched-chat-loading">
+                                <div className="sched-chat-spinner"/>
+                                Thinking…
+                            </div>
+                        )}
+                        {answer}
+                        {loading && answer && <span style={{ opacity: 0.4 }}>▋</span>}
+                    </div>
+                    {!loading && (
+                        <button className="btn btn-secondary sched-chat-reset" onClick={handleReset}>
+                            <RotateCcw size={13}/> Ask another
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ── Leaflet map — identical to SimBriefBriefing ── */
 function RouteMap({ origin, dest, isDarkMode }) {
     const mapRef = useRef(null);
@@ -456,11 +709,44 @@ export default function Schedule({ flights=[], user }) {
             const originCode=String(lf.arrival).toUpperCase();
             const originAp=findAirport(originCode);
             if (!originAp?.latitude) return [];
-            const allDests=MAJOR_DESTINATIONS.map(i=>findAirport(i)).filter(a=>a&&a.icao&&a.latitude!=null);
+
+            // Option 4: visited airports + all large/medium airports from airport-data
+            const visitedIcaos = new Set([
+                ...flights.map(f => String(f.departure||'').toUpperCase()),
+                ...flights.map(f => String(f.arrival||'').toUpperCase()),
+            ]);
+
+            // Filter airport-data: valid ICAO (4 chars), has coordinates, is a sizeable airport
+            // Use iata presence as proxy for "public commercial airport"
+            const largeAirports = airports.filter(a =>
+                a.icao && a.icao.length === 4 &&
+                a.latitude != null && a.longitude != null &&
+                a.iata && a.iata.length >= 2  // has IATA code = commercial airport
+            );
+
+            // Combine visited + large airports, deduplicate by ICAO
+            const poolMap = new Map();
+            largeAirports.forEach(a => poolMap.set(a.icao, a));
+            // Visited airports override (use findAirport for enriched data)
+            visitedIcaos.forEach(icao => {
+                const ap = findAirport(icao);
+                if (ap?.icao && ap.latitude != null) poolMap.set(ap.icao, ap);
+            });
+
+            const allDests = [...poolMap.values()].filter(a => a.icao && a.latitude != null);
+
+            // For long haul: only use top 200 airports by traffic (major hubs)
+            // This prevents unrealistic routes like JFK→small regional airport
+            const top200Icaos = new Set(MAJOR_DESTINATIONS.slice(0, 200));
+            const longHaulDests = allDests.filter(a =>
+                top200Icaos.has(a.icao) || visitedIcaos.has(a.icao)
+            );
 
             return HAUL_TYPES.map(range=>{
+                // Use restricted pool for long haul, full pool for short/medium
+                const pool = range.key === 'LONG' ? longHaulDests : allDests;
                 try {
-                    let cands=allDests.filter(ap=>{
+                    let cands=pool.filter(ap=>{
                         if (ap.icao===originCode) return false;
                         const d=haversineNm(originAp.latitude,originAp.longitude,ap.latitude,ap.longitude);
                         return d>=range.min&&d<=range.max;
@@ -774,6 +1060,14 @@ export default function Schedule({ flights=[], user }) {
                                                 </a>
                                             </div>
                                         )}
+
+                                        {/* AI Route Insight — Option B */}
+                                        <RouteInsight
+                                            suggestion={s}
+                                            flights={flights}
+                                            allianceName={selectedAlliance}
+                                            haulColor={haul.color}
+                                        />
                                     </div>
                                 ) : (
                                     <div className="fcard-empty">No routes available</div>
@@ -783,7 +1077,7 @@ export default function Schedule({ flights=[], user }) {
                     })}
                 </div>
 
-                {/* Right: map */}
+                {/* Right: map + chat */}
                 <div className="sched-map-col">
                     <div className="sched-map-box card">
                         {activeHaul ? (
@@ -800,6 +1094,9 @@ export default function Schedule({ flights=[], user }) {
                             {activeHaul.dest.distance.toLocaleString()} NM
                         </div>
                     )}
+
+                    {/* AI Schedule Chat — Option C */}
+                    <ScheduleChat flights={flights} allianceName={selectedAlliance} />
                 </div>
             </div>
 
@@ -911,9 +1208,35 @@ export default function Schedule({ flights=[], user }) {
                 .simbrief-btn:hover { background: rgba(var(--haul-rgb), .16); border-color: rgba(var(--haul-rgb), .5); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(var(--haul-rgb), .2); }
                 .simbrief-route { font-size: .68rem; font-weight: 500; opacity: .7; font-family: var(--font-family-mono, monospace); margin-left: 4px; }
 
+                /* ── AI Route Insight ── */
+                .fcard-insight { padding: var(--space-3) var(--space-6); border-top: 1px solid var(--color-border); }
+                .insight-trigger { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; font-size: 0.7rem; font-weight: 600; font-family: var(--font-family-display); border-radius: var(--radius-full); border: 1px dashed var(--haul-c); color: var(--haul-c); background: rgba(var(--haul-rgb),.05); cursor: pointer; transition: all .15s; }
+                .insight-trigger:hover { background: rgba(var(--haul-rgb),.12); }
+                .insight-body { display: flex; align-items: flex-start; gap: 7px; font-size: 0.78rem; color: var(--color-text-secondary); line-height: 1.55; font-style: italic; }
+                .insight-loading { color: var(--color-text-hint); }
+
+                /* ── Schedule Chat ── */
+                .sched-chat { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+                .sched-chat-header { display: flex; align-items: center; justify-content: space-between; }
+                .sched-chat-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+                .sched-chat-title { font-size: 0.82rem; font-weight: 700; color: var(--color-text-primary); font-family: var(--font-family-display); }
+                .sched-chat-sub { font-size: 0.65rem; color: var(--color-text-hint); margin-top: 1px; }
+                .sched-chat-input-row { display: flex; gap: var(--space-2); }
+                .sched-chat-input { flex: 1; font-size: 0.8rem; }
+                .sched-chat-send { padding: 8px 12px; }
+                .sched-chat-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+                .sched-chat-pill { padding: 3px 10px; font-size: 0.68rem; font-weight: 500; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; transition: all .15s; }
+                .sched-chat-pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+                .sched-chat-answer-wrap { display: flex; flex-direction: column; gap: var(--space-2); }
+                .sched-chat-question { font-size: 0.75rem; color: var(--color-text-hint); font-style: italic; }
+                .sched-chat-answer { font-size: 0.82rem; line-height: 1.6; color: var(--color-text-primary); background: var(--color-background); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--color-border); white-space: pre-wrap; min-height: 40px; }
+                .sched-chat-loading { display: flex; align-items: center; gap: 7px; color: var(--color-text-hint); }
+                .sched-chat-spinner { width: 12px; height: 12px; border: 2px solid var(--color-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+                .sched-chat-reset { align-self: flex-start; font-size: 0.73rem; padding: 5px 12px; gap: 5px; }
+
                 /* ── Map ── */
-                .sched-map-col { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); height: calc(100vh - 160px); }
-                .sched-map-box { padding: 0; overflow: hidden; flex: 1; min-height: 500px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+                .sched-map-col { position: static; display: flex; flex-direction: column; gap: var(--space-3); }
+                .sched-map-box { padding: 0; overflow: hidden; height: 500px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
                 .map-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); color: var(--color-text-hint); font-size: .8rem; }
                 .map-dist-badge { align-self: flex-start; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 5px 14px; font-family: var(--font-family-display); font-size: .78rem; font-weight: 800; color: var(--color-text-primary); }
 
@@ -926,7 +1249,7 @@ export default function Schedule({ flights=[], user }) {
                 /* ── Responsive ── */
                 @media (max-width: 1100px) {
                     .sched-body { grid-template-columns: 1fr; }
-                    .sched-map-col { position: static; height: 400px; }
+                    .sched-map-col { position: static; }
                     .sched-stats-bar { grid-template-columns: repeat(2, 1fr); }
                 }
                 @media (max-width: 700px) {

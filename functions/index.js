@@ -2,7 +2,11 @@ const https = require("firebase-functions/v2/https");
 const {defineSecret} = require("firebase-functions/params");
 const Anthropic = require("@anthropic-ai/sdk");
 
-const ANTHROPIC_KEY = defineSecret("ANTHROPIC_API_KEY");
+const ANTHROPIC_KEY  = defineSecret("ANTHROPIC_API_KEY");
+const ELEVENLABS_KEY = defineSecret("ELEVENLABS_API_KEY");
+
+// ElevenLabs voice ID for Adam (professional male)
+const ADAM_VOICE_ID = "pNInz6obpgDQGcFmaJgB";
 
 const AVAILABLE_CHECKLISTS = [
   "Airbus A350", "Airbus A330", "Airbus A320",
@@ -107,6 +111,71 @@ exports.askCopilot = https.onRequest(
       res.end();
     } catch (err) {
       console.error("Copilot error:", err);
+      res.status(500).json({error: err.message});
+    }
+  },
+);
+
+/* ── Text-to-Speech via ElevenLabs ── */
+exports.textToSpeech = https.onRequest(
+  {
+    secrets: [ELEVENLABS_KEY],
+    cors: false,
+    region: "europe-west1",
+    timeoutSeconds: 60,
+  },
+  async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") return res.status(405).json({error: "Method not allowed"});
+
+    const {text} = req.body;
+    if (!text || typeof text !== "string") {
+      return res.status(400).json({error: "Missing text"});
+    }
+
+    // Truncate to 5000 chars (ElevenLabs limit per request)
+    const truncated = text.slice(0, 5000);
+
+    try {
+      const response = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${ADAM_VOICE_ID}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": ELEVENLABS_KEY.value(),
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+          },
+          body: JSON.stringify({
+            text: truncated,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+              style: 0.2,
+              use_speaker_boost: true,
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("ElevenLabs error:", err);
+        return res.status(502).json({error: "TTS service error"});
+      }
+
+      // Stream audio back to client
+      const audioBuffer = await response.arrayBuffer();
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Content-Length", audioBuffer.byteLength);
+      res.send(Buffer.from(audioBuffer));
+    } catch (err) {
+      console.error("TTS error:", err);
       res.status(500).json({error: err.message});
     }
   },

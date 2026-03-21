@@ -141,6 +141,7 @@ export const parseSimBriefData = (data) => {
 
   console.log('SimBrief: Raw duration found:', rawDuration);
   console.log('SimBrief: Full times object:', JSON.stringify(data.times));
+  console.log('SimBrief: Files object:', JSON.stringify(data.files));
 
   // Waypoints fallbacks - User says data.navlog is the array itself
   let waypointsRaw = [];
@@ -227,18 +228,35 @@ export const parseSimBriefData = (data) => {
     cruiseAltitude: data.general?.initial_altitude || 0,
     distance: data.general?.air_distance || 0,
     fuel: data.fuel?.plan_ramp || 0,
+    fuelTrip:      data.fuel?.plan_trip      || 0,
+    fuelReserve:   data.fuel?.reserve        || 0,
+    fuelAlternate: data.fuel?.alternate      || 0,
     duration: rawDuration ? formatDuration(rawDuration) : 'N/D',
     durationSeconds: rawDuration ? parseDurationToHours(rawDuration) : null,
     passengers: data.general?.passengers || '0',
     costIndex: data.general?.costindex || '0',
-    zfw: data.weights?.est_zfw || '0',
+    zfw:    data.weights?.est_zfw || '0',
+    tow:    data.weights?.est_tow || '0',
+    ldw:    data.weights?.est_ldw || '0',
+    maxZfw: data.weights?.max_zfw || '0',
+    maxTow: data.weights?.max_tow || '0',
+    maxLdw: data.weights?.max_ldw || '0',
+    avgWindDir:  data.general?.avg_wind_dir  || null,
+    avgWindSpd:  data.general?.avg_wind_spd  || null,
+    avgWindComp: data.general?.avg_wind_comp || null,
+    stepclimb:   data.general?.stepclimb_string || null,
     departureTime: data.times?.est_off || data.times?.sched_off || data.params?.time_off || data.general?.sched_departure || null,
     arrivalTime: data.times?.est_on || data.times?.sched_on || data.params?.time_on || data.general?.sched_arrival || null,
     departureRunway: data.origin?.plan_rwy || '--',
     arrivalRunway: data.destination?.plan_rwy || '--',
     sid: data.general?.sid || '--',
     star: data.general?.star || '--',
-    ofpUrl: data.files?.html?.link || data.files?.pdf?.link || null,
+    ofpUrl: (() => {
+      const dir = data.files?.directory || 'https://www.simbrief.com/ofp/flightplans/';
+      const base = dir.endsWith('/') ? dir : dir + '/';
+      const pdf  = data.files?.pdf?.link || data.files?.html?.link || null;
+      return pdf ? (pdf.startsWith('http') ? pdf : base + pdf) : null;
+    })(),
     waypoints: waypoints
   };
 };

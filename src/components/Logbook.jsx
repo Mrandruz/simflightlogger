@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Edit2, Filter, X, Eye, ChevronLeft, ChevronRight, Plane, Sparkles, Send, RotateCcw } from 'lucide-react';
+import { Trash2, Edit2, Filter, X, Eye, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { findAirport } from '../utils/airportUtils';
 import FlightDetailsModal from './FlightDetailsModal';
@@ -18,172 +18,176 @@ const formatFlightTime = (val) => {
     return `${h}h ${String(m).padStart(2, '0')}m`;
 };
 
-/* ── AI Logbook Query — uses same Cloud Function as Copilot ── */
-const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
-
-const SUGGESTED_QUERIES = [
-    'How many hours have I flown this year?',
-    'Which is my most flown route?',
-    "What's my total distance in nautical miles?",
-    'Which airline have I flown with most?',
-    "What's my longest flight ever?",
-    'How many flights did I do last month?',
+/* ── Anomaly Detection Engine ── */
+const KNOWN_AIRCRAFT = [
+    'Airbus A319','Airbus A320','Airbus A321','Airbus A330',
+    'Airbus A350','Airbus A380','Boeing 777','Boeing 787','Altro',
 ];
+const TODAY = new Date().toISOString().split('T')[0];
 
-function buildLogbookStats(flights) {
-    if (!flights?.length) return null;
-    const totalHours = flights.reduce((a, f) => a + (Number(f.flightTime) || 0), 0);
-    const totalMiles = flights.reduce((a, f) => a + (Number(f.miles) || 0), 0);
-    const airlineCount = {}, aircraftCount = {}, routeCount = {}, monthlyCount = {};
-    const airports = new Set();
-    let longestFlight = null;
-    const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
-    sorted.forEach(f => {
-        if (f.departure) airports.add(f.departure);
-        if (f.arrival)   airports.add(f.arrival);
-        if (f.airline)   airlineCount[f.airline]  = (airlineCount[f.airline]  || 0) + 1;
-        if (f.aircraft)  aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
-        if (f.departure && f.arrival) {
-            const r = `${f.departure}→${f.arrival}`;
-            routeCount[r] = (routeCount[r] || 0) + 1;
+const ANOMALY_TYPES = {
+    IMPOSSIBLE_ROUTE:   { severity: 'error',   label: 'Impossible route',        icon: '🚫' },
+    DUPLICATE:          { severity: 'error',   label: 'Duplicate flight',         icon: '📋' },
+    ZERO_DISTANCE:      { severity: 'error',   label: 'Missing distance',         icon: '📏' },
+    ZERO_TIME:          { severity: 'error',   label: 'Missing flight time',      icon: '⏱️' },
+    SPEED_TOO_HIGH:     { severity: 'warning', label: 'Unrealistic speed',        icon: '⚡' },
+    SPEED_TOO_LOW:      { severity: 'warning', label: 'Unrealistic speed',        icon: '🐢' },
+    MISSING_AIRLINE:    { severity: 'warning', label: 'Missing airline',          icon: '✈️' },
+    MISSING_AIRCRAFT:   { severity: 'warning', label: 'Missing aircraft',         icon: '🛩️' },
+    UNKNOWN_AIRCRAFT:   { severity: 'info',    label: 'Unknown aircraft type',    icon: '❓' },
+    FUTURE_DATE:        { severity: 'warning', label: 'Future date',              icon: '📅' },
+};
+
+function detectAnomalies(flights) {
+    const anomalies = [];
+    const seen = {};
+
+    flights.forEach(f => {
+        const id = f.id;
+        const dep = (f.departure || '').toUpperCase();
+        const arr = (f.arrival   || '').toUpperCase();
+        const miles = Number(f.miles || 0);
+        const hours = Number(f.flightTime || 0);
+
+        // Impossible route
+        if (dep && arr && dep === arr) {
+            anomalies.push({ flightId: id, type: 'IMPOSSIBLE_ROUTE', flight: f,
+                detail: `${dep} → ${arr}` });
         }
-        if (f.date) {
-            const m = f.date.slice(0, 7);
-            monthlyCount[m] = (monthlyCount[m] || 0) + 1;
+
+        // Duplicate
+        const key = `${dep}|${arr}|${f.date}`;
+        if (seen[key]) {
+            anomalies.push({ flightId: id, type: 'DUPLICATE', flight: f,
+                detail: `${dep} → ${arr} on ${f.date}` });
+        } else {
+            seen[key] = true;
         }
-        if (!longestFlight || (f.miles || 0) > (longestFlight.miles || 0)) longestFlight = f;
+
+        // Missing distance
+        if (!miles || miles === 0) {
+            anomalies.push({ flightId: id, type: 'ZERO_DISTANCE', flight: f,
+                detail: `${dep} → ${arr}` });
+        }
+
+        // Missing flight time
+        if (!hours || hours === 0) {
+            anomalies.push({ flightId: id, type: 'ZERO_TIME', flight: f,
+                detail: `${dep} → ${arr}` });
+        }
+
+        // Speed check (only if both distance and time are valid)
+        if (miles > 0 && hours > 0) {
+            const speed = miles / hours;
+            if (speed > 650) anomalies.push({ flightId: id, type: 'SPEED_TOO_HIGH', flight: f,
+                detail: `${Math.round(speed)} kts implied (${dep} → ${arr}, ${miles}nm in ${formatFlightTime(hours)})` });
+            else if (speed < 100) anomalies.push({ flightId: id, type: 'SPEED_TOO_LOW', flight: f,
+                detail: `${Math.round(speed)} kts implied (${dep} → ${arr}, ${miles}nm in ${formatFlightTime(hours)})` });
+        }
+
+        // Missing airline
+        if (!f.airline || !f.airline.trim()) {
+            anomalies.push({ flightId: id, type: 'MISSING_AIRLINE', flight: f,
+                detail: `${dep} → ${arr} on ${f.date}` });
+        }
+
+        // Missing aircraft
+        if (!f.aircraft || !f.aircraft.trim()) {
+            anomalies.push({ flightId: id, type: 'MISSING_AIRCRAFT', flight: f,
+                detail: `${dep} → ${arr} on ${f.date}` });
+        } else if (!KNOWN_AIRCRAFT.includes(f.aircraft)) {
+            anomalies.push({ flightId: id, type: 'UNKNOWN_AIRCRAFT', flight: f,
+                detail: `"${f.aircraft}" on ${dep} → ${arr}` });
+        }
+
+        // Future date
+        if (f.date && f.date > TODAY) {
+            anomalies.push({ flightId: id, type: 'FUTURE_DATE', flight: f,
+                detail: `${dep} → ${arr} on ${f.date}` });
+        }
     });
-    const top = (obj, n = 5) => Object.entries(obj).sort(([,a],[,b]) => b-a).slice(0,n).map(([k,v]) => `${k} (${v})`).join(', ');
-    const last = sorted[0];
-    return {
-        totalFlights: flights.length,
-        totalHours: totalHours.toFixed(2),
-        totalMiles: Math.round(totalMiles).toLocaleString(),
-        uniqueAirports: airports.size,
-        topAirline: Object.entries(airlineCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
-        topAircraftList: top(aircraftCount),
-        topAirlineList: top(airlineCount),
-        topRouteList: top(routeCount, 10),
-        longestFlight: longestFlight ? `${longestFlight.departure}→${longestFlight.arrival} (${Math.round(longestFlight.miles||0)} nm) on ${longestFlight.date}` : '—',
-        lastFlight: last ? `${last.departure}→${last.arrival} on ${last.date} (${last.aircraft})` : '—',
-        monthlyDistribution: Object.entries(monthlyCount).sort(([a],[b]) => a.localeCompare(b)).slice(-12).map(([m,c]) => `${m}: ${c}`).join(', '),
-        aircraftLogbook: top(aircraftCount, 10),
-        flightList: sorted.slice(0, 300).map(f =>
-            `${f.date}|${f.departure}→${f.arrival}|${f.airline||''}|${f.aircraft||''}|${f.miles||0}nm|${formatFlightTime(f.flightTime)}|${f.alliance||''}`
-        ).join('\n'),
-    };
+
+    return anomalies;
 }
 
-function LogbookAI({ flights }) {
-    const [query, setQuery]     = useState('');
-    const [answer, setAnswer]   = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError]     = useState('');
-    const [asked, setAsked]     = useState(false);
-    const inputRef = useRef(null);
+function AnomalyBanner({ flights, onEditFlight }) {
+    const [expanded, setExpanded] = useState(false);
+    const [dismissed, setDismissed] = useState(false);
 
-    const handleQuery = async (q) => {
-        const text = (q || query).trim();
-        if (!text || loading) return;
-        setLoading(true); setError(''); setAnswer(''); setAsked(true);
-        try {
-            const stats = buildLogbookStats(flights);
-            const res = await fetch(COPILOT_FUNCTION_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `[Reply in English only]\n\n${text}`, stats, history: [] }),
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    const data = line.slice(6).trim();
-                    if (data === '[DONE]') break;
-                    try { const { text: chunk } = JSON.parse(data); if (chunk) setAnswer(prev => prev + chunk); } catch (_) {}
-                }
-            }
-        } catch (e) {
-            setError('Could not get an answer. Please try again.');
-            console.error('LogbookAI error:', e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const anomalies = useMemo(() => detectAnomalies(flights), [flights]);
 
-    const handleReset = () => {
-        setQuery(''); setAnswer(''); setError(''); setAsked(false);
-        setTimeout(() => inputRef.current?.focus(), 50);
-    };
+    if (dismissed || anomalies.length === 0) return null;
+
+    const errors   = anomalies.filter(a => ANOMALY_TYPES[a.type].severity === 'error');
+    const warnings = anomalies.filter(a => ANOMALY_TYPES[a.type].severity === 'warning');
+    const infos    = anomalies.filter(a => ANOMALY_TYPES[a.type].severity === 'info');
+
+    const bannerColor = errors.length > 0
+        ? 'var(--color-danger)'
+        : warnings.length > 0 ? 'var(--color-warning, #f59e0b)' : 'var(--color-primary)';
+    const bannerBg = errors.length > 0
+        ? 'var(--color-danger-bg, rgba(239,68,68,0.06))'
+        : warnings.length > 0 ? 'rgba(245,158,11,0.06)' : 'var(--color-primary-light)';
 
     return (
-        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', border: '1px solid var(--color-primary)', background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Sparkles size={16} color="#fff" />
+        <div style={{ borderRadius: 'var(--radius-lg)', border: `1px solid ${bannerColor}`, background: bannerBg, overflow: 'hidden' }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-3) var(--space-5)', cursor: 'pointer' }}
+                onClick={() => setExpanded(e => !e)}>
+                <span style={{ fontSize: '1.1rem' }}>
+                    {errors.length > 0 ? '🚨' : warnings.length > 0 ? '⚠️' : 'ℹ️'}
+                </span>
+                <div style={{ flex: 1 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: bannerColor, fontFamily: 'var(--font-family-display)' }}>
+                        {anomalies.length} logbook {anomalies.length === 1 ? 'issue' : 'issues'} detected
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginLeft: 10 }}>
+                        {errors.length > 0 && `${errors.length} error${errors.length > 1 ? 's' : ''}`}
+                        {errors.length > 0 && warnings.length > 0 && ' · '}
+                        {warnings.length > 0 && `${warnings.length} warning${warnings.length > 1 ? 's' : ''}`}
+                        {(errors.length > 0 || warnings.length > 0) && infos.length > 0 && ' · '}
+                        {infos.length > 0 && `${infos.length} info`}
+                    </span>
                 </div>
-                <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-display)' }}>Ask your Logbook</div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-hint)', marginTop: 1 }}>Query your {flights.length} flights in natural language</div>
-                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)', userSelect: 'none' }}>
+                    {expanded ? '▲ Hide' : '▼ Show details'}
+                </span>
+                <button onClick={e => { e.stopPropagation(); setDismissed(true); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-hint)', padding: '2px 6px', fontSize: '1rem', lineHeight: 1 }}
+                    title="Dismiss">×</button>
             </div>
-            {!asked ? (
-                <>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                        <input ref={inputRef} type="text" className="form-input"
-                            placeholder="e.g. How many hours have I flown this year?"
-                            value={query} onChange={e => setQuery(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleQuery()}
-                            style={{ flex: 1, fontSize: '0.85rem' }} />
-                        <button className="btn btn-primary" onClick={() => handleQuery()}
-                            disabled={!query.trim() || loading} style={{ padding: '8px 16px', gap: 6 }}>
-                            <Send size={14} /> Ask
-                        </button>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                        {SUGGESTED_QUERIES.map(q => (
-                            <button key={q} onClick={() => { setQuery(q); handleQuery(q); }}
-                                style={{ padding: '4px 12px', fontSize: '0.72rem', fontWeight: 500, borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all .15s' }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
-                                {q}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>"{query}"</div>
-                    <div style={{ minHeight: 48, fontSize: '0.88rem', lineHeight: 1.6, color: 'var(--color-text-primary)', background: 'var(--color-surface)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', whiteSpace: 'pre-wrap' }}>
-                        {loading && !answer && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-hint)' }}>
-                                <div style={{ width: 14, height: 14, border: '2px solid var(--color-primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                Analyzing your logbook…
-                            </div>
-                        )}
-                        {error && <span style={{ color: 'var(--color-danger)' }}>{error}</span>}
-                        {answer}
-                        {loading && answer && <span style={{ opacity: 0.4 }}>▋</span>}
-                    </div>
-                    {!loading && (
-                        <button className="btn btn-secondary" onClick={handleReset}
-                            style={{ alignSelf: 'flex-start', gap: 6, fontSize: '0.78rem', padding: '6px 14px' }}>
-                            <RotateCcw size={13} /> Ask another question
-                        </button>
+
+            {/* Expanded list */}
+            {expanded && (
+                <div style={{ borderTop: `1px solid ${bannerColor}`, padding: 'var(--space-3) var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', maxHeight: 320, overflowY: 'auto' }}>
+                    {['error', 'warning', 'info'].map(severity =>
+                        anomalies.filter(a => ANOMALY_TYPES[a.type].severity === severity).map((a, i) => {
+                            const def = ANOMALY_TYPES[a.type];
+                            const color = severity === 'error' ? 'var(--color-danger)' : severity === 'warning' ? 'var(--color-warning, #f59e0b)' : 'var(--color-primary)';
+                            return (
+                                <div key={`${a.flightId}-${a.type}-${i}`}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                                    <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>{def.icon}</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{def.label}</span>
+                                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', marginLeft: 8 }}>{a.detail}</span>
+                                    </div>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ padding: '3px 10px', fontSize: '0.72rem', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                        onClick={() => onEditFlight(a.flight)}
+                                    >
+                                        Fix ✏️
+                                    </button>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             )}
         </div>
     );
 }
-
 
 export default function Logbook({ flights, onDelete, onEdit }) {
     console.log('Logbook: Rendering with', flights.length, 'flights');
@@ -357,14 +361,14 @@ export default function Logbook({ flights, onDelete, onEdit }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
 
+            {/* Anomaly Detection Banner */}
+            <AnomalyBanner flights={flights} onEditFlight={onEdit} />
+
             {/* Global Dashboard Section */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 350px) 1fr', gap: 'var(--space-6)' }}>
                 <LogbookStats stats={stats} filterLabel={filterLabel} narrative={narrative} />
                 <LogbookMap mapData={mapData} isDarkMode={isDarkMode} filteredFlights={filteredFlights} />
             </div>
-
-            {/* AI Natural Language Query */}
-            <LogbookAI flights={flights} />
 
             {/* Active Filters Bar - Punto 2 dello UX Analysis */}
             {Object.keys(activeFilters).length > 0 && (
