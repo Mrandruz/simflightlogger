@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Users, Zap, CalendarDays, ChevronRight, Flame } from 'lucide-react';
+import { Award, Star, Shield, Medal, MapPin, Clock, Plane as PlaneIcon, Fuel, Globe, Trophy, Flame } from 'lucide-react';
 import { usePilotData } from '../hooks/usePilotData';
 
 const RankIcon = ({ rankName }) => {
@@ -88,16 +88,11 @@ export default function PilotProfileCard({ flights, user }) {
                             </div>
                             <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
                                 <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{stats.totalXp.toLocaleString()}</span> XP &bull; <span className="data-mono">{stats.totalHours.toFixed(1)}</span> h
-                                {stats.isMasterBonusActive ? (
-                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 500, color: '#ff6b35', backgroundColor: 'rgba(255, 107, 53, 0.15)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(255, 107, 53, 0.3)' }}>
-                                        <Flame size={12} />
-                                        10x XP Active
+                                {stats.activeBonuses?.map(b => (
+                                    <span key={b.label} style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 500, color: b.color, backgroundColor: b.bg, padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', border: `1px solid ${b.color}30` }}>
+                                        <Flame size={12} /> {b.label} Active
                                     </span>
-                                ) : stats.achievements.dailyStreak.unlocked && (
-                                    <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
-                                        2x XP Active
-                                    </span>
-                                )}
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -127,28 +122,11 @@ export default function PilotProfileCard({ flights, user }) {
                         </div>
 
                         {/* Streak bonus expiration notice */}
-                        {stats.isMasterBonusActive ? (() => {
-                            const expiryDate = new Date(stats.activeBonusExpiryMs);
-                            const expiryStr = expiryDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-                            return (
-                                <div style={{
-                                    marginTop: '6px',
-                                    padding: '5px 10px',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255,107,53,0.1)',
-                                    border: '1px solid rgba(255,107,53,0.3)',
-                                    fontSize: '0.7rem',
-                                    color: '#ff6b35',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    fontWeight: 500
-                                }}>
-                                    <Flame size={11} />
-                                    10x XP achievement bonus active — expires {expiryStr} (end of day)
-                                </div>
-                            );
-                        })() : null}
+                        {stats.activeBonuses?.filter(b => b.description.includes('expires')).map(b => (
+                            <div key={b.label} style={{ marginTop: '6px', padding: '5px 10px', borderRadius: '8px', background: b.bg, border: `1px solid ${b.color}50`, fontSize: '0.7rem', color: b.color, display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
+                                <Flame size={11} /> {b.label} bonus active — {b.description}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -240,91 +218,6 @@ export default function PilotProfileCard({ flights, user }) {
                         </div>
                     </div>
 
-                </div>
-
-                {/* Achievements Section */}
-                <div style={{
-                    flex: '1 1 100%',
-                    marginTop: 'var(--space-2)',
-                    padding: 'var(--space-4)',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(145deg, rgba(20, 106, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
-                    position: 'relative'
-                }}>
-                    {/* Decorative background element */}
-                    <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(20, 106, 255, 0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-
-                    <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'stretch', position: 'relative', zIndex: 1 }}>
-                        <div className="achievement-card" style={{
-                            flex: '0 0 65px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                            background: 'rgba(20, 106, 255, 0.08)',
-                            border: '1px solid rgba(20, 106, 255, 0.2)',
-                            padding: 'var(--space-3) 0',
-                            borderRadius: '12px'
-                        }}>
-                            <div className="achievement-icon-wrapper" style={{
-                                background: 'linear-gradient(135deg, var(--color-primary), #00d2ff)',
-                                color: 'white',
-                                boxShadow: '0 4px 10px rgba(20, 106, 255, 0.3)'
-                            }}>
-                                <Trophy size={18} />
-                            </div>
-                            <ChevronRight size={18} style={{ color: 'var(--color-primary)', opacity: 0.8 }} />
-                        </div>
-
-                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)' }}>
-
-                            <AchievementBadge
-                                title="World Traveler"
-                                description="Visit 100 different countries"
-                                icon={Globe}
-                                data={stats.achievements.worldTraveler}
-                            />
-                            <AchievementBadge
-                                title="Long Haul Ace"
-                                description="Complete 120 flights over 5000nm"
-                                icon={PlaneIcon}
-                                data={stats.achievements.longHaulAce}
-                            />
-                            <AchievementBadge
-                                title="Airline Loyal"
-                                description="Fly 70 times total with the same airline"
-                                icon={Users}
-                                data={stats.achievements.airlineLoyal}
-                            />
-                            <AchievementBadge
-                                title="Tireless"
-                                description="Complete 3 flights in a single day"
-                                icon={Zap}
-                                data={stats.achievements.tireless}
-                            />
-                            <AchievementBadge
-                                title="Type Rating Master"
-                                description="Fly 120 times with the same aircraft type"
-                                icon={Award}
-                                data={stats.achievements.typeRatingMaster}
-                            />
-                            <AchievementBadge
-                                title="7-Day Streak"
-                                description="Log at least one flight per day for 7 consecutive days"
-                                icon={CalendarDays}
-                                data={stats.achievements.dailyStreak}
-                            />
-                            <AchievementBadge
-                                title="New Discovery"
-                                description="Discover 50 new destinations never visited before"
-                                icon={MapPin}
-                                data={stats.achievements.newDiscovery}
-                            />
-                        </div>
-                    </div>
                 </div>
 
             </div>

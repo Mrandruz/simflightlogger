@@ -13,6 +13,7 @@ import DataRecovery from './components/DataRecovery';
 import Schedule from './components/Schedule';
 import AppSkeleton from './components/AppSkeleton';
 import Hangar from './components/Hangar';
+import Achievements from './components/Achievements';
 import FlightCopilot from './components/FlightCopilot';
 
 import { ConfirmProvider, useConfirm } from './context/ConfirmContext';
@@ -185,6 +186,7 @@ export default function App() {
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} flights={flights} />} />
                     <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
                     <Route path="/hangar" element={<Hangar />} />
+                    <Route path="/achievements" element={<Achievements flights={flights} />} />
                     {isAdmin && <Route path="/admin" element={<AdminPanel />} />}
                     {isAdmin && <Route path="/admin/recovery" element={<DataRecovery />} />}
                 </Route>

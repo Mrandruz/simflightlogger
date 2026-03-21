@@ -319,6 +319,18 @@ export function usePilotData(flights) {
 
         const isMasterBonusActive = latestExpiryMs !== null;
         const activeBonusExpiryMs = latestExpiryMs;
+        const isStreakBonusActive = !isMasterBonusActive && hasDailyStreak;
+
+        // Unified active bonuses list for UI
+        const activeBonuses = [];
+        if (isMasterBonusActive) {
+            const expiryDate = new Date(activeBonusExpiryMs);
+            const expiryStr = expiryDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            activeBonuses.push({ label: '10x XP', color: '#ff6b35', bg: 'rgba(255,107,53,.12)', description: `Achievement bonus — expires ${expiryStr}` });
+        }
+        if (isStreakBonusActive) {
+            activeBonuses.push({ label: '2x XP', color: 'var(--color-warning)', bg: 'var(--color-warning-bg)', description: '7-day streak active' });
+        }
 
         let latestFlight = null;
         if (sortedFlights.length > 0) {
@@ -347,6 +359,8 @@ export function usePilotData(flights) {
             latestFlight,
             isMasterBonusActive,
             activeBonusExpiryMs,
+            isStreakBonusActive,
+            activeBonuses,
             achievements: {
                 worldTraveler: { unlocked: hasWorldTraveler, progress: worldTravelerProgress, current: countriesCount, goal: worldTravelerGoal },
                 longHaulAce: { unlocked: hasLongHaulAce, progress: longHaulProgress, current: longHaulCount, goal: longHaulGoal },
