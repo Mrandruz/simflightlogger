@@ -1,11 +1,188 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Edit2, Filter, X, Eye, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
+import { Trash2, Edit2, Filter, X, Eye, ChevronLeft, ChevronRight, Plane, Sparkles, Send, RotateCcw } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { findAirport } from '../utils/airportUtils';
 import FlightDetailsModal from './FlightDetailsModal';
 
 import LogbookStats from './LogbookStats';
 import LogbookMap from './LogbookMap';
+
+// Converts decimal hours to "8h 58m" format
+// Handles both real decimals (8.97) and pseudo-decimal (8.58) formats
+const formatFlightTime = (val) => {
+    if (!val && val !== 0) return '—';
+    const n = Number(val);
+    if (isNaN(n) || n === 0) return '0h 00m';
+    const h = Math.floor(n);
+    const m = Math.round((n - h) * 60);
+    return `${h}h ${String(m).padStart(2, '0')}m`;
+};
+
+/* ── AI Logbook Query — uses same Cloud Function as Copilot ── */
+const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
+
+const SUGGESTED_QUERIES = [
+    'How many hours have I flown this year?',
+    'Which is my most flown route?',
+    "What's my total distance in nautical miles?",
+    'Which airline have I flown with most?',
+    "What's my longest flight ever?",
+    'How many flights did I do last month?',
+];
+
+function buildLogbookStats(flights) {
+    if (!flights?.length) return null;
+    const totalHours = flights.reduce((a, f) => a + (Number(f.flightTime) || 0), 0);
+    const totalMiles = flights.reduce((a, f) => a + (Number(f.miles) || 0), 0);
+    const airlineCount = {}, aircraftCount = {}, routeCount = {}, monthlyCount = {};
+    const airports = new Set();
+    let longestFlight = null;
+    const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
+    sorted.forEach(f => {
+        if (f.departure) airports.add(f.departure);
+        if (f.arrival)   airports.add(f.arrival);
+        if (f.airline)   airlineCount[f.airline]  = (airlineCount[f.airline]  || 0) + 1;
+        if (f.aircraft)  aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
+        if (f.departure && f.arrival) {
+            const r = `${f.departure}→${f.arrival}`;
+            routeCount[r] = (routeCount[r] || 0) + 1;
+        }
+        if (f.date) {
+            const m = f.date.slice(0, 7);
+            monthlyCount[m] = (monthlyCount[m] || 0) + 1;
+        }
+        if (!longestFlight || (f.miles || 0) > (longestFlight.miles || 0)) longestFlight = f;
+    });
+    const top = (obj, n = 5) => Object.entries(obj).sort(([,a],[,b]) => b-a).slice(0,n).map(([k,v]) => `${k} (${v})`).join(', ');
+    const last = sorted[0];
+    return {
+        totalFlights: flights.length,
+        totalHours: totalHours.toFixed(2),
+        totalMiles: Math.round(totalMiles).toLocaleString(),
+        uniqueAirports: airports.size,
+        topAirline: Object.entries(airlineCount).sort(([,a],[,b]) => b-a)[0]?.[0] || '—',
+        topAircraftList: top(aircraftCount),
+        topAirlineList: top(airlineCount),
+        topRouteList: top(routeCount, 10),
+        longestFlight: longestFlight ? `${longestFlight.departure}→${longestFlight.arrival} (${Math.round(longestFlight.miles||0)} nm) on ${longestFlight.date}` : '—',
+        lastFlight: last ? `${last.departure}→${last.arrival} on ${last.date} (${last.aircraft})` : '—',
+        monthlyDistribution: Object.entries(monthlyCount).sort(([a],[b]) => a.localeCompare(b)).slice(-12).map(([m,c]) => `${m}: ${c}`).join(', '),
+        aircraftLogbook: top(aircraftCount, 10),
+        flightList: sorted.slice(0, 300).map(f =>
+            `${f.date}|${f.departure}→${f.arrival}|${f.airline||''}|${f.aircraft||''}|${f.miles||0}nm|${formatFlightTime(f.flightTime)}|${f.alliance||''}`
+        ).join('\n'),
+    };
+}
+
+function LogbookAI({ flights }) {
+    const [query, setQuery]     = useState('');
+    const [answer, setAnswer]   = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError]     = useState('');
+    const [asked, setAsked]     = useState(false);
+    const inputRef = useRef(null);
+
+    const handleQuery = async (q) => {
+        const text = (q || query).trim();
+        if (!text || loading) return;
+        setLoading(true); setError(''); setAnswer(''); setAsked(true);
+        try {
+            const stats = buildLogbookStats(flights);
+            const res = await fetch(COPILOT_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `[Reply in English only]\n\n${text}`, stats, history: [] }),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') break;
+                    try { const { text: chunk } = JSON.parse(data); if (chunk) setAnswer(prev => prev + chunk); } catch (_) {}
+                }
+            }
+        } catch (e) {
+            setError('Could not get an answer. Please try again.');
+            console.error('LogbookAI error:', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReset = () => {
+        setQuery(''); setAnswer(''); setError(''); setAsked(false);
+        setTimeout(() => inputRef.current?.focus(), 50);
+    };
+
+    return (
+        <div className="card" style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', border: '1px solid var(--color-primary)', background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Sparkles size={16} color="#fff" />
+                </div>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-display)' }}>Ask your Logbook</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-hint)', marginTop: 1 }}>Query your {flights.length} flights in natural language</div>
+                </div>
+            </div>
+            {!asked ? (
+                <>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <input ref={inputRef} type="text" className="form-input"
+                            placeholder="e.g. How many hours have I flown this year?"
+                            value={query} onChange={e => setQuery(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleQuery()}
+                            style={{ flex: 1, fontSize: '0.85rem' }} />
+                        <button className="btn btn-primary" onClick={() => handleQuery()}
+                            disabled={!query.trim() || loading} style={{ padding: '8px 16px', gap: 6 }}>
+                            <Send size={14} /> Ask
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                        {SUGGESTED_QUERIES.map(q => (
+                            <button key={q} onClick={() => { setQuery(q); handleQuery(q); }}
+                                style={{ padding: '4px 12px', fontSize: '0.72rem', fontWeight: 500, borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all .15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
+                                {q}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>"{query}"</div>
+                    <div style={{ minHeight: 48, fontSize: '0.88rem', lineHeight: 1.6, color: 'var(--color-text-primary)', background: 'var(--color-surface)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', whiteSpace: 'pre-wrap' }}>
+                        {loading && !answer && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-hint)' }}>
+                                <div style={{ width: 14, height: 14, border: '2px solid var(--color-primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                Analyzing your logbook…
+                            </div>
+                        )}
+                        {error && <span style={{ color: 'var(--color-danger)' }}>{error}</span>}
+                        {answer}
+                        {loading && answer && <span style={{ opacity: 0.4 }}>▋</span>}
+                    </div>
+                    {!loading && (
+                        <button className="btn btn-secondary" onClick={handleReset}
+                            style={{ alignSelf: 'flex-start', gap: 6, fontSize: '0.78rem', padding: '6px 14px' }}>
+                            <RotateCcw size={13} /> Ask another question
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 
 export default function Logbook({ flights, onDelete, onEdit }) {
@@ -186,6 +363,9 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                 <LogbookMap mapData={mapData} isDarkMode={isDarkMode} filteredFlights={filteredFlights} />
             </div>
 
+            {/* AI Natural Language Query */}
+            <LogbookAI flights={flights} />
+
             {/* Active Filters Bar - Punto 2 dello UX Analysis */}
             {Object.keys(activeFilters).length > 0 && (
                 <div style={{
@@ -325,7 +505,7 @@ export default function Logbook({ flights, onDelete, onEdit }) {
                                         <span className="badge data-mono clickable-filter-badge" onClick={() => handleFilterClick('icao', f.arrival)} title={`Filter by ${f.arrival}`}>{f.arrival}</span>
                                     </td>
                                     <td className="data-mono">{f.miles} nm</td>
-                                    <td className="data-mono">{f.flightTime} h</td>
+                                    <td className="data-mono">{formatFlightTime(f.flightTime)}</td>
                                     <td>
                                         <span className="data-mono" style={{ color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.85rem' }}>
                                             {Math.floor(((f.miles || 0) / 10) + ((f.flightTime || 0) * 50))}

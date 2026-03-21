@@ -1,9 +1,89 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriangle, Wind, Thermometer, Gauge, Droplets, Radio, ExternalLink, Map, Settings } from 'lucide-react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriangle, Wind, Thermometer, Gauge, Droplets, Radio, ExternalLink, Map, Settings, BookOpen, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchSimBriefData, parseSimBriefData } from '../services/simbriefService';
+
+/* ── SimBrief aircraft code → FlightForm aircraft label ── */
+const SIMBRIEF_AIRCRAFT_MAP = {
+    // Airbus A319
+    'A319': 'Airbus A319', 'A19N': 'Airbus A319',
+    // Airbus A320
+    'A320': 'Airbus A320', 'A20N': 'Airbus A320',
+    // Airbus A321
+    'A321': 'Airbus A321', 'A21N': 'Airbus A321', 'A20S': 'Airbus A321',
+    // Airbus A330
+    'A330': 'Airbus A330', 'A332': 'Airbus A330', 'A333': 'Airbus A330',
+    // Airbus A350
+    'A350': 'Airbus A350', 'A359': 'Airbus A350', 'A35K': 'Airbus A350',
+    // Airbus A380
+    'A380': 'Airbus A380', 'A388': 'Airbus A380',
+    // Boeing 777
+    'B777': 'Boeing 777', 'B77W': 'Boeing 777', 'B77L': 'Boeing 777', 'B772': 'Boeing 777', 'B773': 'Boeing 777',
+    // Boeing 787
+    'B787': 'Boeing 787', 'B789': 'Boeing 787', 'B788': 'Boeing 787', 'B78X': 'Boeing 787',
+};
+
+const AIRLINE_ALLIANCE_MAP = {
+    // Star Alliance
+    'Lufthansa':'Star Alliance','United Airlines':'Star Alliance','Air Canada':'Star Alliance',
+    'Singapore Airlines':'Star Alliance','ANA':'Star Alliance','All Nippon Airways':'Star Alliance',
+    'Thai Airways':'Star Alliance','Turkish Airlines':'Star Alliance','Austrian Airlines':'Star Alliance',
+    'SAS':'Star Alliance','Scandinavian Airlines':'Star Alliance','TAP Air Portugal':'Star Alliance',
+    'LOT Polish Airlines':'Star Alliance','Air China':'Star Alliance','Ethiopian Airlines':'Star Alliance',
+    'EgyptAir':'Star Alliance','Air India':'Star Alliance','Avianca':'Star Alliance',
+    // SkyTeam
+    'Air France':'SkyTeam','KLM':'SkyTeam','Delta Air Lines':'SkyTeam','Delta':'SkyTeam',
+    'Aeromexico':'SkyTeam','China Eastern':'SkyTeam','China Southern':'SkyTeam',
+    'Korean Air':'SkyTeam','Vietnam Airlines':'SkyTeam','Garuda Indonesia':'SkyTeam',
+    'Middle East Airlines':'SkyTeam','Kenya Airways':'SkyTeam','Saudia':'SkyTeam','Etihad':'SkyTeam',
+    'TAROM':'SkyTeam','ITA Airways':'SkyTeam',
+    // Oneworld
+    'American Airlines':'Oneworld','British Airways':'Oneworld','Iberia':'Oneworld',
+    'Qatar Airways':'Oneworld','Cathay Pacific':'Oneworld','Japan Airlines':'Oneworld',
+    'Finnair':'Oneworld','Malaysia Airlines':'Oneworld','Royal Jordanian':'Oneworld',
+    'Alaska Airlines':'Oneworld','Qantas':'Oneworld','Brussels Airlines':'Oneworld',
+};
+
+function mapSimbriefAircraft(simbriefCode) {
+    if (!simbriefCode) return '';
+    const upper = simbriefCode.toUpperCase();
+    return SIMBRIEF_AIRCRAFT_MAP[upper] || '';
+}
+
+/* Parse SimBrief duration → decimal hours for FlightForm flightTime field
+   Handles: "8h 58m", "8:58", "08:58", "8+58", "538" (minutes), "32280" (seconds) */
+function parseDuration(dur) {
+    if (!dur) return '';
+    const s = String(dur).trim();
+
+    // "8h 58m" or "8h58m" or "8h 58" 
+    const hmMatch = s.match(/^(\d+)\s*h\s*(\d+)\s*m?$/i);
+    if (hmMatch) return (parseInt(hmMatch[1]) + parseInt(hmMatch[2]) / 60).toFixed(2);
+
+    // "8h" only
+    const hOnly = s.match(/^(\d+)\s*h$/i);
+    if (hOnly) return parseInt(hOnly[1]).toFixed(2);
+
+    // "8:58" or "08:58"
+    const colonMatch = s.match(/^(\d+):(\d{2})$/);
+    if (colonMatch) return (parseInt(colonMatch[1]) + parseInt(colonMatch[2]) / 60).toFixed(2);
+
+    // "8+58" (SimBrief internal format)
+    const plusMatch = s.match(/^(\d+)\+(\d{2})$/);
+    if (plusMatch) return (parseInt(plusMatch[1]) + parseInt(plusMatch[2]) / 60).toFixed(2);
+
+    // Pure number: if > 1000 assume seconds, if > 24 assume minutes, else hours
+    if (!isNaN(Number(s))) {
+        const n = Number(s);
+        if (n > 1440) return (n / 3600).toFixed(2);  // seconds → hours
+        if (n > 24)   return (n / 60).toFixed(2);    // minutes → hours
+        return n.toFixed(2);                          // already hours
+    }
+
+    return '';
+}
 
 const MiniMetar = ({ icao }) => {
     const [metar, setMetar] = useState(null);
@@ -98,9 +178,10 @@ const MiniMetar = ({ icao }) => {
     );
 };
 
-const SimBriefBriefing = () => {
+const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
     const context = useOutletContext();
     const isDarkMode = context?.isDarkMode;
+    const navigate = useNavigate();
     
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -109,11 +190,90 @@ const SimBriefBriefing = () => {
     const mapInstance = useRef(null);
     const [showSettings, setShowSettings] = useState(false);
     const [routeCopied, setRouteCopied] = useState(false);
+    const [logState, setLogState] = useState('idle'); // idle | duplicate | saving | saved | error
+    const [showPreview, setShowPreview] = useState(false);
 
     const [identifier, setIdentifier] = useState(() => {
         const saved = localStorage.getItem('simBriefIdentifier');
         return saved ? JSON.parse(saved) : { type: 'username', value: 'mrandruz' };
     });
+
+    /* ── Build flight draft from SimBrief data ── */
+    const buildFlightDraft = () => {
+        if (!data) return null;
+        const aircraft = mapSimbriefAircraft(data.aircraft);
+        const airline  = data.airlineName || '';
+        const alliance = AIRLINE_ALLIANCE_MAP[airline] || 'Nessuna';
+
+        // Always parse from the display string "8h 58m" — most reliable source.
+        // durationSeconds is only a fallback if display string fails, and only if > 60
+        // (SimBrief sometimes sends raw hours as integer, e.g. 8 instead of 32280 seconds)
+        let flightTime = parseDuration(data.duration);
+        if (!flightTime || flightTime === '0.00') {
+            const sec = Number(data.durationSeconds);
+            if (sec > 60) flightTime = (sec / 3600).toFixed(2);
+        }
+
+        console.log('[Skydeck] buildFlightDraft →', {
+            durationSeconds: data.durationSeconds,
+            durationDisplay: data.duration,
+            flightTimeResult: flightTime,
+        });
+
+        return {
+            departure:  data.origin?.icao      || '',
+            arrival:    data.destination?.icao  || '',
+            airline,
+            alliance,
+            aircraft,
+            miles:      String(data.distance   || ''),
+            flightTime,
+            date:       new Date().toISOString().split('T')[0],
+        };
+    };
+
+    /* ── Quick save: build draft → call onAddFlight → redirect ── */
+    const handleLogFlight = async (force = false) => {
+        const draft = buildFlightDraft();
+        if (!draft || !draft.departure || !draft.arrival) return;
+
+        // Duplicate check unless user already confirmed
+        if (!force) {
+            const duplicate = flights.find(f =>
+                f.departure?.toUpperCase() === draft.departure.toUpperCase() &&
+                f.arrival?.toUpperCase()   === draft.arrival.toUpperCase() &&
+                f.date === draft.date
+            );
+            if (duplicate) {
+                setLogState('duplicate');
+                return;
+            }
+        }
+
+        setLogState('saving');
+        try {
+            await onAddFlight({
+                ...draft,
+                id:         crypto.randomUUID(),
+                createdAt:  Date.now(),
+                miles:      Number(draft.miles),
+                flightTime: Number(draft.flightTime),
+            });
+            setLogState('saved');
+            setTimeout(() => navigate('/logbook'), 1200);
+        } catch (e) {
+            console.error('Log flight error:', e);
+            setLogState('error');
+            setTimeout(() => setLogState('idle'), 3000);
+        }
+    };
+
+    /* ── Edit Details: prefill NewFlight form ── */
+    const handleEditDetails = () => {
+        const draft = buildFlightDraft();
+        if (!draft) return;
+        navigate('/new-flight', { state: { prefillData: draft } });
+    };
 
     const loadFlightPlan = async () => {
         setLoading(true);
@@ -464,6 +624,71 @@ const SimBriefBriefing = () => {
                             <div style={{ backgroundColor: 'var(--color-background)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontFamily: 'var(--font-family-mono)', fontSize: '0.85rem', lineHeight: 1.6, wordBreak: 'break-all', color: 'var(--color-text-primary)' }}>
                                 {data.route}
                             </div>
+                        </div>
+
+                        {/* ── Log This Flight CTA ── */}
+                        <div className="card" style={{ padding: 'var(--space-5)', background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%)', border: '1px solid var(--color-primary)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                            {/* Preview summary */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-3)' }}>
+                                {[
+                                    { label: 'Route',    value: `${data.origin?.icao} → ${data.destination?.icao}` },
+                                    { label: 'Aircraft', value: mapSimbriefAircraft(data.aircraft) || data.aircraft || '—' },
+                                    { label: 'Distance', value: `${data.distance} NM` },
+                                    { label: 'Duration', value: data.duration || '—' },
+                                ].map(({ label, value }) => (
+                                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)' }}>{value}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Action buttons */}
+                            <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => handleLogFlight(false)}
+                                    disabled={logState === 'saving' || logState === 'saved' || !onAddFlight}
+                                    style={{ flex: 1, gap: '8px', fontSize: '0.9rem', padding: '12px', justifyContent: 'center',
+                                        ...(logState === 'saved'     ? { backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' } : {}),
+                                        ...(logState === 'error'     ? { backgroundColor: 'var(--color-danger)',  borderColor: 'var(--color-danger)'  } : {}),
+                                        ...(logState === 'duplicate' ? { backgroundColor: 'var(--color-warning, #f59e0b)', borderColor: 'var(--color-warning, #f59e0b)' } : {}),
+                                    }}
+                                >
+                                    {logState === 'saving'    && <><RefreshCw size={16} className="spin" /> Saving…</>}
+                                    {logState === 'saved'     && <><CheckCircle size={16} /> Saved! Redirecting…</>}
+                                    {logState === 'error'     && <>Error — try again</>}
+                                    {logState === 'duplicate' && <>⚠️ Already logged today</>}
+                                    {logState === 'idle'      && <><BookOpen size={16} /> Log This Flight</>}
+                                </button>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={handleEditDetails}
+                                    style={{ padding: '12px 20px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                                >
+                                    ✏️ Edit Details
+                                </button>
+                            </div>
+
+                            {/* Duplicate warning */}
+                            {logState === 'duplicate' && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: '0.78rem', color: 'var(--color-text-primary)', gap: 'var(--space-3)' }}>
+                                    <span>A flight <strong>{data?.origin?.icao} → {data?.destination?.icao}</strong> is already in your logbook for today.</span>
+                                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                        <button className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: '0.75rem' }} onClick={() => setLogState('idle')}>
+                                            Cancel
+                                        </button>
+                                        <button className="btn" style={{ padding: '5px 12px', fontSize: '0.75rem', background: 'var(--color-warning, #f59e0b)', color: '#fff', border: 'none' }} onClick={() => handleLogFlight(true)}>
+                                            Log Anyway
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            {!onAddFlight && (
+                                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', margin: 0 }}>
+                                    Pass <code>onAddFlight</code> prop to Briefing to enable quick logging.
+                                </p>
+                            )}
                         </div>
                     </div>
 

@@ -86,6 +86,22 @@ export default function App() {
 
     const handleAddFlight = async (flight) => {
         try {
+            // Duplicate check: same departure + arrival + date
+            const duplicate = flights.find(f =>
+                f.departure?.toUpperCase() === flight.departure?.toUpperCase() &&
+                f.arrival?.toUpperCase()   === flight.arrival?.toUpperCase() &&
+                f.date === flight.date
+            );
+            if (duplicate) {
+                const confirmed = await askConfirm({
+                    title: 'Duplicate Flight Detected',
+                    message: `A flight from ${flight.departure} to ${flight.arrival} on ${flight.date} is already in your logbook. Do you want to log it again?`,
+                    confirmText: 'Log Anyway',
+                    confirmType: 'primary',
+                    icon: 'alert'
+                });
+                if (!confirmed) return;
+            }
             await addFlight(flight);
         } catch (error) {
             showToast('Error saving flight. Please try again.', 'error');
@@ -96,6 +112,7 @@ export default function App() {
         try {
             await updateFlight(updatedFlight);
             setEditingFlight(null);
+            navigate('/logbook');
         } catch (error) {
             showToast('Error updating flight. Please try again.', 'error');
         }
@@ -164,7 +181,7 @@ export default function App() {
                 >
                     <Route path="/" element={<Dashboard flights={flights} />} />
                     <Route path="/logbook" element={<Logbook flights={flights} onDelete={handleDeleteClick} onEdit={setEditingFlight} />} />
-                    <Route path="/briefing" element={<Briefing flights={flights} />} />
+                    <Route path="/briefing" element={<Briefing onAddFlight={handleAddFlight} flights={flights} />} />
                     <Route path="/new-flight" element={<NewFlight onAddFlight={handleAddFlight} flights={flights} />} />
                     <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
                     <Route path="/hangar" element={<Hangar />} />

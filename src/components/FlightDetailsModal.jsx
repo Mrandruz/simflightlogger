@@ -4,6 +4,15 @@ import { ComposableMap, Geographies, Geography, Marker, Line } from "react-simpl
 import { geoCentroid, geoDistance } from 'd3-geo';
 import { findAirport } from '../utils/airportUtils';
 
+const formatFlightTime = (val) => {
+    if (!val && val !== 0) return '—';
+    const n = Number(val);
+    if (isNaN(n) || n === 0) return '0h 00m';
+    const h = Math.floor(n);
+    const m = Math.round((n - h) * 60);
+    return `${h}h ${String(m).padStart(2, '0')}m`;
+};
+
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -189,7 +198,7 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Flight Time</div>
-                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }} className="data-mono">{flight.flightTime}h</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }} className="data-mono">{formatFlightTime(flight.flightTime)}</div>
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '1px' }}>Aircraft</div>
@@ -246,7 +255,7 @@ export default function FlightDetailsModal({ flight, allFlights, onClose }) {
                         </div>
                         <div style={{ backgroundColor: 'rgba(30, 215, 96, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(30, 215, 96, 0.2)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Clock size={14} aria-hidden="true" /> Flight Time</div>
-                            <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{flight.flightTime} h</div>
+                            <div style={{ fontWeight: 600, fontSize: '1.1rem' }} className="data-mono">{formatFlightTime(flight.flightTime)}</div>
                         </div>
                         <div style={{ backgroundColor: 'rgba(232, 113, 10, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(232, 113, 10, 0.2)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '4px' }}><Fuel size={14} color="#e8710a" aria-hidden="true" /> Est. Fuel</div>

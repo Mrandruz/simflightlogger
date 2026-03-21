@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import FlightForm from './FlightForm';
 import { useToast } from '../context/ToastContext';
 
 export default function NewFlight({ onAddFlight, flights }) {
     const location = useLocation();
+    const navigate = useNavigate();
     const prefillData = location.state?.prefillData;
     const { showToast } = useToast();
 
@@ -12,10 +13,15 @@ export default function NewFlight({ onAddFlight, flights }) {
         try {
             await onAddFlight(flightData);
             showToast("Flight successfully added!", "success");
+            // If opened from Briefing (prefillData present), redirect to logbook after save
+            if (prefillData) navigate('/logbook');
         } catch (error) {
-            // Error is handled by App.jsx, but we could add more specific feedback here if needed
+            // Error is handled by App.jsx
         }
     };
+
+    // If opened from Briefing (prefillData present), Cancel goes back to Briefing
+    const handleCancel = prefillData ? () => navigate('/briefing') : undefined;
 
     return (
         <div style={{ 
@@ -30,7 +36,8 @@ export default function NewFlight({ onAddFlight, flights }) {
         }}>
             <FlightForm 
                 onAddFlight={handleFlightAdded} 
-                initialData={prefillData} 
+                initialData={prefillData}
+                onCancel={handleCancel}
                 flights={flights} 
             />
         </div>

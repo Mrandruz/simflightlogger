@@ -175,9 +175,12 @@ export default function FlightForm({ onAddFlight, initialData, onCancel, flights
 
                 let updates = { miles: distance.toString() };
 
-                // Estimate flight time if we have distance and aircraft
-                // We only do this if we are not editing an existing flight (which would have an ID)
-                if (state.aircraft && (!initialData || !initialData.id)) {
+                // Estimate flight time only if:
+                // 1. We have an aircraft selected
+                // 2. We are NOT editing an existing flight (has id)
+                // 3. initialData does NOT already provide a flightTime (e.g. from SimBrief)
+                const hasPrefilledTime = initialData?.flightTime && Number(initialData.flightTime) > 0;
+                if (state.aircraft && (!initialData || !initialData.id) && !hasPrefilledTime) {
                     const speed = AIRCRAFT_SPEED_KTS[state.aircraft] || AIRCRAFT_SPEED_KTS['Altro'];
                     // Add 0.5 hours (30 min) for climb/descent/taxi
                     const estimatedHours = (distance / speed) + 0.5;

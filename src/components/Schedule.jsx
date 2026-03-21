@@ -66,6 +66,228 @@ const ALLIANCES = [
 
 
 
+/* ── SimBrief + Airline suggestion ── */
+
+// Maps ICAO prefix → continent code used for routing logic
+function icaoToContinent(icao) {
+    if (!icao) return 'WORLD';
+    const p = icao.toUpperCase();
+    if (p.startsWith('K') || p.startsWith('PH') || p.startsWith('PA')) return 'US';
+    if (p.startsWith('CY')) return 'CA';
+    if (p.startsWith('MM') || p.startsWith('MN') || p.startsWith('MR') || p.startsWith('MT') || p.startsWith('MU') || p.startsWith('MY') || p.startsWith('MZ') || p.startsWith('TI') || p.startsWith('MK')) return 'LA';
+    if (p.startsWith('SB') || p.startsWith('SC') || p.startsWith('SD') || p.startsWith('SJ') || p.startsWith('SK') || p.startsWith('SL') || p.startsWith('SM') || p.startsWith('SO') || p.startsWith('SP') || p.startsWith('SS') || p.startsWith('SU') || p.startsWith('SW') || p.startsWith('SA') || p.startsWith('SE') || p.startsWith('SY') || p.startsWith('SZ')) return 'SA';
+    if (p.startsWith('EG') || p.startsWith('EI') || p.startsWith('LF') || p.startsWith('ED') || p.startsWith('LI') || p.startsWith('LE') || p.startsWith('GC') || p.startsWith('LP') || p.startsWith('EB') || p.startsWith('EH') || p.startsWith('EN') || p.startsWith('EK') || p.startsWith('ES') || p.startsWith('EF') || p.startsWith('LO') || p.startsWith('LZ') || p.startsWith('LK') || p.startsWith('LH') || p.startsWith('EP') || p.startsWith('LR') || p.startsWith('UU') || p.startsWith('UL') || p.startsWith('UM') || p.startsWith('LT') || p.startsWith('LC') || p.startsWith('BK') || p.startsWith('LW') || p.startsWith('LY') || p.startsWith('LJ') || p.startsWith('LQ') || p.startsWith('LB') || p.startsWith('LD')) return 'EU';
+    if (p.startsWith('OJ') || p.startsWith('OI') || p.startsWith('OB') || p.startsWith('OR') || p.startsWith('OE') || p.startsWith('OA') || p.startsWith('OM') || p.startsWith('OT') || p.startsWith('OK') || p.startsWith('LL') || p.startsWith('OS') || p.startsWith('OL')) return 'ME';
+    if (p.startsWith('Z') || p.startsWith('RJ') || p.startsWith('RK') || p.startsWith('VH') || p.startsWith('WS') || p.startsWith('RC') || p.startsWith('VT') || p.startsWith('VA') || p.startsWith('VI') || p.startsWith('VV') || p.startsWith('WI') || p.startsWith('WA') || p.startsWith('WM') || p.startsWith('RP') || p.startsWith('VB') || p.startsWith('VN') || p.startsWith('VM') || p.startsWith('VG') || p.startsWith('VD') || p.startsWith('VC')) return 'AS';
+    if (p.startsWith('YS') || p.startsWith('YM') || p.startsWith('NZ') || p.startsWith('AG') || p.startsWith('AY') || p.startsWith('NF')) return 'OC';
+    return 'AF'; // H*, D*, F*, G* etc.
+}
+
+// More granular sub-region for intra-EU precision
+function icaoToSubRegion(icao) {
+    if (!icao) return null;
+    const p = icao.toUpperCase();
+    if (p.startsWith('EG') || p.startsWith('EI')) return 'EU-UK';
+    if (p.startsWith('LF')) return 'EU-FR';
+    if (p.startsWith('ED')) return 'EU-DE';
+    if (p.startsWith('LI')) return 'EU-IT';
+    if (p.startsWith('LE') || p.startsWith('GC')) return 'EU-ES';
+    if (p.startsWith('LP')) return 'EU-PT';
+    if (p.startsWith('EB') || p.startsWith('EH')) return 'EU-BNL';
+    if (p.startsWith('EN') || p.startsWith('EK') || p.startsWith('ES') || p.startsWith('EF')) return 'EU-N';
+    if (p.startsWith('LO') || p.startsWith('LZ') || p.startsWith('LK') || p.startsWith('LH') || p.startsWith('EP') || p.startsWith('LR')) return 'EU-C';
+    if (p.startsWith('UU') || p.startsWith('UL') || p.startsWith('UM')) return 'EU-E';
+    if (p.startsWith('LT')) return 'ME-TR';
+    if (p.startsWith('K') || p.startsWith('PH') || p.startsWith('PA')) return 'US';
+    if (p.startsWith('CY')) return 'CA';
+    if (p.startsWith('OM') || p.startsWith('OT') || p.startsWith('OK')) return 'ME-GULF';
+    if (p.startsWith('RJ')) return 'AS-JP';
+    if (p.startsWith('RK')) return 'AS-KR';
+    if (p.startsWith('ZB') || p.startsWith('ZS') || p.startsWith('ZG') || p.startsWith('ZU') || p.startsWith('ZH') || p.startsWith('ZW') || p.startsWith('ZY') || p.startsWith('ZL') || p.startsWith('ZP')) return 'AS-CN';
+    if (p.startsWith('VT') || p.startsWith('VA') || p.startsWith('VI')) return 'AS-IN';
+    if (p.startsWith('WI') || p.startsWith('WA') || p.startsWith('WM') || p.startsWith('RP') || p.startsWith('VV') || p.startsWith('VH') || p.startsWith('WS') || p.startsWith('RC')) return 'AS-SEA';
+    return null;
+}
+
+/*
+ * Airline definitions.
+ *
+ * domestic: continents/sub-regions where the airline runs real domestic/regional routes.
+ *   → For an intra-continental route, ONLY airlines with a matching domestic tag are considered.
+ * international: continents the airline serves on intercontinental routes.
+ *   → Used when origin and dest are on different continents.
+ */
+const ALLIANCE_AIRLINES = {
+    'Star Alliance': [
+        { iata:'LH', icao:'DLH', name:'Lufthansa',          domestic:['EU','EU-DE'],          international:['US','AS','AF','ME','SA']       },
+        { iata:'UA', icao:'UAL', name:'United Airlines',     domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
+        { iata:'AC', icao:'ACA', name:'Air Canada',          domestic:['CA','US'],              international:['EU','AS','ME']                 },
+        { iata:'SQ', icao:'SIA', name:'Singapore Airlines',  domestic:['AS-SEA'],               international:['EU','OC','US','AS','ME']       },
+        { iata:'NH', icao:'ANA', name:'ANA',                 domestic:['AS-JP'],                international:['US','EU','AS','OC']            },
+        { iata:'TG', icao:'THA', name:'Thai Airways',        domestic:['AS-SEA'],               international:['EU','AS','OC']                 },
+        { iata:'TK', icao:'THY', name:'Turkish Airlines',    domestic:['EU','ME-TR'],           international:['US','AF','AS','ME','SA','OC']  },
+        { iata:'OS', icao:'AUA', name:'Austrian Airlines',   domestic:['EU','EU-C'],            international:['US','ME','AS']                 },
+        { iata:'SK', icao:'SAS', name:'SAS',                 domestic:['EU','EU-N'],            international:['US','AS']                      },
+        { iata:'TP', icao:'TAP', name:'TAP Air Portugal',    domestic:['EU','EU-PT'],           international:['SA','AF','US']                 },
+        { iata:'LO', icao:'LOT', name:'LOT Polish Airlines', domestic:['EU','EU-C'],            international:['US','AS']                      },
+        { iata:'CA', icao:'CCA', name:'Air China',           domestic:['AS','AS-CN'],           international:['EU','US','OC','ME']            },
+        { iata:'ET', icao:'ETH', name:'Ethiopian Airlines',  domestic:['AF'],                   international:['EU','ME','AS','US']            },
+        { iata:'MS', icao:'MSR', name:'EgyptAir',            domestic:['AF','ME'],              international:['EU','AS']                      },
+        { iata:'AI', icao:'AIC', name:'Air India',           domestic:['AS','AS-IN'],           international:['EU','US','ME']                 },
+        { iata:'AV', icao:'AVA', name:'Avianca',             domestic:['SA','LA'],              international:['US','EU']                      },
+    ],
+    'SkyTeam': [
+        { iata:'AF', icao:'AFR', name:'Air France',          domestic:['EU','EU-FR'],           international:['US','AF','AS','ME','SA','OC']  },
+        { iata:'KL', icao:'KLM', name:'KLM',                 domestic:['EU','EU-BNL'],          international:['US','AS','AF','ME','OC','SA']  },
+        { iata:'DL', icao:'DAL', name:'Delta Air Lines',     domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
+        { iata:'AM', icao:'AMX', name:'Aeromexico',          domestic:['LA','US'],              international:['EU','AS']                      },
+        { iata:'MU', icao:'CES', name:'China Eastern',       domestic:['AS','AS-CN'],           international:['EU','US','OC','AS-SEA']        },
+        { iata:'CZ', icao:'CSN', name:'China Southern',      domestic:['AS','AS-CN','AS-SEA'],  international:['EU','US','OC','ME']            },
+        { iata:'KE', icao:'KAL', name:'Korean Air',          domestic:['AS-KR','AS'],           international:['US','EU','OC']                 },
+        { iata:'VN', icao:'HVN', name:'Vietnam Airlines',    domestic:['AS-SEA'],               international:['EU','AS','OC']                 },
+        { iata:'GA', icao:'GIA', name:'Garuda Indonesia',    domestic:['AS-SEA'],               international:['OC','EU','AS']                 },
+        { iata:'ME', icao:'MEA', name:'Middle East Airlines',domestic:['ME'],                   international:['EU','AF','AS']                 },
+        { iata:'KQ', icao:'KQA', name:'Kenya Airways',       domestic:['AF'],                   international:['EU','ME','AS']                 },
+        { iata:'SV', icao:'SVA', name:'Saudia',              domestic:['ME','ME-GULF'],         international:['AS','EU','AF','US']            },
+        { iata:'EY', icao:'ETD', name:'Etihad',              domestic:['ME','ME-GULF'],         international:['EU','AS','OC','US','AF']       },
+        { iata:'RO', icao:'ROT', name:'TAROM',               domestic:['EU','EU-C'],            international:['ME']                           },
+    ],
+    'Oneworld': [
+        { iata:'AA', icao:'AAL', name:'American Airlines',   domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
+        { iata:'BA', icao:'BAW', name:'British Airways',     domestic:['EU','EU-UK'],           international:['US','AS','AF','ME','SA','OC']  },
+        { iata:'IB', icao:'IBE', name:'Iberia',              domestic:['EU','EU-ES'],           international:['SA','US','AF']                 },
+        { iata:'QR', icao:'QTR', name:'Qatar Airways',       domestic:['ME','ME-GULF'],         international:['EU','US','AS','AF','OC','SA']  },
+        { iata:'CX', icao:'CPA', name:'Cathay Pacific',      domestic:['AS-SEA','AS-CN'],       international:['EU','US','OC','AS']            },
+        { iata:'JL', icao:'JAL', name:'Japan Airlines',      domestic:['AS-JP'],                international:['US','EU','AS','OC']            },
+        { iata:'AY', icao:'FIN', name:'Finnair',             domestic:['EU','EU-N'],            international:['AS','US']                      },
+        { iata:'MH', icao:'MAS', name:'Malaysia Airlines',   domestic:['AS-SEA'],               international:['EU','OC','AS']                 },
+        { iata:'RJ', icao:'RJA', name:'Royal Jordanian',     domestic:['ME'],                   international:['EU','AF','AS']                 },
+        { iata:'AS', icao:'ASA', name:'Alaska Airlines',     domestic:['US','CA'],              international:[]                               },
+        { iata:'QF', icao:'QFA', name:'Qantas',              domestic:['OC'],                   international:['AS','EU','US']                 },
+        { iata:'SN', icao:'BEL', name:'Brussels Airlines',   domestic:['EU','EU-BNL'],          international:['AF']                           },
+    ],
+};
+
+function pickAirlineForRoute(allianceName, originIcao, destIcao) {
+    const options = ALLIANCE_AIRLINES[allianceName] || [];
+    if (!options.length) return null;
+
+    const originCont = icaoToContinent(originIcao);
+    const destCont   = icaoToContinent(destIcao);
+    const originSub  = icaoToSubRegion(originIcao);
+    const destSub    = icaoToSubRegion(destIcao);
+    const seed       = routeSeed(originIcao, destIcao);
+    const isIntra    = originCont === destCont;
+
+    const scored = options.map((a, i) => {
+        let score = 0;
+
+        if (isIntra) {
+            // Intra-continental: domestic field must cover the continent
+            const domCoverage = a.domestic.some(d => d === originCont || d === originSub || (originSub && originSub.startsWith(d)));
+            if (!domCoverage) return { a, score: 0, tiebreak: 0 };
+            score += 10; // base for domestic coverage
+
+            // Bonus for sub-region precision (e.g. EU-N airline on EU-N→EU-UK)
+            if (originSub && a.domestic.includes(originSub)) score += 4;
+            if (destSub   && a.domestic.includes(destSub))   score += 4;
+
+        } else {
+            // Intercontinental: airline must cover BOTH sides
+            const coversOrigin = a.domestic.some(d => d === originCont || d === originSub || originCont.startsWith(d))
+                              || a.international.some(d => d === originCont || (originSub && originSub.startsWith(d)));
+            const coversDest   = a.domestic.some(d => d === destCont   || d === destSub   || destCont.startsWith(d))
+                              || a.international.some(d => d === destCont   || (destSub   && destSub.startsWith(d)));
+
+            if (!coversOrigin || !coversDest) return { a, score: 0, tiebreak: 0 };
+            score += 10;
+
+            // Bonus for home-side match (airline from origin continent)
+            if (a.domestic.some(d => d === originCont || (originSub && originSub.startsWith(d)))) score += 5;
+            if (a.domestic.some(d => d === destCont   || (destSub   && destSub.startsWith(d))))   score += 3;
+        }
+
+        return { a, score, tiebreak: (seed + i * 37) % 1000 };
+    });
+
+    const maxScore = Math.max(...scored.map(s => s.score));
+    if (maxScore === 0) {
+        // Last resort: pick by seed among all
+        return options[seed % options.length];
+    }
+
+    // Top tier: within 4 points of best (allows some variety)
+    const topTier = scored.filter(s => s.score >= maxScore - 4);
+    topTier.sort((a, b) => (b.score * 1000 + b.tiebreak) - (a.score * 1000 + a.tiebreak));
+    return topTier[seed % topTier.length].a;
+}
+
+// Aircraft per haul
+const HAUL_AIRCRAFT = {
+    SHORT:  [
+        { simbrief:'A319', label:'Airbus A319' },
+        { simbrief:'A320', label:'Airbus A320' },
+    ],
+    MEDIUM: [
+        { simbrief:'A320', label:'Airbus A320' },
+        { simbrief:'A321', label:'Airbus A321' },
+        { simbrief:'A332', label:'Airbus A330' },
+        { simbrief:'A359', label:'Airbus A350' },
+    ],
+    LONG: [
+        { simbrief:'A332', label:'Airbus A330' },
+        { simbrief:'A359', label:'Airbus A350' },
+        { simbrief:'A388', label:'Airbus A380' },
+        { simbrief:'B77W', label:'Boeing 777'  },
+        { simbrief:'B789', label:'Boeing 787'  },
+    ],
+};
+
+// Stable seed from two strings
+function routeSeed(a, b) {
+    const s = (a + b).split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
+    return s;
+}
+
+
+
+function pickAircraftForHaul(haulKey, originIcao, destIcao) {
+    const options = HAUL_AIRCRAFT[haulKey] || HAUL_AIRCRAFT.SHORT;
+    const seed = routeSeed(originIcao, destIcao);
+    return options[seed % options.length];
+}
+
+// Generate realistic flight number: ICAO(3) + number, range varies by haul
+function buildFlightNumber(airline, haulKey, originIcao, destIcao) {
+    const icaoCode = airline?.icao || 'SKY';
+    const seed = routeSeed(originIcao, destIcao);
+    let num;
+    if (haulKey === 'SHORT')       num = (seed % 400) + 100;   // 100–499
+    else if (haulKey === 'MEDIUM') num = (seed % 500) + 500;   // 500–999
+    else                           num = (seed % 900) + 1;     // 1–899 (long haul often low numbers)
+    return `${icaoCode}${num}`;
+}
+
+function buildSimbriefUrl(suggestion, airline, aircraft) {
+    if (!suggestion?.origin?.icao || !suggestion?.dest?.icao) return null;
+    const baseUrl = 'https://dispatch.simbrief.com/options/custom';
+    const seed = routeSeed(suggestion.origin.icao, suggestion.dest.icao);
+    let fltnumOnly;
+    if (suggestion.key === 'SHORT')       fltnumOnly = (seed % 400) + 100;   // 100–499
+    else if (suggestion.key === 'MEDIUM') fltnumOnly = (seed % 500) + 500;   // 500–999
+    else                                  fltnumOnly = (seed % 900) + 1;     // 1–899
+    const cruise = suggestion.key === 'LONG' ? '350' : suggestion.key === 'MEDIUM' ? '360' : '370';
+    const params = new URLSearchParams({
+        airline: airline?.icao || 'SKY',
+        fltnum:  String(fltnumOnly),
+        orig:    suggestion.origin.icao,
+        dest:    suggestion.dest.icao,
+        type:    aircraft?.simbrief || 'A320',
+        cruise:  cruise,
+    });
+    return `${baseUrl}?${params.toString()}`;
+}
+
 /* ── Leaflet map — identical to SimBriefBriefing ── */
 function RouteMap({ origin, dest, isDarkMode }) {
     const mapRef = useRef(null);
@@ -413,9 +635,6 @@ export default function Schedule({ flights=[], user }) {
                     <button className="btn regen-btn" onClick={handleRegenerate}>
                         <RefreshCw size={13}/> Regenerate
                     </button>
-                    <a href="https://dispatch.simbrief.com/options/new" target="_blank" rel="noopener noreferrer" className="btn regen-btn">
-                        <ExternalLink size={13}/> SimBrief
-                    </a>
                 </div>
             </header>
 
@@ -437,6 +656,9 @@ export default function Schedule({ flights=[], user }) {
                         const isActive=selectedHaul===haul.key;
                         const wx_dep=s?(weatherCache[s.origin.icao]??null):null;
                         const wx_arr=s?(weatherCache[s.dest.icao]??null):null;
+                        const suggestedAirline = s ? pickAirlineForRoute(selectedAlliance, s.origin.icao, s.dest.icao) : null;
+                        const suggestedAircraft = s ? pickAircraftForHaul(haul.key, s.origin.icao, s.dest.icao) : null;
+                        const sbUrl = s ? buildSimbriefUrl(s, suggestedAirline, suggestedAircraft) : null;
                         return (
                             <div
                                 key={haul.key}
@@ -447,6 +669,14 @@ export default function Schedule({ flights=[], user }) {
                                 {/* Top bar */}
                                 <div className="fcard-topbar">
                                     <span className="fcard-type">{haul.label}</span>
+                                    {s && suggestedAirline && (
+                                        <span className="fcard-suggestion-pill">
+                                            <span className="fcard-suggestion-iata">{suggestedAirline.iata}</span>
+                                            {suggestedAirline.name}
+                                            {suggestedAircraft && <span className="fcard-suggestion-sep">·</span>}
+                                            {suggestedAircraft && <span className="fcard-suggestion-ac">{suggestedAircraft.label}</span>}
+                                        </span>
+                                    )}
                                     {s&&<span className="fcard-xp"><Zap size={11}/> +{s.xp} XP</span>}
                                 </div>
 
@@ -494,12 +724,18 @@ export default function Schedule({ flights=[], user }) {
                                                     <span className="fcard-info-v">{s.origin.country===s.dest.country?'Domestic':'International'}</span>
                                                 </div>
                                                 {s.visitCount>0 ? (
-                                                    <div className="fcard-badge fcard-badge-visited">
-                                                        <span className="fcard-badge-dot" style={{background:'var(--color-success)'}}/> Flown {s.visitCount}×
+                                                    <div className="fcard-info-item">
+                                                        <span className="fcard-info-l">Status</span>
+                                                        <span className="fcard-badge fcard-badge-visited">
+                                                            <span className="fcard-badge-dot" style={{background:'var(--color-success)'}}/> Flown {s.visitCount}×
+                                                        </span>
                                                     </div>
                                                 ) : s.achievement ? (
-                                                    <div className="fcard-badge fcard-badge-new">
-                                                        <span className="fcard-badge-dot" style={{background:'var(--color-primary)'}}/> {s.achievement.label}
+                                                    <div className="fcard-info-item">
+                                                        <span className="fcard-info-l">Achievement</span>
+                                                        <span className="fcard-badge fcard-badge-new">
+                                                            <span className="fcard-badge-dot" style={{background:'var(--color-primary)'}}/> {s.achievement.label}
+                                                        </span>
                                                     </div>
                                                 ) : null}
                                             </div>
@@ -518,6 +754,26 @@ export default function Schedule({ flights=[], user }) {
                                                 <WxStrip icao={s.dest.icao} wx={wx_arr}/>
                                             </div>
                                         </div>
+
+                                        {/* SimBrief CTA */}
+                                        {sbUrl && (
+                                            <div className="fcard-simbrief">
+                                                <a
+                                                    href={sbUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="simbrief-btn"
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch {}
+                                                    }}
+                                                >
+                                                    <ExternalLink size={13}/>
+                                                    Plan on SimBrief
+                                                    <span className="simbrief-route">{s.origin.icao} → {s.dest.icao}</span>
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="fcard-empty">No routes available</div>
@@ -624,7 +880,7 @@ export default function Schedule({ flights=[], user }) {
 
                 /* Meta */
 
-                .fcard-badge { display: flex; align-items: center; gap: 5px; margin-left: auto; padding: 4px 10px; border-radius: var(--radius-full); font-family: var(--font-family-display); font-size: .65rem; font-weight: 800; }
+                .fcard-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: var(--radius-full); font-family: var(--font-family-display); font-size: .65rem; font-weight: 800; }
                 .fcard-badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
                 .fcard-badge-visited { background: rgba(var(--color-success-rgb), .1); color: var(--color-success); border: 1px solid rgba(var(--color-success-rgb), .2); }
                 .fcard-badge-new { background: rgba(var(--color-primary-rgb), .07); color: var(--color-primary); border: 1px dashed rgba(var(--color-primary-rgb), .25); }
@@ -642,6 +898,18 @@ export default function Schedule({ flights=[], user }) {
                 .wx-cv { font-size: .75rem; font-weight: 500; font-family: var(--font-family-mono, 'Courier New', monospace); color: var(--color-text-primary); }
                 .wx-unavailable { margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.02); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: .7rem; color: var(--color-text-hint); text-align: center; font-style: italic; }
                 .fcard-empty { padding: var(--space-6); text-align: center; font-size: .8rem; color: var(--color-text-hint); }
+
+                /* ── Airline / aircraft suggestion pill ── */
+                .fcard-suggestion-pill { display: flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 600; color: var(--color-text-secondary); font-family: var(--font-family-display); background: rgba(var(--haul-rgb),.06); border: 1px solid rgba(var(--haul-rgb),.18); border-radius: var(--radius-full); padding: 3px 10px; }
+                .fcard-suggestion-iata { font-size: .62rem; font-weight: 800; font-family: var(--font-family-mono, monospace); background: rgba(var(--haul-rgb),.15); color: var(--haul-c); border-radius: 3px; padding: 1px 5px; letter-spacing: .04em; }
+                .fcard-suggestion-sep { opacity: .4; font-size: .7rem; }
+                .fcard-suggestion-ac { color: var(--color-text-hint); font-size: .65rem; font-weight: 500; }
+
+                /* ── SimBrief CTA ── */
+                .fcard-simbrief { padding: var(--space-3) var(--space-6); border-top: 1px solid var(--color-border); background: rgba(var(--haul-rgb), .03); }
+                .simbrief-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-md); font-size: .76rem; font-weight: 700; font-family: var(--font-family-display); letter-spacing: .02em; text-decoration: none; background: rgba(var(--haul-rgb), .08); color: var(--haul-c); border: 1px solid rgba(var(--haul-rgb), .25); transition: all .15s; cursor: pointer; }
+                .simbrief-btn:hover { background: rgba(var(--haul-rgb), .16); border-color: rgba(var(--haul-rgb), .5); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(var(--haul-rgb), .2); }
+                .simbrief-route { font-size: .68rem; font-weight: 500; opacity: .7; font-family: var(--font-family-mono, monospace); margin-left: 4px; }
 
                 /* ── Map ── */
                 .sched-map-col { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); height: calc(100vh - 160px); }

@@ -46,10 +46,15 @@ export const fetchSimBriefData = async (identifier = { username: 'mrandruz' }) =
 export const formatDuration = (val) => {
   if (!val) return 'N/D';
   
-  // Handle HH:MM:SS or HH:MM
+  // Handle HH:MM:SS (SimBrief primary format e.g. "08:58:25")
   if (typeof val === 'string' && val.includes(':')) {
     const parts = val.split(':');
-    if (parts.length >= 2) {
+    if (parts.length === 3) {
+      const h = parseInt(parts[0]);
+      const m = parseInt(parts[1]);
+      return `${h}h ${m}m`;
+    }
+    if (parts.length === 2) {
       const h = parseInt(parts[0]);
       const m = parseInt(parts[1]);
       return `${h}h ${m}m`;
@@ -66,14 +71,34 @@ export const formatDuration = (val) => {
 
   const hours = Math.floor(durationSec / 3600);
   const minutes = Math.floor((durationSec % 3600) / 60);
-  
-  if (hours === 0 && minutes === 0 && durationSec > 0) {
-    const h = Math.floor(durationSec / 60);
-    const m = durationSec % 60;
-    return `${h}h ${m}m`;
-  }
-
   return `${hours}h ${minutes}m`;
+};
+
+// Parse any SimBrief duration value → decimal hours
+const parseDurationToHours = (val) => {
+  if (!val) return null;
+  const s = String(val).trim();
+
+  // "HH:MM:SS" → most common SimBrief format
+  const hmsMatch = s.match(/^(\d+):(\d{2}):(\d{2})$/);
+  if (hmsMatch) return parseInt(hmsMatch[1]) + parseInt(hmsMatch[2]) / 60 + parseInt(hmsMatch[3]) / 3600;
+
+  // "HH:MM"
+  const hmColonMatch = s.match(/^(\d+):(\d{2})$/);
+  if (hmColonMatch) return parseInt(hmColonMatch[1]) + parseInt(hmColonMatch[2]) / 60;
+
+  // "8+58"
+  const plusMatch = s.match(/^(\d+)\+(\d{2})$/);
+  if (plusMatch) return parseInt(plusMatch[1]) + parseInt(plusMatch[2]) / 60;
+
+  // Pure number: if > 1440 → seconds, if > 24 → minutes, else → hours
+  if (!isNaN(Number(s))) {
+    const n = Number(s);
+    if (n > 1440) return n / 3600;
+    if (n > 24)   return n / 60;
+    return n;
+  }
+  return null;
 };
 
 export const parseSimBriefData = (data) => {
@@ -115,6 +140,7 @@ export const parseSimBriefData = (data) => {
     null;
 
   console.log('SimBrief: Raw duration found:', rawDuration);
+  console.log('SimBrief: Full times object:', JSON.stringify(data.times));
 
   // Waypoints fallbacks - User says data.navlog is the array itself
   let waypointsRaw = [];
@@ -202,6 +228,7 @@ export const parseSimBriefData = (data) => {
     distance: data.general?.air_distance || 0,
     fuel: data.fuel?.plan_ramp || 0,
     duration: rawDuration ? formatDuration(rawDuration) : 'N/D',
+    durationSeconds: rawDuration ? parseDurationToHours(rawDuration) : null,
     passengers: data.general?.passengers || '0',
     costIndex: data.general?.costindex || '0',
     zfw: data.weights?.est_zfw || '0',
