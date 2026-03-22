@@ -74,7 +74,7 @@ async function checkRateLimit(userId, functionName, config) {
       return { allowed: false, resetInMinutes: resetIn };
     }
 
-    t.update(ref, { count: data.count + 1 });
+    t.set(ref, { count: data.count + 1, windowStart: data.windowStart }, { merge: true });
     return { allowed: true, remaining: max - data.count - 1 };
   });
 }
