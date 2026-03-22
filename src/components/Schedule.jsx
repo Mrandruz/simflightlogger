@@ -7,6 +7,12 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { findAirport } from '../utils/airportUtils';
 import airports from 'airport-data';
+import { majorDestinations } from '../data/majorDestinations';
+
+// ICAO list derived from majorDestinations.js (sorted by Rank)
+const MAJOR_DESTINATIONS = [...majorDestinations]
+    .sort((a, b) => a.Rank - b.Rank)
+    .map(d => d.ICAO);
 
 const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
 
@@ -37,52 +43,7 @@ const haversineNm = (lat1, lon1, lat2, lon2) => {
     return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
 };
 
-// Top 414 airports worldwide by passenger traffic
-// Source: gettocenter.com/airports/top-100-airports-in-world/1000
-const MAJOR_DESTINATIONS = [
-    'KATL','ZBAA','OMDB','KLAX','KORD','EGLL','RJTT','VHHH','ZSPD','LFPG',
-    'EHAM','KDFW','ZGGG','EDDF','LTFM','VIDP','WIII','WSSS','RKSI','KDEN',
-    'VTBS','KJFK','WMKK','KSFO','LEMD','ZUUU','KLAS','LEBL','VABB','CYYZ',
-    'KSEA','KCLT','EGKK','ZGSZ','RCTP','MMMX','ZPPP','EDDM','KMCO','KMIA',
-    'KPHX','YSSY','KEWR','RPLL','ZSSS','ZLXY','LIRF','KIAH','RJAA','UUEE',
-    'ZUCK','VTBD','KMSP','SBGR','KBOS','VVTS','OTHH','ZSHC','KDTW','OEJN',
-    'YMML','KFLL','LTFJ','SKBO','UUDD','RKPC','KLGA','KPHL','EIDW','LSZH',
-    'EKCH','RJBB','LEPA','EGCC','ENGM','LPPT','ESSA','KBWI','LTAI','EGSS',
-    'ZSNJ','RKSS','VOBL','OERK','EBBR','EDDL','ZSAM','LOWW','ZHCC','KSLC',
-    'CYVR','KDCA','ZGHA','OMAA','MMUN','RJFF','ZSQD','YBBN','ZHHH','VVNB',
-    'RJCC','KIAD','WADD','ZJHK','KMDW','SCEL','KSAN','LIMC','SPJC','WARR',
-    'SBSP','LGAV','ZWWW','FAOR','ZJSY','LLBG','ZBTJ','ROAH','EDDT','VECC',
-    'PHNL','KTPA','VOMM','KPDX','NZAA','EFHK','ZYHB','LEMG','CYUL','UUWW',
-    'ZUGY','EDDH','ZYTL','OIII','LSGG','ZYYY','VOHS','SBBR','VTSP','RKPK',
-    'CYYC','SBGL','ULLI','LTAC','EGGW','EPWA','MPTO','KDAL','LKPR','KSTL',
-    'RJOO','ZSJN','KBNA','ZGNN','KAUS','SABE','YPPH','LEAL','KHOU','EGPH',
-    'LFMN','LHBP','GCLP','KOAK','EGBB','ZBYN','EDDB','LTBJ','ZLLL','MMGL',
-    'LROP','KSJC','ZSFZ','EDDK','LIME','WIMM','KMSY','ZYCC','WAAA','KRDU',
-    'KMCI','OMSJ','GCTS','ZSCN','HECA','ZBHH','EDDS','KSMF','VVDN','LPPR',
-    'FACT','UKBB','ZBSJ','OIMM','KSNA','LIPZ','SAEZ','LFLL','VOCI','VTCC',
-    'RJGG','SBCF','RPVM','EGPF','MMMY','ZSOF','LIML','ZGSD','ZSNB','GMMN',
-    'SBKP','ZSWZ','LFBO','SBRJ','KCLE','LICC','KSAT','LFML','KPIT','HAAB',
-    'OIIE','KRSW','KIND','LPFR','WARJ','ZLIC','BIKF','LIPE','LIRN','EGGD',
-    'YPAD','SBPA','WBKK','WIHH','LEIB','LFSB','ZGKL','KCVG','VAPO','CYEG',
-    'SBRF','SBSV','EBCI','WALL','DAAG','KCMH','LGIR','VAAH','GCRR','WMKP',
-    'ZPLJ','MMTJ','HKJK','VAGO','ESGG','LEVC','SBCT','ZSWX','NZCH','ZSYT',
-    'LBSF','RCKH','YBCG','KBDL','LGTS','DNMM','WIDD','KPBI','OEMA','LFBD',
-    'RCSS','ZSQZ','ENBR','EVRA','GCFV','NZWN','LMML','ZBNY','SBFZ','VYYY',
-    'LIRA','EDDV','EGAA','EPKK','LICJ','MUHA','URSS','DTTA','WIPP','EHEH',
-    'ZLXN','LTAF','KJAX','FADU','LFRS','USSS','EGNT','LYBE','LGRP','LIRP',
-    'RJFK','UKFF','LEZL','WBGG','UNNT','LEBB','PANC','KABQ','EGGP','YBCS',
-    'EGNX','VVCR','ZGOW','CYOW','KBUF','GCXO','LIBD','KOMA','EPGD','EGLC',
-    'WIBB','ENVA','LTBS','MROC','VTSS','GMMX','VIJP','CYWG','VILK','VEGT',
-    'WARS','KONT','EDDN','ENZV','LIEE','UMMS','CYHZ','VTSG','EGNM','HEGN',
-    'VOTV','ZPJH','KPVD','WIPT','EPKT','LTFE','SBFL','DTMB','ZULS','WICC',
-    'WRLC','WAMM','WAOO','FIMP','RKTN','RPMD','ZUMY','OISS','URKK','DNAA',
-    'WIOO','LEMH','LTCG','KMKE','SBBE','RJFT','SPZO','LPMA','UGTB','RJSS',
-    'WMKJ','RJFU','LDZA','PHKO','SBGO','SBVT','ELLX','VVPQ','YSCB','MSLP',
-    'RJFM','OIAW','OIBK','VEBS','VOCL','SBCY','WMSA','RJOM','KLGB','PHLI',
-    'LDSP','UWUU','KELP','CYTZ','OIFM','VEPT','WMKL','URRR','SACO','KSFB',
-    'RKTU','RPVK','RJOA','UWWW','SBEG','LEST','UWKD','MGGT','DGAA','EDDW',
-    'WAJJ','ZSCG','HESH','VTCT',
-];
+
 
 const HAUL_TYPES = [
     { key:'SHORT',  label:'Short haul',  color:'#10b981', rgb:'16,185,129',  min:300,  max:1500, xpMult:1.5  },
@@ -895,6 +856,83 @@ export default function Schedule({ flights=[], user }) {
         }
     };
 
+    const handleRegenerateHaul = async (haulKey) => {
+        // Regenerate only the specified haul type, leave the others intact
+        const current = suggestions[selectedAlliance] || [];
+        const others  = current.filter(s => s.key !== haulKey);
+        const haul    = HAUL_TYPES.find(h => h.key === haulKey);
+        if (!haul) return;
+
+        // Generate fresh candidates for this haul only (forceRandom=true)
+        const lf = analysis.allianceLastFlights[selectedAlliance];
+        if (!lf?.arrival) return;
+        const originCode = String(lf.arrival).toUpperCase();
+        const originAp   = findAirport(originCode);
+        if (!originAp?.latitude) return;
+
+        const visitedIcaos = new Set([
+            ...flights.map(f => String(f.departure||'').toUpperCase()),
+            ...flights.map(f => String(f.arrival||'').toUpperCase()),
+        ]);
+        const largeAirports = airports.filter(a =>
+            a.icao && a.icao.length === 4 &&
+            a.latitude != null && a.longitude != null &&
+            a.iata && a.iata.length >= 2
+        );
+        const poolMap = new Map();
+        largeAirports.forEach(a => poolMap.set(a.icao, a));
+        visitedIcaos.forEach(icao => {
+            const ap = findAirport(icao);
+            if (ap?.icao && ap.latitude != null) poolMap.set(ap.icao, ap);
+        });
+        const allDests = [...poolMap.values()].filter(a => a.icao && a.latitude != null);
+        const top200Icaos = new Set(MAJOR_DESTINATIONS.slice(0, 200));
+        const longHaulDests = allDests.filter(a => top200Icaos.has(a.icao) || visitedIcaos.has(a.icao));
+        const pool = haulKey === 'LONG' ? longHaulDests : allDests;
+
+        // Pick a random candidate in range (different from current)
+        const currentDest = current.find(s => s.key === haulKey)?.dest?.icao;
+        let cands = pool.filter(ap => {
+            if (ap.icao === originCode || ap.icao === currentDest) return false;
+            const d = haversineNm(originAp.latitude, originAp.longitude, ap.latitude, ap.longitude);
+            return d >= haul.min && d <= haul.max;
+        }).map(ap => ({
+            icao: ap.icao, name: ap.name, city: ap.city, country: ap.country,
+            latitude: ap.latitude, longitude: ap.longitude,
+            elevation: ap.elevation ?? ap.alt ?? null,
+            distance: haversineNm(originAp.latitude, originAp.longitude, ap.latitude, ap.longitude),
+        }));
+        if (!cands.length) return;
+        // Shuffle and pick
+        cands.sort(() => Math.random() - 0.5);
+        const best = cands[0];
+        const hrs  = best.distance / 450;
+        const h    = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+        const baseXP  = Math.floor((best.distance / 10) + (hrs * 50) + 250);
+        const totalXP = Math.round(baseXP * haul.xpMult);
+        let achievement = null;
+        if (haulKey === 'LONG') achievement = { label: 'Long Haul Ace', icon: '✈️' };
+        else if (!analysis.visitedCountries.has(best.country)) achievement = { label: 'World Traveler', icon: '🌍' };
+        else if (!analysis.visitedAirports.has(best.icao)) achievement = { label: 'New Discovery', icon: '📍' };
+        const visitCount = flights.filter(f => f && (
+            String(f.arrival||'').toUpperCase()  === best.icao ||
+            String(f.departure||'').toUpperCase() === best.icao
+        )).length;
+
+        const newSuggestion = { ...haul, dest: best, origin: originAp, duration: `${h}h ${m}m`, baseXP, xp: totalXP, achievement, visitCount };
+        const newS = [...others, newSuggestion].sort((a,b) =>
+            HAUL_TYPES.findIndex(h=>h.key===a.key) - HAUL_TYPES.findIndex(h=>h.key===b.key)
+        );
+        setSuggestions(p => ({ ...p, [selectedAlliance]: newS }));
+        if (user) {
+            try {
+                const ref = doc(db, 'users', user.uid, 'settings', 'schedule');
+                const lf2 = analysis.allianceLastFlights[selectedAlliance];
+                await setDoc(ref, { [selectedAlliance]: { baseAirport: lf2?.arrival?.toUpperCase()||null, suggestions: newS } }, { merge: true });
+            } catch(e) { console.error('Regen haul save', e); }
+        }
+    };
+
     const totalFlights=Object.values(analysis.allianceFlightCounts).reduce((a,b)=>a+b,0);
     const activeAl=ALLIANCES.find(a=>a.name===selectedAlliance);
     const activeLastFlight=analysis.allianceLastFlights[selectedAlliance];
@@ -942,7 +980,7 @@ export default function Schedule({ flights=[], user }) {
                             </button>
                         );
                     })}
-                    <button className="btn regen-btn" onClick={handleRegenerate}>
+                    <button className="btn regen-btn" onClick={handleRegenerate} style={{ display: 'none' }}>
                         <RefreshCw size={13}/> Regenerate
                     </button>
                 </div>
@@ -987,7 +1025,16 @@ export default function Schedule({ flights=[], user }) {
                                             {suggestedAircraft && <span className="fcard-suggestion-ac">{suggestedAircraft.label}</span>}
                                         </span>
                                     )}
-                                    {s&&<span className="fcard-xp"><Zap size={11}/> +{s.xp} XP</span>}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                                        {s&&<span className="fcard-xp"><Zap size={11}/> +{s.xp} XP</span>}
+                                        <button
+                                            className="fcard-regen-btn"
+                                            title="Regenerate this suggestion"
+                                            onClick={e => { e.stopPropagation(); handleRegenerateHaul(haul.key); }}
+                                        >
+                                            <RefreshCw size={11}/>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {s ? (
@@ -1168,6 +1215,8 @@ export default function Schedule({ flights=[], user }) {
                 @keyframes cardFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
                 .fcard-topbar { display: flex; align-items: center; justify-content: space-between; padding: 9px 18px; background: rgba(var(--haul-rgb), .07); border-bottom: 1px solid rgba(var(--haul-rgb), .15); }
+                .fcard-regen-btn { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(var(--haul-rgb), .3); background: transparent; color: var(--color-text-hint); cursor: pointer; transition: all .15s; flex-shrink: 0; }
+                .fcard-regen-btn:hover { border-color: var(--haul-c); color: var(--haul-c); background: rgba(var(--haul-rgb), .1); }
                 .fcard-type { font-family: var(--font-family-display); font-size: .65rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--haul-c); }
                 .fcard-xp { font-family: var(--font-family-display); font-size: .68rem; font-weight: 800; color: var(--haul-c); display: flex; align-items: center; gap: 4px; opacity: .9; }
 
