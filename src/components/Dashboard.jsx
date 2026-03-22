@@ -2,8 +2,119 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { Plane, Clock, MapPin, Globe, Trophy, CalendarDays, ExternalLink, Sparkles, RefreshCw, Send, TrendingUp, BookOpen, Calendar, Zap, Activity, Users, Map } from 'lucide-react';
+import { getAuth } from 'firebase/auth';
 import { usePilotData } from '../hooks/usePilotData';
 import { findAirport } from '../utils/airportUtils';
+
+// ---------------------------------------------------------------------------
+// aggregateStats — identica a useCopilot.js, evita duplicazione e stub fields
+// ---------------------------------------------------------------------------
+const aggregateStats = (flights) => {
+    if (!flights || flights.length === 0) return null;
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const aircraftCount = {};
+    const airportCount = {};
+    const airlineCount = {};
+    const routeCount = {};
+    const monthlyCount = {};
+    const aircraftIndex = {};
+
+    let totalHours = 0;
+    let totalMiles = 0;
+    let flightsLastMonth = 0;
+    let longestFlight = null;
+
+    const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sorted.forEach((f) => {
+        totalHours += f.flightTime || 0;
+        totalMiles += f.miles || 0;
+
+        if (new Date(f.date) >= thirtyDaysAgo) flightsLastMonth++;
+        if (!longestFlight || (f.miles || 0) > (longestFlight.miles || 0)) longestFlight = f;
+
+        if (f.aircraft) {
+            aircraftCount[f.aircraft] = (aircraftCount[f.aircraft] || 0) + 1;
+            if (!aircraftIndex[f.aircraft]) {
+                aircraftIndex[f.aircraft] = { count: 0, hours: 0, miles: 0, lastFlight: null, routes: {} };
+            }
+            const idx = aircraftIndex[f.aircraft];
+            idx.count++;
+            idx.hours += f.flightTime || 0;
+            idx.miles += f.miles || 0;
+            if (!idx.lastFlight) idx.lastFlight = `${f.departure}→${f.arrival} il ${f.date}`;
+            if (f.departure && f.arrival) {
+                const r = `${f.departure}→${f.arrival}`;
+                idx.routes[r] = (idx.routes[r] || 0) + 1;
+            }
+        }
+
+        if (f.departure) airportCount[f.departure] = (airportCount[f.departure] || 0) + 1;
+        if (f.arrival)   airportCount[f.arrival]   = (airportCount[f.arrival]   || 0) + 1;
+        if (f.airline)   airlineCount[f.airline]   = (airlineCount[f.airline]   || 0) + 1;
+        if (f.departure && f.arrival) {
+            const key = `${f.departure}→${f.arrival}`;
+            routeCount[key] = (routeCount[key] || 0) + 1;
+        }
+        if (f.date) {
+            const month = f.date.slice(0, 7);
+            monthlyCount[month] = (monthlyCount[month] || 0) + 1;
+        }
+    });
+
+    const top = (obj, n = 5) =>
+        Object.entries(obj)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, n)
+            .map(([k, v]) => `${k} (${v})`)
+            .join(', ');
+
+    const last = sorted[0];
+
+    const aircraftLogbook = Object.entries(aircraftIndex)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .map(([type, d]) => {
+            const topRoute = Object.entries(d.routes).sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
+            return `${type}: ${d.count} voli, ${d.hours.toFixed(1)}h, ${Math.round(d.miles)} nm, ultimo: ${d.lastFlight || '—'}, rotta top: ${topRoute}`;
+        })
+        .join(' | ');
+
+    const daysSinceLast = last ? Math.floor((now - new Date(last.date)) / 86400000) : null;
+
+    return {
+        totalFlights: flights.length,
+        totalHours: totalHours.toFixed(1),
+        totalMiles: Math.round(totalMiles).toLocaleString(),
+        topAircraft: Object.entries(aircraftCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topAirport:  Object.entries(airportCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topAirline:  Object.entries(airlineCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        topRoute:    Object.entries(routeCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
+        flightsLastMonth,
+        avgHours: (totalHours / flights.length).toFixed(1),
+        longestFlight: longestFlight
+            ? `${longestFlight.departure}→${longestFlight.arrival} (${Math.round(longestFlight.miles || 0)} nm)`
+            : '—',
+        topAircraftList: top(aircraftCount),
+        topAirportList:  top(airportCount),
+        topAirlineList:  top(airlineCount),
+        topRouteList:    top(routeCount),
+        monthlyDistribution: Object.entries(monthlyCount)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .slice(-6)
+            .map(([m, c]) => `${m}: ${c}`)
+            .join(', '),
+        lastFlight: last
+            ? `${last.departure}→${last.arrival} il ${last.date} (${last.aircraft})`
+            : '—',
+        nextFlight: daysSinceLast !== null
+            ? `Last flight was ${daysSinceLast} days ago`
+            : 'no data',
+        aircraftLogbook,
+    };
+};
 
 const COPILOT_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
 
@@ -54,58 +165,36 @@ function EmptyState() {
 }
 
 /* ── AI Pilot Brief ── */
-function PilotBrief({ flights, stats, generated, loading, brief }) {
+function PilotBrief({ flights, generated, loading, brief }) {
     const [question, setQuestion] = useState('');
     const [asking, setAsking] = useState(false);
     const [answer, setAnswer] = useState('');
     const inputRef = useRef(null);
 
-    const buildStats = () => {
-        const now = new Date();
-        const monthFlights = flights.filter(f => {
-            const d = new Date(f.date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        });
-        const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
-        const lastFlight = sorted[0];
-        const airlineCounts = {};
-        flights.forEach(f => { if (f.airline) airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1; });
-        const topAirline = Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
-        const routeCounts = {};
-        flights.forEach(f => { if (f.departure && f.arrival) { const r = `${f.departure}→${f.arrival}`; routeCounts[r] = (routeCounts[r] || 0) + 1; } });
-        const topRoute = Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
-        const totalMiles = flights.reduce((s, f) => s + (f.miles || 0), 0);
-        const totalHours = flights.reduce((s, f) => s + (f.flightTime || 0), 0);
-        const daysSinceLast = lastFlight ? Math.floor((now - new Date(lastFlight.date)) / (86400000)) : null;
-        return {
-            totalFlights: flights.length,
-            totalHours: totalHours.toFixed(1),
-            totalMiles: Math.round(totalMiles).toLocaleString(),
-            topAirline, topAircraftList: stats.achievements?.typeRatingMaster?.extraInfo || '—',
-            topAirlineList: topAirline, topRouteList: topRoute,
-            flightsLastMonth: monthFlights.length,
-            avgHours: flights.length ? (totalHours / flights.length).toFixed(1) : '0',
-            longestFlight: stats.longestFlight ? `${stats.longestFlight.departure}→${stats.longestFlight.arrival}(${stats.longestFlight.miles}nm)` : '—',
-            lastFlight: lastFlight ? `${lastFlight.departure}→${lastFlight.arrival} on ${lastFlight.date}` : '—',
-            nextFlight: daysSinceLast !== null ? `Last flight was ${daysSinceLast} days ago` : 'no data',
-            monthlyDistribution: '—', topAirportList: '—', aircraftLogbook: '—',
-        };
-    };
-
     const handleAsk = async () => {
         const q = question.trim();
         if (!q || asking) return;
         setAsking(true); setAnswer('');
-        
-        // Internal helper to build stats since it depends on flights prop
-        const currentStats = buildStats();
-        
-        const streamCopilotLocal = async (message, onChunk) => {
+
+        try {
+            // Usa aggregateStats condivisa — stessi dati del Copilot, nessun campo stub
+            const currentStats = aggregateStats(flights);
+
+            // Token Firebase obbligatorio per la Cloud Function
+            const auth = getAuth();
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error('Utente non autenticato.');
+
             const res = await fetch(COPILOT_URL, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, stats: currentStats, history: [] }),
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ message: q, stats: currentStats, history: [] }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -118,14 +207,14 @@ function PilotBrief({ flights, stats, generated, loading, brief }) {
                     if (!line.startsWith('data: ')) continue;
                     const raw = line.slice(6).trim();
                     if (raw === '[DONE]') return;
-                    try { const { text } = JSON.parse(raw); if (text) onChunk(text); } catch (_) { }
+                    try { const { text } = JSON.parse(raw); if (text) setAnswer(p => p + text); } catch (_) { }
                 }
             }
-        };
-
-        try { await streamCopilotLocal(q, chunk => setAnswer(p => p + chunk)); }
-        catch { setAnswer('Could not get an answer. Please try again.'); }
-        finally { setAsking(false); }
+        } catch {
+            setAnswer('Could not get an answer. Please try again.');
+        } finally {
+            setAsking(false);
+        }
     };
 
     const QUICK_QUESTIONS = ['How was my last month?', 'What\'s my longest route?', 'Suggest my next flight'];
@@ -274,49 +363,31 @@ export default function Dashboard() {
     const handleGenerateBrief = async () => {
         if (aiLoading) return;
         setAiLoading(true); setBrief(''); setGenerated(true);
-        
+
         const now = new Date();
         const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        
-        // Comprehensive stats logic
-        const monthFlights = flights.filter(f => {
-            const d = new Date(f.date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        });
-        const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
-        const lastFlight = sorted[0];
-        const airlineCounts = {};
-        flights.forEach(f => { if (f.airline) airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1; });
-        const topAirline = Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
-        const routeCounts = {};
-        flights.forEach(f => { if (f.departure && f.arrival) { const r = `${f.departure}→${f.arrival}`; routeCounts[r] = (routeCounts[r] || 0) + 1; } });
-        const topRoute = Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || '—';
-        const totalMiles = flights.reduce((s, f) => s + (f.miles || 0), 0);
-        const totalHours = flights.reduce((s, f) => s + (f.flightTime || 0), 0);
-        const daysSinceLast = lastFlight ? Math.floor((now - new Date(lastFlight.date)) / (86400000)) : null;
-        
-        const statsPayload = {
-            totalFlights: flights.length,
-            totalHours: totalHours.toFixed(1),
-            totalMiles: Math.round(totalMiles).toLocaleString(),
-            topAirline, topAircraftList: stats.achievements?.typeRatingMaster?.extraInfo || '—',
-            topAirlineList: topAirline, topRouteList: topRoute,
-            flightsLastMonth: monthFlights.length,
-            avgHours: flights.length ? (totalHours / flights.length).toFixed(1) : '0',
-            longestFlight: stats.longestFlight ? `${stats.longestFlight.departure}→${stats.longestFlight.arrival}(${stats.longestFlight.miles}nm)` : '—',
-            lastFlight: lastFlight ? `${lastFlight.departure}→${lastFlight.arrival} on ${lastFlight.date}` : '—',
-            nextFlight: daysSinceLast !== null ? `Last flight was ${daysSinceLast} days ago` : 'no data',
-            monthlyDistribution: '—', topAirportList: '—', aircraftLogbook: '—',
-        };
+
+        // Usa aggregateStats condivisa — stessi dati del Copilot, nessun campo stub
+        const statsPayload = aggregateStats(flights);
 
         const prompt = `Write a concise pilot brief for ${monthName}. Summarize the pilot's activity this month, highlight key stats, any interesting patterns or records, and give a short operational suggestion for the coming days. Keep it to 3-4 sentences. Aviation-toned, professional, no bullet points.`;
-        
+
         try {
+            // Token Firebase obbligatorio per la Cloud Function
+            const auth = getAuth();
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error('Utente non autenticato.');
+
             const res = await fetch(COPILOT_URL, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ message: prompt, stats: statsPayload, history: [] }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -502,8 +573,8 @@ export default function Dashboard() {
                             </button>
                         </div>
                         <div className="ai-brief-content" style={{ padding: '20px 24px', position: 'relative', zIndex: 1 }}>
-                            <PilotBrief 
-                                flights={flights} stats={stats} 
+                            <PilotBrief
+                                flights={flights}
                                 generated={generated} loading={aiLoading} brief={brief}
                             />
                         </div>

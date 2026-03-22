@@ -88,7 +88,7 @@ const aggregateStats = (flights) => {
         }
     });
 
-    const top = (obj, n = 5) =>
+    const top = (obj, n = 20) =>
         Object.entries(obj)
             .sort(([, a], [, b]) => b - a)
             .slice(0, n)
@@ -141,6 +141,20 @@ const aggregateStats = (flights) => {
             `Distanza: ${last.miles || '—'} nm, Data: ${last.date}`
             : null,
         aircraftLogbook,
+        uniqueAirports: Object.keys(airportCount).length,
+        // Logbook completo compresso — ground truth per analisi illimitate.
+        // Formato CSV: date,departure,arrival,aircraft,airline,flightTime_h,distance_nm
+        compressedLogbook: sorted.map(f =>
+            [
+                f.date || '',
+                f.departure || '',
+                f.arrival || '',
+                f.aircraft || '',
+                f.airline || '',
+                (f.flightTime || 0).toFixed(1),
+                Math.round(f.miles || 0),
+            ].join(',')
+        ).join('\n'),
     };
 };
 
