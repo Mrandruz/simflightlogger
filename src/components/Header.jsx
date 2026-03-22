@@ -36,10 +36,17 @@ const formatZuluShort = (val) => {
     return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}z`;
 };
 
-const NextFlightPill = () => {
+const NextFlightPill = ({ flights = [] }) => {
     const navigate = useNavigate();
     const { data, loading, error } = useSimBrief();
     const [hovered, setHovered] = React.useState(false);
+    const [now, setNow] = React.useState(() => Date.now());
+
+    // Tick every minute to re-evaluate the 30-min threshold
+    React.useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 60000);
+        return () => clearInterval(id);
+    }, []);
 
     const pillBase = {
         display: 'flex', alignItems: 'center', gap: '10px',
@@ -62,11 +69,103 @@ const NextFlightPill = () => {
 
     if (!data || error) return null;
 
+    // Check if SimBrief flight is already in logbook (same dep+arr+date)
+    const simDate = data.departureTime
+        ? (() => {
+            const d = !isNaN(Number(data.departureTime)) && String(data.departureTime).length >= 10
+                ? new Date(Number(data.departureTime) * 1000)
+                : new Date(data.departureTime);
+            return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+        })()
+        : null;
+
+    const matchedFlight = Array.isArray(flights) && data.origin?.icao && data.destination?.icao
+        ? flights.find(f => {
+            const depMatch = String(f.departure || '').toUpperCase() === data.origin.icao.toUpperCase();
+            const arrMatch = String(f.arrival   || '').toUpperCase() === data.destination.icao.toUpperCase();
+            if (!depMatch || !arrMatch) return false;
+            if (!simDate || !f.date) return true;
+            const diffDays = Math.abs((new Date(f.date) - new Date(simDate)) / 86400000);
+            return diffDays <= 7;
+        })
+        : null;
+
+    // 30 minutes in ms after logbook insertion
+    const THRESHOLD_MS = 30 * 60 * 1000;
+    const loggedAt = matchedFlight?.createdAt
+        ? (typeof matchedFlight.createdAt === 'number'
+            ? matchedFlight.createdAt
+            : matchedFlight.createdAt?.toMillis?.() ?? Date.parse(matchedFlight.createdAt))
+        : null;
+    const isLogged = !!matchedFlight;
+    const pastThreshold = loggedAt !== null && (now - loggedAt) >= THRESHOLD_MS;
+    const showNoFlights = isLogged && pastThreshold;
+
     const depTime = formatZuluShort(data.departureTime);
 
+    // ── No flights planned pill ──
+    if (showNoFlights) {
+        return (
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+                {hovered && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 10px)',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(22, 36, 51, 0.92)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        color: '#ffffff',
+                        padding: '6px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        pointerEvents: 'none',
+                        zIndex: 1000,
+                    }}>
+                        Plan your next flight
+                        <div style={{
+                            position: 'absolute', bottom: '100%', left: '50%',
+                            transform: 'translateX(-50%)', width: 0, height: 0,
+                            borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                            borderBottom: '5px solid rgba(22, 36, 51, 0.92)',
+                        }} />
+                    </div>
+                )}
+                <button
+                    onClick={() => navigate('/briefing')}
+                    onMouseEnter={() => setHovered(true)}
+                    onMouseLeave={() => setHovered(false)}
+                    style={{
+                        ...pillBase,
+                        cursor: 'pointer',
+                        border: '1px dashed var(--color-border)',
+                        opacity: hovered ? 0.8 : 1,
+                        transition: 'opacity 0.15s ease',
+                        gap: '8px',
+                    }}
+                >
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--color-text-hint)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
+                            No flights planned
+                        </span>
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
+                            Plan your next flight →
+                        </span>
+                    </div>
+                </button>
+            </div>
+        );
+    }
+
+    // ── Normal next flight pill ──
     return (
         <div style={{ position: 'relative', flexShrink: 0 }}>
-            {/* Tooltip custom — stesso stile di .tooltip-box in index.css */}
             {hovered && (
                 <div style={{
                     position: 'absolute',
@@ -88,15 +187,10 @@ const NextFlightPill = () => {
                     zIndex: 1000,
                 }}>
                     Open briefing
-                    {/* Freccia verso l'alto */}
                     <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 0, height: 0,
-                        borderLeft: '5px solid transparent',
-                        borderRight: '5px solid transparent',
+                        position: 'absolute', bottom: '100%', left: '50%',
+                        transform: 'translateX(-50%)', width: 0, height: 0,
+                        borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
                         borderBottom: '5px solid rgba(22, 36, 51, 0.92)',
                     }} />
                 </div>
@@ -107,37 +201,33 @@ const NextFlightPill = () => {
                 onMouseLeave={() => setHovered(false)}
                 style={{ ...pillBase, cursor: 'pointer', transition: 'opacity 0.15s ease', opacity: hovered ? 0.8 : 1 }}
             >
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#146AFF', flexShrink: 0 }} />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
-                    Next flight
-                </span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)', lineHeight: 1.2 }}>
-                    {data.origin?.icao} → {data.destination?.icao}
-                </span>
-            </div>
-
-            <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', alignItems: 'flex-end' }}>
-                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
-                    {data.aircraft}
-                </span>
-                {depTime && (
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-hint)', lineHeight: 1 }}>{depTime}</span>
-                )}
-            </div>
-
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.4 }}>
-                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-        </button>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#146AFF', flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
+                        Next flight
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)', lineHeight: 1.2 }}>
+                        {data.origin?.icao} → {data.destination?.icao}
+                    </span>
+                </div>
+                <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', alignItems: 'flex-end' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
+                        {data.aircraft}
+                    </span>
+                    {depTime && (
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-hint)', lineHeight: 1 }}>{depTime}</span>
+                    )}
+                </div>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.4 }}>
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            </button>
         </div>
     );
 };
 
-export default function Header() {
+export default function Header({ flights = [] }) {
     const { isDarkMode } = useTheme();
     const quote = getTodayQuote();
 
@@ -180,7 +270,7 @@ export default function Header() {
 
                 <div style={{ width: '1px', height: '24px', background: divider, flexShrink: 0 }} />
 
-                <NextFlightPill />
+                <NextFlightPill flights={flights} />
             </div>
         </header>
     );

@@ -96,7 +96,7 @@ export default function Layout({
             />
 
             <div className={`main-wrapper ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
-                <Header />
+                <Header flights={flights} />
 
                 <main className="main-content" style={{ 
                     display: isNewFlightPage ? 'flex' : 'block',

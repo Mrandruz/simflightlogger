@@ -663,9 +663,33 @@ export default function Schedule({ flights=[], user }) {
 
     const [suggestions, setSuggestions]   = useState({});
     const [loading, setLoading]           = useState(true);
-    const [selectedAlliance, setSelectedAlliance] = useState('Star Alliance');
     const [selectedHaul, setSelectedHaul] = useState('SHORT');
     const [weatherCache, setWeatherCache] = useState({});
+
+    /* ── Derive default alliance from last flight ── */
+    const defaultAlliance = useMemo(() => {
+        if (!Array.isArray(flights) || flights.length === 0) return 'Star Alliance';
+        const sorted = [...flights].filter(f => f?.date).sort((a,b) => new Date(b.date)-new Date(a.date));
+        for (const f of sorted) {
+            let al = f.alliance;
+            if (!al) al = f.airline === 'ITA Airways'
+                ? (new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam')
+                : ALLIANCE_MAP[f.airline];
+            if (al && ['Star Alliance','SkyTeam','Oneworld'].includes(al)) return al;
+        }
+        return 'Star Alliance';
+    }, [flights]);
+
+    const [selectedAlliance, setSelectedAlliance] = useState(() => defaultAlliance);
+
+    // Keep in sync if flights load after mount (e.g. async Firebase)
+    const prevDefaultRef = React.useRef(defaultAlliance);
+    useEffect(() => {
+        if (prevDefaultRef.current !== defaultAlliance) {
+            prevDefaultRef.current = defaultAlliance;
+            setSelectedAlliance(defaultAlliance);
+        }
+    }, [defaultAlliance]);
 
     /* ── Analysis ── */
     const analysis = useMemo(() => {
