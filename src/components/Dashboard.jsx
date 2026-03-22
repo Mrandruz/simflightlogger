@@ -392,7 +392,7 @@ export default function Dashboard() {
         // Usa aggregateStats condivisa — stessi dati del Copilot, nessun campo stub
         const statsPayload = aggregateStats(flights);
 
-        const prompt = `Write a concise pilot brief for ${monthName}. Summarize the pilot's activity this month, highlight key stats, any interesting patterns or records, and give a short operational suggestion for the coming days. Keep it to 3-4 sentences. Aviation-toned, professional, no bullet points.`;
+        const prompt = `You are Skydeck Copilot. Write a motivational monthly pilot brief for ${monthName} in the same language I am writing in now (detect it from this message). Celebrate what the pilot achieved this month with genuine enthusiasm — highlight impressive stats, milestones or records. Use warm aviation language (e.g. 'great flights logged', 'impressive range'). End with an encouraging challenge or suggestion for the coming days. 3-4 sentences, no bullet points, feel like a real co-pilot talking to a friend.`;
 
         try {
             // Token Firebase obbligatorio per la Cloud Function
