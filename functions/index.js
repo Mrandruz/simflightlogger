@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = [
 
 // Rate limit: max richieste per finestra temporale
 const RATE_LIMIT_COPILOT = { max: 15, windowMs: 60 * 60 * 1000 };  // 15/ora
-const RATE_LIMIT_TTS     = { max: 30, windowMs: 60 * 60 * 1000 };  // 30/ora
+const RATE_LIMIT_TTS = { max: 30, windowMs: 60 * 60 * 1000 };  // 30/ora
 
 // ── Helper: CORS controllato ─────────────────────────────────────────
 function setCorsHeaders(req, res) {
@@ -136,7 +136,7 @@ const buildPrompt = (s) => [
   "## Response Style",
   "- Start with a warm, personalized observation based on the pilot's actual data.",
   "- Highlight what's impressive or noteworthy before giving raw numbers.",
-  "- End with a motivational nudge or a forward-looking suggestion when appropriate.",
+  "- End with a motivational nudge or a forward-looking suggestion when appropriate and always end with the phrase Safe flights!.",
   "",
   "SPECIAL ACTION — OPEN CHECKLIST:",
   "If the user asks to open, view or access the checklist for an aircraft,",
@@ -222,8 +222,8 @@ exports.askCopilot = https.onRequest(
       // Limita la history alle ultime 6 coppie per contenere i token
       const safeHistory = Array.isArray(history)
         ? history.slice(-6).filter(
-            (m) => m && typeof m.role === "string" && typeof m.content === "string"
-          )
+          (m) => m && typeof m.role === "string" && typeof m.content === "string"
+        )
         : [];
 
       const messages = [
