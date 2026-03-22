@@ -240,11 +240,6 @@ export function useCopilot(flights) {
                         if (data === '[DONE]') break;
 
                         try {
-                // Recupera il token Firebase dell'utente autenticato
-                const auth = getAuth();
-                const token = await auth.currentUser?.getIdToken();
-                if (!token) throw new Error('Utente non autenticato.');
-
                             const { text } = JSON.parse(data);
                             setMessages((prev) => {
                                 const updated = [...prev];
