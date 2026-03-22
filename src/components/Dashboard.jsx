@@ -235,7 +235,18 @@ function PilotBrief({ flights, generated, loading, brief }) {
                             Drafting your brief…
                         </span>
                     )}
-                    {brief}
+                    {brief
+                        ? <ReactMarkdown
+                            components={{
+                                p: ({children}) => <p style={{margin: '0 0 6px 0'}}>{children}</p>,
+                                strong: ({children}) => <strong style={{fontWeight: 600}}>{children}</strong>,
+                                ul: ({children}) => <ul style={{margin: '4px 0', paddingLeft: '16px'}}>{children}</ul>,
+                                li: ({children}) => <li style={{marginBottom: '2px'}}>{children}</li>,
+                            }}
+                          >
+                            {DOMPurify.sanitize(brief)}
+                          </ReactMarkdown>
+                        : null}
                     {loading && brief && <span style={{ opacity: .35 }}>▋</span>}
                 </div>
             )}
@@ -265,7 +276,18 @@ function PilotBrief({ flights, generated, loading, brief }) {
 
             {answer && (
                 <div style={{ padding: 'var(--space-3) var(--space-4)', borderRadius: 'var(--radius-md)', background: 'var(--color-background)', border: '1px solid var(--color-border)', fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--color-text-primary)' }}>
-                    {answer}
+                    {answer
+                        ? <ReactMarkdown
+                            components={{
+                                p: ({children}) => <p style={{margin: '0 0 6px 0'}}>{children}</p>,
+                                strong: ({children}) => <strong style={{fontWeight: 600}}>{children}</strong>,
+                                ul: ({children}) => <ul style={{margin: '4px 0', paddingLeft: '16px'}}>{children}</ul>,
+                                li: ({children}) => <li style={{marginBottom: '2px'}}>{children}</li>,
+                            }}
+                          >
+                            {DOMPurify.sanitize(answer)}
+                          </ReactMarkdown>
+                        : null}
                     {asking && <span style={{ opacity: .35 }}>▋</span>}
                 </div>
             )}
