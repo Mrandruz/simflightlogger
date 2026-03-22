@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDvtUxUN3Y-4OverV48AMmQfZpNPx694Ws",
@@ -12,5 +13,14 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// ── Firebase App Check (reCAPTCHA v3) ────────────────────────────────
+// Garantisce che le richieste provengano solo dall'app reale su Vercel,
+// bloccando script esterni e bot anche se autenticati.
+initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider("6Ld6spMsAAAAABoAfHFKa4egGHDDaB4kxXsUudNq"),
+    isTokenAutoRefreshEnabled: true,
+});
+
 export const db = getFirestore(app);
 export const auth = getAuth(app);

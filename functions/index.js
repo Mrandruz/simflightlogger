@@ -6,6 +6,22 @@ const Anthropic = require("@anthropic-ai/sdk");
 // ── Inizializza Firebase Admin (per Auth + Firestore rate limiting) ──
 admin.initializeApp();
 
+// ── Helper: Verifica App Check token ────────────────────────────────
+async function verifyAppCheck(req, res) {
+  const appCheckToken = req.headers["x-firebase-appcheck"];
+  if (!appCheckToken) {
+    res.status(401).json({ error: "App Check token mancante." });
+    return false;
+  }
+  try {
+    await admin.appCheck().verifyToken(appCheckToken);
+    return true;
+  } catch {
+    res.status(401).json({ error: "App Check token non valido." });
+    return false;
+  }
+}
+
 const ANTHROPIC_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ELEVENLABS_KEY = defineSecret("ELEVENLABS_API_KEY");
 
@@ -20,7 +36,7 @@ const ALLOWED_ORIGINS = [
 
 // Rate limit: max richieste per finestra temporale
 const RATE_LIMIT_COPILOT = { max: 15, windowMs: 60 * 60 * 1000 };  // 15/ora
-const RATE_LIMIT_TTS = { max: 30, windowMs: 60 * 60 * 1000 };  // 30/ora
+const RATE_LIMIT_TTS     = { max: 30, windowMs: 60 * 60 * 1000 };  // 30/ora
 
 // ── Helper: CORS controllato ─────────────────────────────────────────
 function setCorsHeaders(req, res) {
@@ -136,7 +152,7 @@ const buildPrompt = (s) => [
   "## Response Style",
   "- Start with a warm, personalized observation based on the pilot's actual data.",
   "- Highlight what's impressive or noteworthy before giving raw numbers.",
-  "- End with a motivational nudge or a forward-looking suggestion when appropriate and always end with the phrase Safe flights!.",
+  "- End with a motivational nudge or a forward-looking suggestion when appropriate.",
   "",
   "SPECIAL ACTION — OPEN CHECKLIST:",
   "If the user asks to open, view or access the checklist for an aircraft,",
@@ -191,11 +207,15 @@ exports.askCopilot = https.onRequest(
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // ── 1. Autenticazione ──────────────────────────────────────────
-    const user = await verifyAuthToken(req, res);
-    if (!user) return; // verifyAuthToken ha già risposto con 401
+    // ── 1. App Check ───────────────────────────────────────────────
+    const appCheckOk = await verifyAppCheck(req, res);
+    if (!appCheckOk) return;
 
-    // ── 2. Rate Limiting ───────────────────────────────────────────
+    // ── 2. Autenticazione ──────────────────────────────────────────
+    const user = await verifyAuthToken(req, res);
+    if (!user) return;
+
+    // ── 3. Rate Limiting ───────────────────────────────────────────
     const rateCheck = await checkRateLimit(user.uid, "askCopilot", RATE_LIMIT_COPILOT);
     if (!rateCheck.allowed) {
       return res.status(429).json({
@@ -222,8 +242,8 @@ exports.askCopilot = https.onRequest(
       // Limita la history alle ultime 6 coppie per contenere i token
       const safeHistory = Array.isArray(history)
         ? history.slice(-6).filter(
-          (m) => m && typeof m.role === "string" && typeof m.content === "string"
-        )
+            (m) => m && typeof m.role === "string" && typeof m.content === "string"
+          )
         : [];
 
       const messages = [
@@ -278,11 +298,15 @@ exports.textToSpeech = https.onRequest(
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // ── 1. Autenticazione ──────────────────────────────────────────
+    // ── 1. App Check ───────────────────────────────────────────────
+    const appCheckOk = await verifyAppCheck(req, res);
+    if (!appCheckOk) return;
+
+    // ── 2. Autenticazione ──────────────────────────────────────────
     const user = await verifyAuthToken(req, res);
     if (!user) return;
 
-    // ── 2. Rate Limiting ───────────────────────────────────────────
+    // ── 3. Rate Limiting ───────────────────────────────────────────
     const rateCheck = await checkRateLimit(user.uid, "textToSpeech", RATE_LIMIT_TTS);
     if (!rateCheck.allowed) {
       return res.status(429).json({
