@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'plane.svg'],
       manifest: {
-        name: 'Simulator Flight Logger',
-        short_name: 'SimLogger',
-        description: 'Advanced flight logging for flight simulator enthusiasts',
+        name: 'Skydeck',
+        short_name: 'Skydeck',
+        description: 'Skydeck — Sim Flight Logger powered by AI',
         theme_color: '#0d151e',
         background_color: '#0d151e',
         display: 'standalone',
