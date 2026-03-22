@@ -8,6 +8,7 @@
  *   const { send, messages, loading, clear } = useCopilot(flights);
  */
 import { useState, useCallback, useMemo } from 'react';
+import { getAuth } from 'firebase/auth';
 import { useSimBrief } from './useSimBrief';
 
 // URL della tua Cloud Function — sostituisci con il tuo progetto Firebase
@@ -205,9 +206,17 @@ export function useCopilot(flights) {
             }));
 
             try {
+                // Recupera il token Firebase dell'utente autenticato
+                const auth = getAuth();
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) throw new Error('Utente non autenticato.');
+
                 const res = await fetch(FUNCTION_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
                     body: JSON.stringify({ message: userMessage, stats, history }),
                 });
 
@@ -231,6 +240,11 @@ export function useCopilot(flights) {
                         if (data === '[DONE]') break;
 
                         try {
+                // Recupera il token Firebase dell'utente autenticato
+                const auth = getAuth();
+                const token = await auth.currentUser?.getIdToken();
+                if (!token) throw new Error('Utente non autenticato.');
+
                             const { text } = JSON.parse(data);
                             setMessages((prev) => {
                                 const updated = [...prev];
