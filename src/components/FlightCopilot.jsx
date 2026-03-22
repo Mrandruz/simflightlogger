@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import DOMPurify from 'dompurify';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCopilot } from '../hooks/useCopilot';
@@ -70,7 +72,18 @@ const Message = ({ msg }) => {
                 fontSize: '13px', lineHeight: 1.55,
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-                {msg.content || <TypingDots />}
+                {msg.content
+                    ? <ReactMarkdown
+                        components={{
+                            p: ({children}) => <p style={{margin: '0 0 6px 0'}}>{children}</p>,
+                            strong: ({children}) => <strong style={{fontWeight: 600}}>{children}</strong>,
+                            ul: ({children}) => <ul style={{margin: '4px 0', paddingLeft: '16px'}}>{children}</ul>,
+                            li: ({children}) => <li style={{marginBottom: '2px'}}>{children}</li>,
+                        }}
+                      >
+                        {DOMPurify.sanitize(msg.content)}
+                      </ReactMarkdown>
+                    : <TypingDots />}
             </div>
         </div>
     );
