@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import DOMPurify from 'dompurify';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { Plane, Clock, MapPin, Globe, Trophy, CalendarDays, ExternalLink, Sparkles, RefreshCw, Send, TrendingUp, BookOpen, Calendar, Zap, Activity, Users, Map } from 'lucide-react';
