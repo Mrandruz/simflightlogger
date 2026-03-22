@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 // Garantisce che le richieste provengano solo dall'app reale su Vercel,
 // bloccando script esterni e bot anche se autenticati.
 initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider("6Le0upMsAAAAAH--XrN61bgEdgtZyLNKEvNbigDS"),
+    provider: new ReCaptchaV3Provider("6Ld6spMsAAAAABoAfHFKa4egGHDDaB4kxXsUudNq"),
     isTokenAutoRefreshEnabled: true,
 });
 
