@@ -467,6 +467,26 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [routeCopied, setRouteCopied] = useState(false);
     const [logState, setLogState] = useState('idle'); // idle | duplicate | saving | saved | error
+
+    // ── Check if SimBrief flight already logged in last 7 days ──────────
+    const alreadyLogged = React.useMemo(() => {
+        if (!data || !Array.isArray(flights) || !data.origin?.icao || !data.destination?.icao) return false;
+        const simDate = data.departureTime
+            ? (() => {
+                const d = !isNaN(Number(data.departureTime)) && String(data.departureTime).length >= 10
+                    ? new Date(Number(data.departureTime) * 1000)
+                    : new Date(data.departureTime);
+                return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+            })()
+            : null;
+        return !!flights.find(f => {
+            const depMatch = String(f.departure || '').toUpperCase() === data.origin.icao.toUpperCase();
+            const arrMatch = String(f.arrival   || '').toUpperCase() === data.destination.icao.toUpperCase();
+            if (!depMatch || !arrMatch) return false;
+            if (!simDate || !f.date) return true;
+            return Math.abs((new Date(f.date) - new Date(simDate)) / 86400000) <= 7;
+        });
+    }, [data, flights]);
     const [showPreview, setShowPreview] = useState(false);
 
     const [identifier, setIdentifier] = useState(() => {
@@ -827,7 +847,41 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
                 </div>
             )}
 
-            {data && (
+            {data && alreadyLogged && (
+                <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-5)', border: '1px dashed var(--color-border)' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CheckCircle size={28} style={{ color: 'var(--color-success)' }} />
+                    </div>
+                    <div>
+                        <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)', fontWeight: 500 }}>
+                            {data.origin?.icao} → {data.destination?.icao} already logged
+                        </h3>
+                        <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                            This flight is already in your logbook. Plan a new route on SimBrief to see your next briefing here.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => window.open('https://dispatch.simbrief.com/briefing/latest', '_blank')}
+                            style={{ gap: '8px' }}
+                        >
+                            <ExternalLink size={16} />
+                            Plan on SimBrief
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={loadFlightPlan}
+                            style={{ gap: '8px' }}
+                        >
+                            <RefreshCw size={16} />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            )}
+
+    {data && !alreadyLogged && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: 'var(--space-6)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
                         {/* Hero Flight Card */}
