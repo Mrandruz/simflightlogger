@@ -6,21 +6,6 @@ const Anthropic = require("@anthropic-ai/sdk");
 // ── Inizializza Firebase Admin (per Auth + Firestore rate limiting) ──
 admin.initializeApp();
 
-// ── Helper: Verifica App Check token ────────────────────────────────
-async function verifyAppCheck(req, res) {
-  const appCheckToken = req.headers["x-firebase-appcheck"];
-  if (!appCheckToken) {
-    res.status(401).json({ error: "App Check token mancante." });
-    return false;
-  }
-  try {
-    await admin.appCheck().verifyToken(appCheckToken);
-    return true;
-  } catch {
-    res.status(401).json({ error: "App Check token non valido." });
-    return false;
-  }
-}
 
 const ANTHROPIC_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ELEVENLABS_KEY = defineSecret("ELEVENLABS_API_KEY");
@@ -207,15 +192,11 @@ exports.askCopilot = https.onRequest(
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // ── 1. App Check ───────────────────────────────────────────────
-    const appCheckOk = await verifyAppCheck(req, res);
-    if (!appCheckOk) return;
-
-    // ── 2. Autenticazione ──────────────────────────────────────────
+    // ── 1. Autenticazione ──────────────────────────────────────────
     const user = await verifyAuthToken(req, res);
     if (!user) return;
 
-    // ── 3. Rate Limiting ───────────────────────────────────────────
+    // ── 2. Rate Limiting ───────────────────────────────────────────
     const rateCheck = await checkRateLimit(user.uid, "askCopilot", RATE_LIMIT_COPILOT);
     if (!rateCheck.allowed) {
       return res.status(429).json({
@@ -298,15 +279,11 @@ exports.textToSpeech = https.onRequest(
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // ── 1. App Check ───────────────────────────────────────────────
-    const appCheckOk = await verifyAppCheck(req, res);
-    if (!appCheckOk) return;
-
-    // ── 2. Autenticazione ──────────────────────────────────────────
+    // ── 1. Autenticazione ──────────────────────────────────────────
     const user = await verifyAuthToken(req, res);
     if (!user) return;
 
-    // ── 3. Rate Limiting ───────────────────────────────────────────
+    // ── 2. Rate Limiting ───────────────────────────────────────────
     const rateCheck = await checkRateLimit(user.uid, "textToSpeech", RATE_LIMIT_TTS);
     if (!rateCheck.allowed) {
       return res.status(429).json({
