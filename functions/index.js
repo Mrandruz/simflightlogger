@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 // Rate limit: max richieste per finestra temporale
-const RATE_LIMIT_COPILOT = { max: 15, windowMs: 60 * 60 * 1000 };  // 15/ora
+const RATE_LIMIT_COPILOT = { max: 50, windowMs: 60 * 60 * 1000 };  // 50/ora (alzato per sviluppo — ridurre a 15 in produzione pubblica)
 const RATE_LIMIT_TTS     = { max: 30, windowMs: 60 * 60 * 1000 };  // 30/ora
 
 // ── Helper: CORS controllato ─────────────────────────────────────────
