@@ -21,6 +21,68 @@ const WIKI_SLUGS = {
     OMAA: { airport: 'Abu_Dhabi_International_Airport',  city: 'Abu_Dhabi' },
     KJFK: { airport: 'John_F._Kennedy_International_Airport', city: 'New_York_City' },
     VTBS: { airport: 'Suvarnabhumi_Airport',             city: 'Bangkok' },
+    // Spain
+    LEMD: { airport: 'Adolfo_Suárez_Madrid–Barajas_Airport', city: 'Madrid' },
+    LEBL: { airport: 'Barcelona–El_Prat_Airport',        city: 'Barcelona' },
+    LEMG: { airport: 'Málaga_Airport',                   city: 'Málaga' },
+    // Italy
+    LIMC: { airport: 'Milan_Malpensa_Airport',           city: 'Milan' },
+    LIME: { airport: 'Milan_Bergamo_Airport',            city: 'Bergamo' },
+    LIPZ: { airport: 'Venice_Marco_Polo_Airport',        city: 'Venice' },
+    LIRN: { airport: 'Naples_International_Airport',     city: 'Naples' },
+    // UK
+    EGKK: { airport: 'Gatwick_Airport',                  city: 'London' },
+    EGCC: { airport: 'Manchester_Airport',               city: 'Manchester' },
+    // Germany
+    EDDL: { airport: 'Düsseldorf_Airport',               city: 'Düsseldorf' },
+    EDDB: { airport: 'Berlin_Brandenburg_Airport',       city: 'Berlin' },
+    // Other Europe
+    LSZH: { airport: 'Zurich_Airport',                   city: 'Zurich' },
+    LFPO: { airport: 'Paris_Orly_Airport',               city: 'Paris' },
+    LPPT: { airport: 'Humberto_Delgado_Airport',         city: 'Lisbon' },
+    EIDW: { airport: 'Dublin_Airport',                   city: 'Dublin' },
+    EKCH: { airport: 'Copenhagen_Airport',               city: 'Copenhagen' },
+    ENGM: { airport: 'Oslo_Airport,_Gardermoen',         city: 'Oslo' },
+    ESSA: { airport: 'Stockholm_Arlanda_Airport',        city: 'Stockholm' },
+    EFHK: { airport: 'Helsinki_Airport',                 city: 'Helsinki' },
+    LOWW: { airport: 'Vienna_International_Airport',     city: 'Vienna' },
+    LKPR: { airport: 'Václav_Havel_Airport_Prague',      city: 'Prague' },
+    EPWA: { airport: 'Warsaw_Chopin_Airport',            city: 'Warsaw' },
+    LHBP: { airport: 'Budapest_Ferenc_Liszt_International_Airport', city: 'Budapest' },
+    LGAV: { airport: 'Athens_International_Airport',     city: 'Athens' },
+    LTBA: { airport: 'Atatürk_Airport',                  city: 'Istanbul' },
+    LTFM: { airport: 'Istanbul_Airport',                 city: 'Istanbul' },
+    // Middle East
+    OMDB: { airport: 'Dubai_International_Airport',      city: 'Dubai' },
+    OMDW: { airport: 'Al_Maktoum_International_Airport', city: 'Dubai' },
+    OTHH: { airport: 'Hamad_International_Airport',      city: 'Doha' },
+    OERK: { airport: 'King_Khalid_International_Airport', city: 'Riyadh' },
+    OEDF: { airport: 'King_Fahd_International_Airport',  city: 'Dammam' },
+    // Asia
+    VHHH: { airport: 'Hong_Kong_International_Airport',  city: 'Hong_Kong' },
+    RJTT: { airport: 'Tokyo_International_Airport',      city: 'Tokyo' },
+    RJAA: { airport: 'Narita_International_Airport',     city: 'Tokyo' },
+    RKSI: { airport: 'Incheon_International_Airport',    city: 'Seoul' },
+    WSSS: { airport: 'Singapore_Changi_Airport',         city: 'Singapore' },
+    VIDP: { airport: 'Indira_Gandhi_International_Airport', city: 'Delhi' },
+    VABB: { airport: 'Chhatrapati_Shivaji_Maharaj_International_Airport', city: 'Mumbai' },
+    ZBAA: { airport: 'Beijing_Capital_International_Airport', city: 'Beijing' },
+    ZSPD: { airport: 'Shanghai_Pudong_International_Airport', city: 'Shanghai' },
+    // Americas
+    KJFK: { airport: 'John_F._Kennedy_International_Airport', city: 'New_York_City' },
+    KEWR: { airport: 'Newark_Liberty_International_Airport', city: 'Newark,_New_Jersey' },
+    KORD: { airport: "O'Hare_International_Airport",     city: 'Chicago' },
+    KATL: { airport: 'Hartsfield–Jackson_Atlanta_International_Airport', city: 'Atlanta' },
+    KDFW: { airport: 'Dallas/Fort_Worth_International_Airport', city: 'Dallas' },
+    KMIA: { airport: 'Miami_International_Airport',      city: 'Miami' },
+    CYYZ: { airport: 'Toronto_Pearson_International_Airport', city: 'Toronto' },
+    SBGR: { airport: 'São_Paulo/Guarulhos_International_Airport', city: 'São_Paulo' },
+    SAEZ: { airport: 'Ministro_Pistarini_International_Airport', city: 'Buenos_Aires' },
+    // Africa & Oceania
+    FAOR: { airport: 'O._R._Tambo_International_Airport', city: 'Johannesburg' },
+    HECA: { airport: 'Cairo_International_Airport',      city: 'Cairo' },
+    YSSY: { airport: 'Sydney_Airport',                   city: 'Sydney' },
+    YMML: { airport: 'Melbourne_Airport',                city: 'Melbourne' },
 };
 
 // Airport display names
@@ -73,9 +135,19 @@ async function fetchWikiSummary(slug) {
     return res.json();
 }
 
-async function getHubWikiData(icao) {
+// For unknown ICAOs, search Wikipedia and return the best match summary
+async function searchWikiSummary(query) {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=1`;
+    const searchRes = await fetch(searchUrl, { headers: { 'Api-User-Agent': 'Skydeck/1.0' } });
+    if (!searchRes.ok) throw new Error(`Wiki search ${searchRes.status}`);
+    const searchData = await searchRes.json();
+    const title = searchData?.query?.search?.[0]?.title;
+    if (!title) throw new Error('No results');
+    return fetchWikiSummary(title.replace(/ /g, '_'));
+}
+
+async function getHubWikiData(icao, airportName, cityName) {
     const slugs = WIKI_SLUGS[icao];
-    if (!slugs) return null;
 
     const cacheRef = doc(db, 'hubsCache', icao);
     try {
@@ -86,10 +158,18 @@ async function getHubWikiData(icao) {
         }
     } catch (_) {}
 
-    // Fetch from Wikipedia
+    // Use dictionary slugs if available, otherwise fall back to search
+    const fetchAirport = slugs
+        ? fetchWikiSummary(slugs.airport)
+        : searchWikiSummary(`${airportName || icao} airport`);
+
+    const fetchCity = slugs
+        ? fetchWikiSummary(slugs.city)
+        : searchWikiSummary(cityName || icao);
+
     const [airportData, cityData] = await Promise.all([
-        fetchWikiSummary(slugs.airport).catch(() => null),
-        fetchWikiSummary(slugs.city).catch(() => null),
+        fetchAirport.catch(() => null),
+        fetchCity.catch(() => null),
     ]);
 
     const payload = {
@@ -245,6 +325,8 @@ const MonthlyChart = ({ data, color }) => {
 };
 
 const WikiCard = ({ data, type, color }) => {
+    const [expanded, setExpanded] = useState(false);
+
     if (!data) return (
         <div style={{
             background: 'var(--color-surface)',
@@ -257,7 +339,11 @@ const WikiCard = ({ data, type, color }) => {
         </div>
     );
 
-    const words = (data.extract || '').split(' ').slice(0, 60).join(' ') + '…';
+    const fullText = data.extract || '';
+    // Preview: first ~200 chars, cutting at a sentence boundary
+    const previewEnd = fullText.indexOf('. ', 180);
+    const previewText = previewEnd > 0 ? fullText.slice(0, previewEnd + 1) : fullText.slice(0, 220);
+    const hasMore = fullText.length > previewText.length;
 
     return (
         <div style={{
@@ -268,10 +354,11 @@ const WikiCard = ({ data, type, color }) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
+            transition: 'box-shadow 0.2s ease',
         }}>
             {data.thumbnail && (
                 <div style={{
-                    height: '120px',
+                    height: '140px',
                     background: `url(${data.thumbnail}) center/cover`,
                     position: 'relative',
                     flexShrink: 0,
@@ -282,7 +369,7 @@ const WikiCard = ({ data, type, color }) => {
                     }} />
                 </div>
             )}
-            <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {type === 'airport' ? <Building2 size={13} style={{ color }} /> : <Globe size={13} style={{ color }} />}
                     <span style={{
@@ -296,24 +383,61 @@ const WikiCard = ({ data, type, color }) => {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, fontFamily: 'var(--font-family-display)', color: 'var(--color-text-primary)' }}>
                     {data.title}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.55, flex: 1 }}>
-                    {words}
+
+                {/* Text body — toggles between preview and full */}
+                <div style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.65,
+                    flex: 1,
+                    overflow: 'hidden',
+                    position: 'relative',
+                }}>
+                    <span>{expanded ? fullText : previewText}</span>
+                    {/* Fade-out gradient when collapsed */}
+                    {!expanded && hasMore && (
+                        <div style={{
+                            position: 'absolute', bottom: 0, left: 0, right: 0,
+                            height: '40px',
+                            background: 'linear-gradient(to bottom, transparent, var(--color-surface))',
+                            pointerEvents: 'none',
+                        }} />
+                    )}
                 </div>
-                {data.url && (
-                    <a
-                        href={data.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            fontSize: '0.72rem', color,
-                            textDecoration: 'none', fontWeight: 500,
-                            marginTop: '4px',
-                        }}
-                    >
-                        Read on Wikipedia <ExternalLink size={10} />
-                    </a>
-                )}
+
+                {/* Action row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    {hasMore && (
+                        <button
+                            onClick={() => setExpanded(e => !e)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                fontSize: '0.75rem', fontWeight: 600, color,
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                transition: 'opacity 0.15s',
+                            }}
+                        >
+                            {expanded ? '↑ Show less' : '↓ Read more'}
+                        </button>
+                    )}
+                    {data.url && (
+                        <a
+                            href={data.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                fontSize: '0.72rem', color: 'var(--color-text-hint)',
+                                textDecoration: 'none', fontWeight: 500,
+                                transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = color}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-hint)'}
+                        >
+                            Full article <ExternalLink size={10} />
+                        </a>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -344,7 +468,7 @@ export default function Hubs() {
         if (!hasSlug) { setWikiData(p => ({ ...p, [activeIcao]: null })); return; }
 
         setWikiLoading(true);
-        getHubWikiData(activeIcao)
+        getHubWikiData(activeIcao, AIRPORT_NAMES[activeIcao], CITY_NAMES[activeIcao])
             .then(data => setWikiData(p => ({ ...p, [activeIcao]: data })))
             .catch(() => setWikiData(p => ({ ...p, [activeIcao]: null })))
             .finally(() => setWikiLoading(false));
@@ -542,7 +666,7 @@ export default function Hubs() {
                             {/* KPI row */}
                             <div style={{ display: 'flex', gap: '10px', flex: 2, minWidth: '280px', flexWrap: 'wrap' }}>
                                 <KpiCard icon={Plane} label="Operations" value={activeHub.totalFlights} color={activeColor} />
-                                <KpiCard icon={Clock} label="Hours" value={`${activeHub.totalHours.toFixed(0)}h`} color={activeColor} />
+                                <KpiCard icon={Clock} label="Hours" value={activeHub.totalHours.toFixed(0)} color={activeColor} />
                                 <KpiCard icon={Route} label="Nautical mi" value={activeHub.totalMiles.toLocaleString()} color={activeColor} />
                             </div>
                         </div>
