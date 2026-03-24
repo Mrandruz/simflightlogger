@@ -122,28 +122,28 @@ const HUB_COLORS = {
 // Coordinate geografiche degli aeroporti — usate per centrare la mappa Leaflet.
 // lat/lng = centro dell'aeroporto, zoom = livello ottimale per vedere le piste.
 const AIRPORT_COORDS = {
-    LFPG: { lat: 49.0097,  lng:  2.5479,  zoom: 13 },
-    LIRF: { lat: 41.8003,  lng: 12.2389,  zoom: 13 },
-    KLAX: { lat: 33.9425,  lng:-118.4081, zoom: 13 },
-    EGLL: { lat: 51.4775,  lng: -0.4614,  zoom: 13 },
-    EDDF: { lat: 50.0379,  lng:  8.5622,  zoom: 13 },
-    EHAM: { lat: 52.3086,  lng:  4.7639,  zoom: 13 },
-    EDDM: { lat: 48.3538,  lng: 11.7861,  zoom: 13 },
-    OMAA: { lat: 24.4330,  lng: 54.6511,  zoom: 13 },
-    KJFK: { lat: 40.6413,  lng:-73.7781,  zoom: 13 },
-    VTBS: { lat: 13.6900,  lng:100.7501,  zoom: 13 },
-    LEMD: { lat: 40.4719,  lng: -3.5626,  zoom: 13 },
-    LEBL: { lat: 41.2971,  lng:  2.0785,  zoom: 13 },
-    LIMC: { lat: 45.6306,  lng:  8.7281,  zoom: 13 },
-    EGKK: { lat: 51.1537,  lng: -0.1821,  zoom: 13 },
-    EGCC: { lat: 53.3537,  lng: -2.2750,  zoom: 13 },
-    LSZH: { lat: 47.4647,  lng:  8.5492,  zoom: 13 },
-    OMDB: { lat: 25.2532,  lng: 55.3657,  zoom: 13 },
-    OTHH: { lat: 25.2731,  lng: 51.6080,  zoom: 13 },
-    VHHH: { lat: 22.3080,  lng:113.9185,  zoom: 13 },
-    WSSS: { lat:  1.3644,  lng:103.9915,  zoom: 13 },
-    KORD: { lat: 41.9742,  lng:-87.9073,  zoom: 13 },
-    KATL: { lat: 33.6407,  lng:-84.4277,  zoom: 13 },
+    LFPG: { lat: 49.0097,  lng:  2.5479,  zoom: 15 },
+    LIRF: { lat: 41.8003,  lng: 12.2389,  zoom: 15 },
+    KLAX: { lat: 33.9425,  lng:-118.4081, zoom: 15 },
+    EGLL: { lat: 51.4775,  lng: -0.4614,  zoom: 15 },
+    EDDF: { lat: 50.0379,  lng:  8.5622,  zoom: 15 },
+    EHAM: { lat: 52.3086,  lng:  4.7639,  zoom: 15 },
+    EDDM: { lat: 48.3538,  lng: 11.7861,  zoom: 15 },
+    OMAA: { lat: 24.4330,  lng: 54.6511,  zoom: 15 },
+    KJFK: { lat: 40.6413,  lng:-73.7781,  zoom: 15 },
+    VTBS: { lat: 13.6900,  lng:100.7501,  zoom: 15 },
+    LEMD: { lat: 40.4719,  lng: -3.5626,  zoom: 15 },
+    LEBL: { lat: 41.2971,  lng:  2.0785,  zoom: 15 },
+    LIMC: { lat: 45.6306,  lng:  8.7281,  zoom: 15 },
+    EGKK: { lat: 51.1537,  lng: -0.1821,  zoom: 15 },
+    EGCC: { lat: 53.3537,  lng: -2.2750,  zoom: 15 },
+    LSZH: { lat: 47.4647,  lng:  8.5492,  zoom: 15 },
+    OMDB: { lat: 25.2532,  lng: 55.3657,  zoom: 15 },
+    OTHH: { lat: 25.2731,  lng: 51.6080,  zoom: 15 },
+    VHHH: { lat: 22.3080,  lng:113.9185,  zoom: 15 },
+    WSSS: { lat:  1.3644,  lng:103.9915,  zoom: 15 },
+    KORD: { lat: 41.9742,  lng:-87.9073,  zoom: 15 },
+    KATL: { lat: 33.6407,  lng:-84.4277,  zoom: 15 },
 };
 
 // Fallback per aeroporti non nel dizionario
@@ -309,18 +309,22 @@ function computeHubStats(flights) {
 
 const OPENAIP_KEY = import.meta.env.VITE_OPENAIP_KEY || null;
 
-const HubMap = ({ icao, color }) => {
+const HubMap = ({ icao, color, isDarkMode }) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
+    const baseTileRef = useRef(null);   // riferimento al layer CartoDB base
     const prevIcaoRef = useRef(null);
 
     const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
 
+    // ── Effetto 1: inizializzazione mappa e cambio ICAO ──────────────────────
+    // Gira solo alla prima montatura e quando cambia l'aeroporto selezionato.
+    // NON dipende da isDarkMode — il tema è gestito dall'effetto 2 separato.
     useEffect(() => {
         if (!mapRef.current) return;
 
-        // Prima montatura: inizializza la mappa Leaflet
         if (!mapInstanceRef.current) {
+            // Prima montatura: costruisce la mappa da zero
             const L = window.L;
             if (!L) return;
 
@@ -329,19 +333,22 @@ const HubMap = ({ icao, color }) => {
                 zoom: coords.zoom,
                 zoomControl: true,
                 attributionControl: true,
-                scrollWheelZoom: false, // evita scroll accidentale nella pagina
+                scrollWheelZoom: false,
             });
 
-            // Layer 1: basemap satellite Esri (no API key necessaria)
-            L.tileLayer(
-                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                {
-                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DigitalGlobe',
-                    maxZoom: 19,
-                }
-            ).addTo(map);
+            // CartoDB base — il tileUrl corretto per il tema attuale al momento
+            // dell'init. Cambi successivi di tema vengono gestiti dall'effetto 2.
+            const tileUrl = isDarkMode
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            const baseTile = L.tileLayer(tileUrl, {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                maxZoom: 19,
+            });
+            baseTile.addTo(map);
+            baseTileRef.current = baseTile; // salviamo il ref per poterlo swappare
 
-            // Layer 2: OpenAIP aeronautico (opzionale — solo se la key è disponibile)
+            // Layer OpenAIP sopra al basemap (se la key è presente)
             if (OPENAIP_KEY) {
                 L.tileLayer(
                     `https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`,
@@ -353,7 +360,7 @@ const HubMap = ({ icao, color }) => {
                 ).addTo(map);
             }
 
-            // Marker personalizzato con il colore dell'hub attivo
+            // Marker con il colore accent dell'hub
             const markerHtml = `
                 <div style="
                     width: 28px; height: 28px;
@@ -379,8 +386,9 @@ const HubMap = ({ icao, color }) => {
 
             mapInstanceRef.current = map;
             prevIcaoRef.current = icao;
+
         } else if (prevIcaoRef.current !== icao) {
-            // Cambio hub: vola fluidamente alle nuove coordinate
+            // Cambio hub: animazione flyTo senza ricreare la mappa
             mapInstanceRef.current.flyTo([coords.lat, coords.lng], coords.zoom, {
                 duration: 1.2,
                 easeLinearity: 0.4,
@@ -389,12 +397,37 @@ const HubMap = ({ icao, color }) => {
         }
     }, [icao, coords, color]);
 
-    // Cleanup alla smontatura del componente
+    // ── Effetto 2: cambio tema ────────────────────────────────────────────────
+    // Swappa solo il tile layer CartoDB senza toccare il resto della mappa.
+    // Dipende esclusivamente da isDarkMode.
+    useEffect(() => {
+        if (!mapInstanceRef.current || !baseTileRef.current) return;
+        const L = window.L;
+        if (!L) return;
+
+        // Rimuove il vecchio layer base e ne crea uno nuovo con il tema corretto
+        mapInstanceRef.current.removeLayer(baseTileRef.current);
+        const newTileUrl = isDarkMode
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        const newBaseTile = L.tileLayer(newTileUrl, {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 19,
+        });
+        // Il layer base va inserito sotto a tutti gli altri (z-index più basso)
+        // Leaflet gestisce l'ordine tramite pane — usiamo bringToBack()
+        newBaseTile.addTo(mapInstanceRef.current);
+        newBaseTile.bringToBack();
+        baseTileRef.current = newBaseTile;
+    }, [isDarkMode]);
+
+    // ── Cleanup alla smontatura ───────────────────────────────────────────────
     useEffect(() => {
         return () => {
             if (mapInstanceRef.current) {
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
+                baseTileRef.current = null;
             }
         };
     }, []);
@@ -431,7 +464,7 @@ const HubMap = ({ icao, color }) => {
                             padding: '2px 7px', borderRadius: 'var(--radius-full)',
                             border: '1px solid var(--color-border)',
                         }}>
-                            Satellite · Add VITE_OPENAIP_KEY for aviation overlay
+                            CartoDB · Add VITE_OPENAIP_KEY for aviation overlay
                         </span>
                     )}
                     {OPENAIP_KEY && (
@@ -441,7 +474,7 @@ const HubMap = ({ icao, color }) => {
                             padding: '2px 7px', borderRadius: 'var(--radius-full)',
                             border: `1px solid ${color}30`,
                         }}>
-                            Satellite + OpenAIP
+                            CartoDB + OpenAIP
                         </span>
                     )}
                     <a
@@ -882,7 +915,7 @@ const WikiLink = ({ url, color }) => (
 // Main component
 // ---------------------------------------------------------------------------
 export default function Hubs() {
-    const { flights } = useOutletContext();
+    const { flights, isDarkMode } = useOutletContext();
     const hubs = useMemo(() => computeHubStats(flights || []), [flights]);
 
     const [activeIcao, setActiveIcao] = useState(null);
@@ -1108,7 +1141,7 @@ export default function Hubs() {
                     </div>
 
                     {/* ── Airport Map ── */}
-                    <HubMap icao={activeIcao} color={activeColor} />
+                    <HubMap icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
 
                     {/* ── Main grid ── */}
                     <div style={{
