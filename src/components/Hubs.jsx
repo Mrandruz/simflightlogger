@@ -292,52 +292,35 @@ function computeHubStats(flights) {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// HubMap — mappa Leaflet con basemap satellite Esri + overlay aeronautico OpenAIP
+// useLeafletMap — hook condiviso che gestisce il ciclo di vita di una mappa Leaflet.
+// Entrambe le card mappa (Overview e Chart) lo usano con parametri diversi.
+// Separare il hook dal rendering evita duplicazione di logica e permette a
+// ciascuna card di avere il proprio stato Leaflet indipendente.
 // ---------------------------------------------------------------------------
-// La mappa usa due layer sovrapposti:
-//   1. Esri World Imagery — satellite ad alta risoluzione, mostra le piste nitidamente
-//   2. OpenAIP — layer aeronautico (simboli ICAO, frequenze, spazi aerei)
-//      Richiede una API key gratuita da https://www.openaip.net/
-//      Senza key il layer OpenAIP viene semplicemente omesso, la mappa satellite rimane.
-//
-// COME OTTENERE LA OPENAIP KEY:
-//   1. Vai su https://www.openaip.net/ → Register
-//   2. Nella dashboard, genera una API key gratuita
-//   3. Aggiungila come variabile d'ambiente Vercel: VITE_OPENAIP_KEY=tuachiave
-//      oppure in .env.local: VITE_OPENAIP_KEY=tuachiave
-
-const OPENAIP_KEY = import.meta.env.VITE_OPENAIP_KEY || null;
-
-const HubMap = ({ icao, color, isDarkMode }) => {
-    const mapRef = useRef(null);
+function useLeafletMap({ mapRef, icao, zoom, isDarkMode, showMarker }) {
     const mapInstanceRef = useRef(null);
-    const baseTileRef = useRef(null);   // riferimento al layer CartoDB base
-    const markerRef = useRef(null);     // riferimento al marker per riposizionarlo al cambio hub
+    const baseTileRef = useRef(null);
+    const markerRef = useRef(null);
     const prevIcaoRef = useRef(null);
 
     const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
 
-    // ── Effetto 1: inizializzazione mappa e cambio ICAO ──────────────────────
-    // Gira solo alla prima montatura e quando cambia l'aeroporto selezionato.
-    // NON dipende da isDarkMode — il tema è gestito dall'effetto 2 separato.
+    // Effetto 1: inizializzazione e cambio hub
     useEffect(() => {
         if (!mapRef.current) return;
 
         if (!mapInstanceRef.current) {
-            // Prima montatura: costruisce la mappa da zero
             const L = window.L;
             if (!L) return;
 
             const map = L.map(mapRef.current, {
                 center: [coords.lat, coords.lng],
-                zoom: coords.zoom,
+                zoom,
                 zoomControl: true,
                 attributionControl: true,
                 scrollWheelZoom: false,
             });
 
-            // CartoDB base — il tileUrl corretto per il tema attuale al momento
-            // dell'init. Cambi successivi di tema vengono gestiti dall'effetto 2.
             const tileUrl = isDarkMode
                 ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                 : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
@@ -346,72 +329,49 @@ const HubMap = ({ icao, color, isDarkMode }) => {
                 maxZoom: 19,
             });
             baseTile.addTo(map);
-            baseTileRef.current = baseTile; // salviamo il ref per poterlo swappare
+            baseTileRef.current = baseTile;
 
-            // Layer OpenAIP sopra al basemap (se la key è presente)
-            if (OPENAIP_KEY) {
-                L.tileLayer(
-                    `https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`,
-                    {
-                        attribution: 'OpenAIP &copy; <a href="https://www.openaip.net">openaip.net</a>',
-                        maxZoom: 14,
-                        opacity: 0.85,
-                    }
-                ).addTo(map);
-            }
-
-            // Marker con il colore accent dell'hub
-            const markerHtml = `
-                <div style="
-                    width: 28px; height: 28px;
-                    background: ${color};
+            // Il marker appare solo sulla card Overview, non sulla Chart
+            if (showMarker) {
+                const markerHtml = `<div style="
+                    width: 24px; height: 24px;
+                    background: var(--marker-color, #4d8eff);
                     border: 3px solid #fff;
                     border-radius: 50% 50% 50% 0;
                     transform: rotate(-45deg);
                     box-shadow: 0 2px 8px rgba(0,0,0,0.35);
                 "></div>`;
-            const icon = L.divIcon({
-                html: markerHtml,
-                className: '',
-                iconSize: [28, 28],
-                iconAnchor: [14, 28],
-            });
-            const marker = L.marker([coords.lat, coords.lng], { icon })
-                .addTo(map)
-                .bindTooltip(icao, {
-                    permanent: true, direction: 'right',
-                    className: 'hub-map-tooltip',
-                    offset: [10, -14],
-                });
-            markerRef.current = marker;
+                const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 24] });
+                const marker = L.marker([coords.lat, coords.lng], { icon })
+                    .addTo(map)
+                    .bindTooltip(icao, {
+                        permanent: true, direction: 'right',
+                        className: 'hub-map-tooltip',
+                        offset: [8, -12],
+                    });
+                markerRef.current = marker;
+            }
 
             mapInstanceRef.current = map;
             prevIcaoRef.current = icao;
 
         } else if (prevIcaoRef.current !== icao) {
-            // Cambio hub: anima la mappa verso le nuove coordinate
-            mapInstanceRef.current.flyTo([coords.lat, coords.lng], coords.zoom, {
-                duration: 1.2,
-                easeLinearity: 0.4,
+            mapInstanceRef.current.flyTo([coords.lat, coords.lng], zoom, {
+                duration: 1.2, easeLinearity: 0.4,
             });
-            // Riposiziona il marker e aggiorna il tooltip con il nuovo ICAO
             if (markerRef.current) {
                 markerRef.current.setLatLng([coords.lat, coords.lng]);
                 markerRef.current.setTooltipContent(icao);
             }
             prevIcaoRef.current = icao;
         }
-    }, [icao, coords, color]);
+    }, [icao, coords, zoom, showMarker]);
 
-    // ── Effetto 2: cambio tema ────────────────────────────────────────────────
-    // Swappa solo il tile layer CartoDB senza toccare il resto della mappa.
-    // Dipende esclusivamente da isDarkMode.
+    // Effetto 2: cambio tema — swappa solo il tile layer base
     useEffect(() => {
         if (!mapInstanceRef.current || !baseTileRef.current) return;
         const L = window.L;
         if (!L) return;
-
-        // Rimuove il vecchio layer base e ne crea uno nuovo con il tema corretto
         mapInstanceRef.current.removeLayer(baseTileRef.current);
         const newTileUrl = isDarkMode
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -420,14 +380,12 @@ const HubMap = ({ icao, color, isDarkMode }) => {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
             maxZoom: 19,
         });
-        // Il layer base va inserito sotto a tutti gli altri (z-index più basso)
-        // Leaflet gestisce l'ordine tramite pane — usiamo bringToBack()
         newBaseTile.addTo(mapInstanceRef.current);
         newBaseTile.bringToBack();
         baseTileRef.current = newBaseTile;
     }, [isDarkMode]);
 
-    // ── Cleanup alla smontatura ───────────────────────────────────────────────
+    // Cleanup alla smontatura
     useEffect(() => {
         return () => {
             if (mapInstanceRef.current) {
@@ -439,82 +397,291 @@ const HubMap = ({ icao, color, isDarkMode }) => {
         };
     }, []);
 
+    return coords;
+}
+
+// ---------------------------------------------------------------------------
+// HubMapOverview — zoom ampio (livello 8) per il contesto geografico.
+// Mostra dove si trova l'aeroporto all'interno della nazione/regione.
+// ---------------------------------------------------------------------------
+const HubMapOverview = ({ icao, color, isDarkMode }) => {
+    const mapRef = useRef(null);
+    const coords = useLeafletMap({ mapRef, icao, zoom: 8, isDarkMode, showMarker: true });
+
     return (
         <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-xl)',
             overflow: 'hidden',
-            position: 'relative',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
         }}>
-            {/* Header della sezione mappa */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '12px 18px',
                 borderBottom: '1px solid var(--color-border)',
+                flexShrink: 0,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Globe size={13} style={{ color }} />
+                    <span style={{ fontSize: '0.68rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)' }}>
+                        Location
+                    </span>
+                </div>
+                <a
+                    href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '0.7rem', color: 'var(--color-text-hint)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    onMouseEnter={e => e.currentTarget.style.color = color}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-hint)'}
+                >
+                    Open in Maps <ExternalLink size={10} />
+                </a>
+            </div>
+            <div ref={mapRef} style={{ height: '260px', width: '100%', '--marker-color': color }} />
+            <style>{`
+                .hub-map-tooltip {
+                    background: ${color} !important;
+                    color: #fff !important; border: none !important;
+                    border-radius: 6px !important;
+                    font-family: var(--font-family-mono) !important;
+                    font-weight: 700 !important; font-size: 0.78rem !important;
+                    padding: 2px 8px !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+                }
+                .hub-map-tooltip::before { display: none !important; }
+            `}</style>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// HubMapChart — carta aeroportuale con Mapbox GL JS.
+//
+// Usa lo stile cartografico di Mapbox (light-v11 / dark-v11) che a zoom 15
+// mostra piste, taxiway, apron e terminal con simbolologia dedicata — molto
+// superiore a qualsiasi tile layer generico.
+//
+// SETUP (una tantum):
+//   1. Registrati su https://account.mapbox.com (gratuito, 50k tile/mese)
+//   2. Copia il tuo Public Access Token (inizia con pk.eyJ1...)
+//   3. Aggiungilo su Vercel: Settings → Environment Variables
+//      Nome: VITE_MAPBOX_TOKEN   Valore: pk.eyJ1...
+//   4. Fai un redeploy
+//
+// Senza token la card mostra un placeholder con le istruzioni.
+// ---------------------------------------------------------------------------
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || null;
+
+// Carica il CSS di Mapbox GL una volta sola inserendo un <link> nel <head>.
+// Necessario perché Mapbox GL usa classi CSS proprie per i controlli UI.
+let mapboxCssLoaded = false;
+function ensureMapboxCss() {
+    if (mapboxCssLoaded || document.getElementById('mapbox-gl-css')) return;
+    const link = document.createElement('link');
+    link.id = 'mapbox-gl-css';
+    link.rel = 'stylesheet';
+    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css';
+    document.head.appendChild(link);
+    mapboxCssLoaded = true;
+}
+
+const HubMapChart = ({ icao, color, isDarkMode }) => {
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const prevIcaoRef = useRef(null);
+
+    const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
+
+    // Effetto 1: inizializzazione Mapbox GL e cambio hub
+    useEffect(() => {
+        if (!mapRef.current || !MAPBOX_TOKEN) return;
+
+        // Carica il CSS di Mapbox GL se non già presente
+        ensureMapboxCss();
+
+        // Carica lo script Mapbox GL via CDN se non ancora disponibile
+        const initMap = () => {
+            const mapboxgl = window.mapboxgl;
+            if (!mapboxgl) return;
+
+            if (!mapInstanceRef.current) {
+                // Prima montatura: crea la mappa Mapbox GL
+                mapboxgl.accessToken = MAPBOX_TOKEN;
+
+                const map = new mapboxgl.Map({
+                    container: mapRef.current,
+                    // light-v11 e dark-v11 sono gli stili cartografici di Mapbox:
+                    // mostrano aeroporti, piste e infrastrutture con simbolologia
+                    // dedicata, cambiando automaticamente con il tema Skydeck.
+                    style: isDarkMode
+                        ? 'mapbox://styles/mapbox/dark-v11'
+                        : 'mapbox://styles/mapbox/light-v11',
+                    center: [coords.lng, coords.lat], // Mapbox usa [lng, lat] — inverso rispetto a Leaflet
+                    zoom: 14,
+                    attributionControl: false, // gestiamo noi l'attribution
+                });
+
+                // Aggiunge solo il controllo zoom, senza compass (più pulito)
+                map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+
+                // Attribution compatta in basso a destra
+                map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+
+                // Disabilita lo scroll zoom per evitare scroll accidentale nella pagina
+                map.scrollZoom.disable();
+
+                mapInstanceRef.current = map;
+                prevIcaoRef.current = icao;
+
+            } else if (prevIcaoRef.current !== icao) {
+                // Cambio hub: animazione flyTo verso le nuove coordinate
+                mapInstanceRef.current.flyTo({
+                    center: [coords.lng, coords.lat],
+                    zoom: 14,
+                    duration: 1400,
+                    essential: true,
+                });
+                prevIcaoRef.current = icao;
+            }
+        };
+
+        if (window.mapboxgl) {
+            initMap();
+        } else {
+            // Carica Mapbox GL JS dal CDN se non ancora presente nella pagina
+            if (!document.getElementById('mapbox-gl-js')) {
+                const script = document.createElement('script');
+                script.id = 'mapbox-gl-js';
+                script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js';
+                script.onload = initMap;
+                document.head.appendChild(script);
+            } else {
+                // Script già in caricamento — aspetta che sia disponibile
+                const wait = setInterval(() => {
+                    if (window.mapboxgl) { clearInterval(wait); initMap(); }
+                }, 50);
+            }
+        }
+    }, [icao, coords]);
+
+    // Effetto 2: cambio tema — swappa lo stile Mapbox senza ricreare la mappa
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+        mapInstanceRef.current.setStyle(
+            isDarkMode
+                ? 'mapbox://styles/mapbox/dark-v11'
+                : 'mapbox://styles/mapbox/light-v11'
+        );
+    }, [isDarkMode]);
+
+    // Cleanup alla smontatura
+    useEffect(() => {
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
+
+    return (
+        <div style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+        }}>
+            {/* Header card */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 18px',
+                borderBottom: '1px solid var(--color-border)',
+                flexShrink: 0,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <MapPin size={13} style={{ color }} />
-                    <span style={{
-                        fontSize: '0.68rem', fontWeight: 500,
-                        textTransform: 'uppercase', letterSpacing: '0.08em',
-                        color: 'var(--color-text-hint)',
-                    }}>
-                        Airport Map
+                    <span style={{ fontSize: '0.68rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)' }}>
+                        Airport Chart
                     </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {!OPENAIP_KEY && (
-                        <span style={{
-                            fontSize: '0.62rem', color: 'var(--color-text-hint)',
-                            background: 'var(--color-background)',
-                            padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                            border: '1px solid var(--color-border)',
-                        }}>
-                            CartoDB · Add VITE_OPENAIP_KEY for aviation overlay
-                        </span>
-                    )}
-                    {OPENAIP_KEY && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {MAPBOX_TOKEN && (
                         <span style={{
                             fontSize: '0.62rem', color,
                             background: `${color}15`,
                             padding: '2px 7px', borderRadius: 'var(--radius-full)',
                             border: `1px solid ${color}30`,
+                            fontWeight: 500,
                         }}>
-                            CartoDB + OpenAIP
+                            Mapbox GL
                         </span>
                     )}
-                    <a
-                        href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            fontSize: '0.7rem', color: 'var(--color-text-hint)',
-                            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px',
-                        }}
-                    >
-                        Open in Maps <ExternalLink size={10} />
-                    </a>
+                    <span style={{
+                        fontSize: '0.62rem', color: 'var(--color-text-hint)',
+                        fontFamily: 'var(--font-family-mono)', fontWeight: 600,
+                    }}>
+                        {icao}
+                    </span>
                 </div>
             </div>
 
-            {/* Container della mappa */}
-            <div ref={mapRef} style={{ height: '300px', width: '100%' }} />
+            {/* Corpo: mappa Mapbox oppure placeholder se token mancante */}
+            {MAPBOX_TOKEN ? (
+                <div ref={mapRef} style={{ height: '260px', width: '100%' }} />
+            ) : (
+                <div style={{
+                    height: '260px', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    padding: '24px', textAlign: 'center',
+                    background: 'var(--color-background)',
+                }}>
+                    <MapPin size={28} strokeWidth={1.2} style={{ color: 'var(--color-text-hint)' }} />
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        Mapbox token required
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: '280px' }}>
+                        Add <code style={{ fontFamily: 'var(--font-family-mono)', background: 'var(--color-border)', padding: '1px 5px', borderRadius: '3px' }}>VITE_MAPBOX_TOKEN</code> to your Vercel environment variables to enable the airport chart.
+                    </div>
+                    <a
+                        href="https://account.mapbox.com"
+                        target="_blank" rel="noopener noreferrer"
+                        style={{
+                            fontSize: '0.72rem', color,
+                            textDecoration: 'none', fontWeight: 500,
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            marginTop: '4px',
+                        }}
+                    >
+                        Get free token at mapbox.com <ExternalLink size={10} />
+                    </a>
+                </div>
+            )}
 
-            {/* Tooltip CSS per il marker */}
+            {/* CSS per i controlli Mapbox — adattati al tema Skydeck */}
             <style>{`
-                .hub-map-tooltip {
-                    background: ${color} !important;
-                    color: #fff !important;
-                    border: none !important;
-                    border-radius: 6px !important;
-                    font-family: var(--font-family-mono) !important;
-                    font-weight: 700 !important;
-                    font-size: 0.8rem !important;
-                    padding: 2px 8px !important;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+                .mapboxgl-ctrl-group {
+                    background: var(--color-surface) !important;
+                    border: 1px solid var(--color-border) !important;
+                    box-shadow: var(--shadow-sm) !important;
+                    border-radius: var(--radius-md) !important;
                 }
-                .hub-map-tooltip::before { display: none !important; }
+                .mapboxgl-ctrl-group button {
+                    color: var(--color-text-secondary) !important;
+                }
+                .mapboxgl-ctrl-group button:hover {
+                    background: var(--color-background) !important;
+                }
+                .mapboxgl-ctrl-attrib {
+                    background: var(--color-surface) !important;
+                    font-size: 10px !important;
+                }
             `}</style>
         </div>
     );
@@ -1147,8 +1314,11 @@ export default function Hubs() {
                         </div>
                     </div>
 
-                    {/* ── Airport Map ── */}
-                    <HubMap icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
+                    {/* ── Maps: Location overview + Airport chart ── */}
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                        <HubMapOverview icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
+                        <HubMapChart icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
+                    </div>
 
                     {/* ── Main grid ── */}
                     <div style={{
