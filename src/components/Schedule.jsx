@@ -5,6 +5,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getAuth } from 'firebase/auth';
+// Importa aggregateStats da useCopilot — è la stessa funzione usata dal
+// Copilot globale, garantisce che i campi stats siano identici a quelli
+// attesi dal buildPrompt della Cloud Function askCopilot.
+// Non usiamo buildScheduleStats perché ha una struttura diversa e incompleta.
+import { aggregateStats } from '../hooks/useCopilot';
 import { findAirport } from '../utils/airportUtils';
 import airports from 'airport-data';
 import { majorDestinations } from '../data/majorDestinations';
@@ -324,16 +330,23 @@ function buildScheduleStats(flights, allianceName) {
 }
 
 async function callCopilot(message, flights, allianceName) {
-    const stats = buildScheduleStats(flights, allianceName);
+    // aggregateStats produce lo stesso oggetto stats usato dal Copilot globale,
+    // con tutti i campi che buildPrompt in index.js si aspetta (topAirportList,
+    // compressedLogbook, uniqueAirports, ecc.). buildScheduleStats aveva una
+    // struttura diversa e incompleta che causava errori nella Cloud Function.
+    const stats = aggregateStats(flights);
+
+    const auth = getAuth();
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('Utente non autenticato.');
+
     const res = await fetch(COPILOT_FUNCTION_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, stats: stats || {
-            totalFlights:0, totalHours:'0', totalMiles:'0', topAirline:'—',
-            topAirlineList:'—', topRouteList:'—', topDestList:'—',
-            monthlyDistribution:'—', lastFlight:'—', aircraftLogbook:'—',
-            flightsLastMonth:0, avgHours:'0', longestFlight:'—', nextFlight:'—',
-        }, history: [] }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message, stats, history: [] }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res;
@@ -563,6 +576,29 @@ function RouteMap({ origin, dest, isDarkMode }) {
     return <div ref={mapRef} style={{width:'100%',height:'100%'}} />;
 }
 
+
+// ── Weather condition classifier ────────────────────────────────────────────
+// Restituisce { color, label, dot } in base alle condizioni METAR.
+// Logica semplificata ma realistica: vento e visibilità sono i fattori chiave
+// per un simulatore — non serve la precisione di un sistema ATC reale.
+function classifyWx(wx) {
+    if (!wx || wx === 'loading' || wx === 'unavailable') {
+        return { color: 'var(--color-text-hint)', label: 'Unknown', dot: '○' };
+    }
+    const wspd = wx.wind ? parseInt(wx.wind.split('/')[1]) : 0;
+    const pres  = wx.pres || 1013;
+    // Condizioni severe: vento forte o pressione molto bassa
+    if (wspd > 25 || pres < 990) {
+        return { color: 'var(--color-danger)', label: 'Severe', dot: '●' };
+    }
+    // Condizioni marginate: vento moderato o pressione bassa
+    if (wspd > 15 || pres < 1005) {
+        return { color: 'var(--color-warning)', label: 'Marginal', dot: '●' };
+    }
+    // Condizioni buone: VFR/CAVOK
+    return { color: 'var(--color-success)', label: 'Good', dot: '●' };
+}
+
 /* ── Weather strip — mirrors MiniMetar from SimBriefBriefing exactly ── */
 function WxStrip({ icao, wx }) {
     if (wx === 'loading' || wx === undefined) {
@@ -626,6 +662,12 @@ export default function Schedule({ flights=[], user }) {
     const [loading, setLoading]           = useState(true);
     const [selectedHaul, setSelectedHaul] = useState('SHORT');
     const [weatherCache, setWeatherCache] = useState({});
+    // Timestamp dell'ultima generazione — mostrato come "Updated X ago"
+    // per dare contesto all'utente su quanto sono fresche le suggestions
+    const [generatedAt, setGeneratedAt]   = useState(null);
+    // Traccia quale haul ha appena fatto dispatch verso SimBrief
+    // null = nessun dispatch recente; 'SHORT'|'MEDIUM'|'LONG' = dispatched
+    const [dispatchedHaul, setDispatchedHaul] = useState(null);
 
     /* ── Derive default alliance from last flight ── */
     const defaultAlliance = useMemo(() => {
@@ -685,6 +727,17 @@ export default function Schedule({ flights=[], user }) {
         });
         return res;
     },[flights]);
+
+    // Pre-calcola le stats dell'alleanza attiva per l'header AI context.
+    // Deve stare QUI — dopo selectedAlliance (riga ~683) perché ne dipende.
+    // useMemo garantisce che buildScheduleStats venga ricalcolata solo quando
+    // flights o selectedAlliance cambiano davvero, non ad ogni render.
+    const schedStats = React.useMemo(
+        () => buildScheduleStats(flights, selectedAlliance),
+        [flights, selectedAlliance]
+    );
+    const aiContextTopRoute   = schedStats?.topRouteList?.split(',')[0]?.split('(')[0]?.trim() || null;
+    const aiContextTopAirline = schedStats?.topAirline !== '—' ? schedStats?.topAirline : null;
 
     /* ── Generate suggestions ── */
     const generateSuggestions = (allianceName, forceRandom=false) => {
@@ -847,6 +900,7 @@ export default function Schedule({ flights=[], user }) {
     const handleRegenerate = async()=>{
         const newS=generateSuggestions(selectedAlliance,true);
         setSuggestions(p=>({...p,[selectedAlliance]:newS}));
+        setGeneratedAt(Date.now());
         if (user) {
             try {
                 const ref=doc(db,'users',user.uid,'settings','schedule');
@@ -924,6 +978,7 @@ export default function Schedule({ flights=[], user }) {
             HAUL_TYPES.findIndex(h=>h.key===a.key) - HAUL_TYPES.findIndex(h=>h.key===b.key)
         );
         setSuggestions(p => ({ ...p, [selectedAlliance]: newS }));
+        setGeneratedAt(Date.now());
         if (user) {
             try {
                 const ref = doc(db, 'users', user.uid, 'settings', 'schedule');
@@ -957,12 +1012,30 @@ export default function Schedule({ flights=[], user }) {
                     <h1 className="page-title"><Calendar className="title-icon"/> Flight Schedule</h1>
                     {activeLastFlight && (
                         <p className="sched-header-sub">
-                            From <strong>{String(activeLastFlight.arrival).toUpperCase()}</strong>
-                            {' — '}{findAirport(activeLastFlight.arrival)?.name||activeLastFlight.arrival}
+                            Departing from <strong>{String(activeLastFlight.arrival).toUpperCase()}</strong>
+                            {' · '}
+                            <span style={{ color: 'var(--color-text-hint)', fontSize: '0.75rem' }}>
+                                AI suggestions based on your{aiContextTopRoute ? <> top route <strong style={{ color: 'var(--color-text-secondary)' }}>{aiContextTopRoute}</strong></> : ' flight history'}
+                                {aiContextTopAirline ? <> and <strong style={{ color: 'var(--color-text-secondary)' }}>{aiContextTopAirline}</strong> preference</> : ''}
+                            </span>
                         </p>
                     )}
                 </div>
                 <div className="sched-header-actions">
+                    {/* Timestamp ultima generazione — "Updated X ago" */}
+                    {generatedAt && (() => {
+                        const diffMin = Math.round((Date.now() - generatedAt) / 60000);
+                        const label = diffMin < 1 ? 'Just now' : diffMin < 60 ? `${diffMin}m ago` : `${Math.round(diffMin/60)}h ago`;
+                        return (
+                            <span style={{
+                                fontSize: '0.68rem', color: 'var(--color-text-hint)',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                fontFamily: 'var(--font-family-mono)',
+                            }}>
+                                <RefreshCw size={10}/> Updated {label}
+                            </span>
+                        );
+                    })()}
                     {ALLIANCES.map(al=>{
                         const count=analysis.allianceFlightCounts[al.name];
                         const isActive=selectedAlliance===al.name;
@@ -1007,11 +1080,29 @@ export default function Schedule({ flights=[], user }) {
                         const suggestedAirline = s ? pickAirlineForRoute(selectedAlliance, s.origin.icao, s.dest.icao) : null;
                         const suggestedAircraft = s ? pickAircraftForHaul(haul.key, s.origin.icao, s.dest.icao) : null;
                         const sbUrl = s ? buildSimbriefUrl(s, suggestedAirline, suggestedAircraft) : null;
+                        // Hub accent color — se l'aeroporto di partenza è un hub noto, usiamo il suo colore
+                        const HUB_ACCENT = {
+                            LFPG:'#4d8eff',LIRF:'#ff6b6b',KLAX:'#00c4f4',EGLL:'#ff5c7a',
+                            EDDF:'#ffaa44',EHAM:'#3de0a0',EDDM:'#a78bfa',OMAA:'#ffd166',
+                            KJFK:'#2dd4bf',VTBS:'#6ee06e',LEMD:'#f97316',
+                        };
+                        const hubAccent = s ? (HUB_ACCENT[s.origin.icao] || null) : null;
+                        // Classificazione condizioni meteo origine e destinazione
+                        const wxOriginCond = classifyWx(wx_dep);
+                        const wxDestCond   = classifyWx(wx_arr);
+                        // Stima sessione di simulazione: distanza / 450 ktas + 30min pre/post
+                        const sessionHours = s ? ((s.dest.distance / 450) + 0.5).toFixed(1) : null;
+                        // Flag per micro-stato post-dispatch
+                        const isDispatched = dispatchedHaul === haul.key;
                         return (
                             <div
                                 key={haul.key}
                                 className={`fcard card ${isActive?'fcard-active':''}`}
-                                style={{'--haul-c':haul.color,'--haul-rgb':haul.rgb,'--anim-delay':`${idx*70}ms`}}
+                                style={{
+                                    '--haul-c': hubAccent || haul.color,
+                                    '--haul-rgb': haul.rgb,
+                                    '--anim-delay': `${idx*70}ms`,
+                                }}
                                 onClick={()=>s&&setSelectedHaul(haul.key)}
                             >
                                 {/* Top bar */}
@@ -1080,6 +1171,28 @@ export default function Schedule({ flights=[], user }) {
                                                     <span className="fcard-info-l">Route type</span>
                                                     <span className="fcard-info-v">{s.origin.country===s.dest.country?'Domestic':'International'}</span>
                                                 </div>
+                                                {/* Session estimator — quanto tempo serve per questo volo */}
+                                                {sessionHours && (
+                                                    <div className="fcard-info-item">
+                                                        <span className="fcard-info-l">Session est.</span>
+                                                        <span className="fcard-info-v">~{sessionHours}h</span>
+                                                    </div>
+                                                )}
+                                                {/* Condizioni meteo sintetiche origine + destinazione */}
+                                                <div className="fcard-info-item">
+                                                    <span className="fcard-info-l">Wx Origin</span>
+                                                    <span className="fcard-info-v" style={{ color: wxOriginCond.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span style={{ fontSize: '0.65rem' }}>{wxOriginCond.dot}</span>
+                                                        {wxOriginCond.label}
+                                                    </span>
+                                                </div>
+                                                <div className="fcard-info-item">
+                                                    <span className="fcard-info-l">Wx Dest</span>
+                                                    <span className="fcard-info-v" style={{ color: wxDestCond.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span style={{ fontSize: '0.65rem' }}>{wxDestCond.dot}</span>
+                                                        {wxDestCond.label}
+                                                    </span>
+                                                </div>
                                                 {s.visitCount>0 ? (
                                                     <div className="fcard-info-item">
                                                         <span className="fcard-info-l">Status</span>
@@ -1112,23 +1225,49 @@ export default function Schedule({ flights=[], user }) {
                                             </div>
                                         </div>
 
-                                        {/* SimBrief CTA */}
+                                        {/* SimBrief CTA — si trasforma in micro-stato post-dispatch */}
                                         {sbUrl && (
                                             <div className="fcard-simbrief">
-                                                <a
-                                                    href={sbUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="simbrief-btn"
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch {}
-                                                    }}
-                                                >
-                                                    <ExternalLink size={13}/>
-                                                    Plan on SimBrief
-                                                    <span className="simbrief-route">{s.origin.icao} → {s.dest.icao}</span>
-                                                </a>
+                                                {isDispatched ? (
+                                                    // Banner post-dispatch: guida l'utente verso Briefing
+                                                    <div className="simbrief-dispatched">
+                                                        <span className="simbrief-dispatched-check">✓</span>
+                                                        <span className="simbrief-dispatched-text">
+                                                            Plan dispatched to SimBrief
+                                                        </span>
+                                                        <a
+                                                            href="/briefing"
+                                                            className="simbrief-dispatched-link"
+                                                            onClick={e => e.stopPropagation()}
+                                                        >
+                                                            Open Briefing →
+                                                        </a>
+                                                        <button
+                                                            className="simbrief-dispatched-reset"
+                                                            onClick={e => { e.stopPropagation(); setDispatchedHaul(null); }}
+                                                            title="Plan again"
+                                                        >
+                                                            <RefreshCw size={11}/>
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <a
+                                                        href={sbUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="simbrief-btn"
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            // Segna questo haul come dispatched e salva nel localStorage
+                                                            setDispatchedHaul(haul.key);
+                                                            try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch {}
+                                                        }}
+                                                    >
+                                                        <ExternalLink size={13}/>
+                                                        Plan on SimBrief
+                                                        <span className="simbrief-route">{s.origin.icao} → {s.dest.icao}</span>
+                                                    </a>
+                                                )}
                                             </div>
                                         )}
 
@@ -1160,11 +1299,32 @@ export default function Schedule({ flights=[], user }) {
                             </div>
                         )}
                     </div>
-                    {activeHaul&&(
-                        <div className="map-dist-badge">
-                            {activeHaul.dest.distance.toLocaleString()} NM
-                        </div>
-                    )}
+                    {activeHaul && (() => {
+                        const wxO = classifyWx(weatherCache[activeHaul.origin.icao] ?? null);
+                        const wxD = classifyWx(weatherCache[activeHaul.dest.icao]   ?? null);
+                        return (
+                            <div className="map-info-bar">
+                                {/* Colonna sinistra: distanza + sessione */}
+                                <div className="map-info-bar-left">
+                                    <span className="map-info-dist">{activeHaul.dest.distance.toLocaleString()} NM</span>
+                                    <span className="map-info-sep">·</span>
+                                    <span className="map-info-session">~{((activeHaul.dest.distance / 450) + 0.5).toFixed(1)}h session</span>
+                                </div>
+                                {/* Colonna destra: condizioni meteo origine → destinazione */}
+                                <div className="map-info-bar-right">
+                                    <span className="map-info-wx" style={{ color: wxO.color }}>
+                                        <span className="map-info-wx-dot">{wxO.dot}</span>
+                                        {activeHaul.origin.icao}
+                                    </span>
+                                    <span className="map-info-arrow">→</span>
+                                    <span className="map-info-wx" style={{ color: wxD.color }}>
+                                        <span className="map-info-wx-dot">{wxD.dot}</span>
+                                        {activeHaul.dest.icao}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* AI Schedule Chat — Option C */}
                     <ScheduleChat flights={flights} allianceName={selectedAlliance} />
@@ -1280,6 +1440,14 @@ export default function Schedule({ flights=[], user }) {
                 .simbrief-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-md); font-size: .76rem; font-weight: 700; font-family: var(--font-family-display); letter-spacing: .02em; text-decoration: none; background: rgba(var(--haul-rgb), .08); color: var(--haul-c); border: 1px solid rgba(var(--haul-rgb), .25); transition: all .15s; cursor: pointer; }
                 .simbrief-btn:hover { background: rgba(var(--haul-rgb), .16); border-color: rgba(var(--haul-rgb), .5); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(var(--haul-rgb), .2); }
                 .simbrief-route { font-size: .68rem; font-weight: 500; opacity: .7; font-family: var(--font-family-mono, monospace); margin-left: 4px; }
+                /* ── Post-dispatch state — si sostituisce al simbrief-btn dopo il click ── */
+                .simbrief-dispatched { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--color-success-bg); border:1px solid var(--color-success); border-radius:var(--radius-md); animation:fadeIn .2s ease; }
+                .simbrief-dispatched-check { font-size:1rem; color:var(--color-success); font-weight:700; flex-shrink:0; }
+                .simbrief-dispatched-text { font-size:.78rem; font-weight:600; color:var(--color-success); flex:1; font-family:var(--font-family-display); }
+                .simbrief-dispatched-link { font-size:.78rem; font-weight:700; color:var(--color-primary); text-decoration:none; white-space:nowrap; flex-shrink:0; font-family:var(--font-family-display); padding:4px 10px; background:var(--color-primary-light); border-radius:var(--radius-full); transition:all .15s; }
+                .simbrief-dispatched-link:hover { background:var(--color-primary); color:#fff; }
+                .simbrief-dispatched-reset { background:none; border:none; cursor:pointer; padding:2px 4px; color:var(--color-success); opacity:.6; display:flex; align-items:center; border-radius:var(--radius-sm); transition:opacity .15s; flex-shrink:0; }
+                .simbrief-dispatched-reset:hover { opacity:1; }
 
                 /* ── AI Route Insight ── */
                 .fcard-insight { padding: var(--space-3) var(--space-6); border-top: 1px solid var(--color-border); }
@@ -1311,7 +1479,24 @@ export default function Schedule({ flights=[], user }) {
                 .sched-map-col { position: static; display: flex; flex-direction: column; gap: var(--space-3); }
                 .sched-map-box { padding: 0; overflow: hidden; height: 500px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
                 .map-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); color: var(--color-text-hint); font-size: .8rem; }
-                .map-dist-badge { align-self: flex-start; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 5px 14px; font-family: var(--font-family-display); font-size: .78rem; font-weight: 800; color: var(--color-text-primary); }
+                .map-dist-badge { display:flex; align-items:center; gap:8px; padding:6px 12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:.75rem; font-weight:600; font-family:var(--font-family-mono); color:var(--color-text-primary); align-self:flex-start; }
+                /* ── Info bar sotto la mappa — tutta larghezza, due colonne ── */
+                .map-info-bar {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 10px 16px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    border-radius: var(--radius-lg);
+                    font-family: var(--font-family-mono);
+                }
+                .map-info-bar-left { display: flex; align-items: center; gap: 6px; }
+                .map-info-dist { font-size: .8rem; font-weight: 700; color: var(--color-text-primary); }
+                .map-info-sep { color: var(--color-text-hint); font-size: .7rem; }
+                .map-info-session { font-size: .72rem; color: var(--color-text-hint); font-weight: 500; }
+                .map-info-bar-right { display: flex; align-items: center; gap: 6px; }
+                .map-info-wx { display: flex; align-items: center; gap: 3px; font-size: .72rem; font-weight: 600; }
+                .map-info-wx-dot { font-size: .6rem; }
+                .map-info-arrow { color: var(--color-text-hint); font-size: .65rem; }
 
                 /* ── Loader ── */
                 .persistence-loader { position: fixed; bottom: var(--space-12); right: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); padding: var(--space-2) var(--space-4); border-radius: var(--radius-full); display: flex; align-items: center; gap: var(--space-2); font-size: .72rem; font-weight: 600; color: var(--color-text-secondary); box-shadow: var(--shadow-lg); z-index: 100; }

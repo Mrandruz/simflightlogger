@@ -18,15 +18,14 @@ const FUNCTION_URL =
 // ---------------------------------------------------------------------------
 // Aggregazione statistica — riduce i token inviati al modello
 // ---------------------------------------------------------------------------
-const aggregateStats = (flights) => {
+export const aggregateStats = (flights) => {
     if (!flights || flights.length === 0) return null;
 
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const aircraftCount = {};
-    const airportCount = {};   // movements: dep+arr, ogni volo conta 2 volte (metrica Hubs)
-    const flightCountByAirport = {}; // flights: quanti voli coinvolgono questo aeroporto (metrica Copilot legacy)
+    const airportCount = {};
     const airlineCount = {};
     const routeCount = {};
     const monthlyCount = {};
@@ -76,14 +75,8 @@ const aggregateStats = (flights) => {
             }
         }
 
-        // Movements: ogni volo vale +1 per departure E +1 per arrival (metrica usata in Hubs)
         if (f.departure) airportCount[f.departure] = (airportCount[f.departure] || 0) + 1;
         if (f.arrival) airportCount[f.arrival] = (airportCount[f.arrival] || 0) + 1;
-        // Flights: un volo vale 1 indipendentemente da quanti aeroporti tocca (metrica Copilot legacy)
-        const touchedAirports = new Set([f.departure, f.arrival].filter(Boolean));
-        touchedAirports.forEach(icao => {
-            flightCountByAirport[icao] = (flightCountByAirport[icao] || 0) + 1;
-        });
         if (f.airline) airlineCount[f.airline] = (airlineCount[f.airline] || 0) + 1;
         if (f.departure && f.arrival) {
             const key = `${f.departure}→${f.arrival}`;
@@ -123,7 +116,6 @@ const aggregateStats = (flights) => {
         totalHours: totalHours.toFixed(1),
         totalMiles: Math.round(totalMiles).toLocaleString(),
         topAircraft: Object.entries(aircraftCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
-        // topAirport usa movements (coerente con la pagina Hubs)
         topAirport: Object.entries(airportCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
         topAirline: Object.entries(airlineCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
         topRoute: Object.entries(routeCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
@@ -133,12 +125,7 @@ const aggregateStats = (flights) => {
             ? `${longestFlight.departure}→${longestFlight.arrival} (${Math.round(longestFlight.miles || 0)} nm)`
             : '—',
         topAircraftList: top(aircraftCount),
-        // Classifica aeroporti per MOVEMENTS (dep+arr sommati) — coerente con pagina Hubs
-        // Formato: "LFPG (47), LIRF (38), ..." dove il numero è il totale movimenti
         topAirportList: top(airportCount),
-        // Classifica aeroporti per VOLI DISTINTI — utile quando l'utente chiede
-        // "quanti voli ho fatto passando per X" senza contare dep e arr separatamente
-        topAirportListByFlights: top(flightCountByAirport),
         topRouteList: top(routeCount),
         monthlyDistribution: Object.entries(monthlyCount)
             .sort(([a], [b]) => a.localeCompare(b))

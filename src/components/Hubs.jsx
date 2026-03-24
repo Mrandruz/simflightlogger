@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import {
     MapPin, Clock, Route, TrendingUp, Star, Plane, Calendar,
     ExternalLink, Building2, Globe, RefreshCw, ChevronRight,
-    Award, BarChart2, Layers
+    Award, BarChart2, Layers, Gauge, Wind, Thermometer, Droplets
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -417,6 +417,7 @@ const HubMapOverview = ({ icao, color, isDarkMode }) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
+            alignSelf: 'stretch',
         }}>
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -440,7 +441,9 @@ const HubMapOverview = ({ icao, color, isDarkMode }) => {
                     Open in Maps <ExternalLink size={10} />
                 </a>
             </div>
-            <div ref={mapRef} style={{ height: '260px', width: '100%', '--marker-color': color }} />
+            {/* flex:1 fa sì che la mappa occupi tutto lo spazio verticale rimasto
+                nella card, allineandosi automaticamente all'altezza della card destra */}
+            <div ref={mapRef} style={{ flex: 1, width: '100%', minHeight: '220px', '--marker-color': color }} />
             <style>{`
                 .hub-map-tooltip {
                     background: ${color} !important;
@@ -458,135 +461,175 @@ const HubMapOverview = ({ icao, color, isDarkMode }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Dati statici per la card operativa — frequenze, IATA code, fuso orario, piste.
+// Hardcodati per i 10 hub principali, completamente zero-dependency.
 // ---------------------------------------------------------------------------
-// HubMapChart — carta aeroportuale con Mapbox GL JS.
-//
-// Usa lo stile cartografico di Mapbox (light-v11 / dark-v11) che a zoom 15
-// mostra piste, taxiway, apron e terminal con simbolologia dedicata — molto
-// superiore a qualsiasi tile layer generico.
-//
-// SETUP (una tantum):
-//   1. Registrati su https://account.mapbox.com (gratuito, 50k tile/mese)
-//   2. Copia il tuo Public Access Token (inizia con pk.eyJ1...)
-//   3. Aggiungilo su Vercel: Settings → Environment Variables
-//      Nome: VITE_MAPBOX_TOKEN   Valore: pk.eyJ1...
-//   4. Fai un redeploy
-//
-// Senza token la card mostra un placeholder con le istruzioni.
+const AIRPORT_INFO = {
+    LFPG: { iata: 'CDG', name: 'Charles de Gaulle', city: 'Paris', country: 'France',
+             tz: 'CET', utcOffset: '+1', runways: ['09L/27R', '09R/27L', '08L/26R', '08R/26L'],
+             tower: '120.900', ground: '121.650', atis: '126.500' },
+    LIRF: { iata: 'FCO', name: 'Leonardo da Vinci', city: 'Rome', country: 'Italy',
+             tz: 'CET', utcOffset: '+1', runways: ['07/25', '16L/34R', '16R/34L'],
+             tower: '118.700', ground: '121.800', atis: '121.775' },
+    KLAX: { iata: 'LAX', name: 'Los Angeles Intl', city: 'Los Angeles', country: 'USA',
+             tz: 'PST', utcOffset: '-8', runways: ['06L/24R', '06R/24L', '07L/25R', '07R/25L'],
+             tower: '133.900', ground: '121.750', atis: '133.800' },
+    EGLL: { iata: 'LHR', name: 'Heathrow', city: 'London', country: 'UK',
+             tz: 'GMT', utcOffset: '+0', runways: ['09L/27R', '09R/27L'],
+             tower: '118.500', ground: '121.900', atis: '128.075' },
+    EDDF: { iata: 'FRA', name: 'Frankfurt', city: 'Frankfurt', country: 'Germany',
+             tz: 'CET', utcOffset: '+1', runways: ['07L/25R', '07C/25C', '07R/25L', '18'],
+             tower: '119.900', ground: '121.800', atis: '118.025' },
+    EHAM: { iata: 'AMS', name: 'Schiphol', city: 'Amsterdam', country: 'Netherlands',
+             tz: 'CET', utcOffset: '+1', runways: ['04/22', '06/24', '09/27', '18L/36R', '18C/36C', '18R/36L'],
+             tower: '118.100', ground: '121.800', atis: '132.975' },
+    EDDM: { iata: 'MUC', name: 'Munich', city: 'Munich', country: 'Germany',
+             tz: 'CET', utcOffset: '+1', runways: ['08L/26R', '08R/26L'],
+             tower: '120.775', ground: '121.975', atis: '123.125' },
+    OMAA: { iata: 'AUH', name: 'Abu Dhabi Intl', city: 'Abu Dhabi', country: 'UAE',
+             tz: 'GST', utcOffset: '+4', runways: ['13L/31R', '13R/31L'],
+             tower: '118.200', ground: '121.900', atis: '127.350' },
+    KJFK: { iata: 'JFK', name: 'John F. Kennedy', city: 'New York', country: 'USA',
+             tz: 'EST', utcOffset: '-5', runways: ['04L/22R', '04R/22L', '13L/31R', '13R/31L'],
+             tower: '119.100', ground: '121.900', atis: '128.725' },
+    VTBS: { iata: 'BKK', name: 'Suvarnabhumi', city: 'Bangkok', country: 'Thailand',
+             tz: 'ICT', utcOffset: '+7', runways: ['01L/19R', '01R/19L'],
+             tower: '118.100', ground: '121.800', atis: '128.150' },
+    LEMD: { iata: 'MAD', name: 'Barajas', city: 'Madrid', country: 'Spain',
+             tz: 'CET', utcOffset: '+1', runways: ['14L/32R', '14R/32L', '18L/36R', '18R/36L'],
+             tower: '118.150', ground: '121.700', atis: '127.175' },
+};
+
+// Costruisce il link Navigraph per un ICAO e una sezione specifica.
+// Il formato del link è stabile — Navigraph Charts usa query params standard.
+const navigraphUrl = (icao, section = 'Charts', category = 'ARR') =>
+    `https://charts.navigraph.com/airport/${icao}?section=${section}&chartCategory=${category}&informationSection=General&procedureSection=Departures&weatherSection=METAR&networksSection=Gates&ATISSection=Real`;
+
 // ---------------------------------------------------------------------------
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || null;
+// HubWeather — widget METAR identico a WxStrip in Schedule.
+// Fetcha /api/metar?ids={icao}&format=json e mostra PRES, WIND, TEMP, DEW
+// con la stessa griglia a 4 colonne e gli stessi skeleton di caricamento.
+// ---------------------------------------------------------------------------
+const HubWeather = ({ icao }) => {
+    const [wx, setWx] = useState('loading'); // 'loading' | 'unavailable' | { pres, wind, temp, dew }
 
-// Carica il CSS di Mapbox GL una volta sola inserendo un <link> nel <head>.
-// Necessario perché Mapbox GL usa classi CSS proprie per i controlli UI.
-let mapboxCssLoaded = false;
-function ensureMapboxCss() {
-    if (mapboxCssLoaded || document.getElementById('mapbox-gl-css')) return;
-    const link = document.createElement('link');
-    link.id = 'mapbox-gl-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css';
-    document.head.appendChild(link);
-    mapboxCssLoaded = true;
-}
-
-const HubMapChart = ({ icao, color, isDarkMode }) => {
-    const mapRef = useRef(null);
-    const mapInstanceRef = useRef(null);
-    const prevIcaoRef = useRef(null);
-
-    const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
-
-    // Effetto 1: inizializzazione Mapbox GL e cambio hub
     useEffect(() => {
-        if (!mapRef.current || !MAPBOX_TOKEN) return;
-
-        // Carica il CSS di Mapbox GL se non già presente
-        ensureMapboxCss();
-
-        // Carica lo script Mapbox GL via CDN se non ancora disponibile
-        const initMap = () => {
-            const mapboxgl = window.mapboxgl;
-            if (!mapboxgl) return;
-
-            if (!mapInstanceRef.current) {
-                // Prima montatura: crea la mappa Mapbox GL
-                mapboxgl.accessToken = MAPBOX_TOKEN;
-
-                const map = new mapboxgl.Map({
-                    container: mapRef.current,
-                    // light-v11 e dark-v11 sono gli stili cartografici di Mapbox:
-                    // mostrano aeroporti, piste e infrastrutture con simbolologia
-                    // dedicata, cambiando automaticamente con il tema Skydeck.
-                    style: isDarkMode
-                        ? 'mapbox://styles/mapbox/dark-v11'
-                        : 'mapbox://styles/mapbox/light-v11',
-                    center: [coords.lng, coords.lat], // Mapbox usa [lng, lat] — inverso rispetto a Leaflet
-                    zoom: 14,
-                    attributionControl: false, // gestiamo noi l'attribution
+        if (!icao) return;
+        setWx('loading');
+        fetch(`/api/metar?ids=${icao}&format=json`)
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(data => {
+                const m = Array.isArray(data) ? data[0] : data;
+                if (!m) { setWx('unavailable'); return; }
+                setWx({
+                    pres: m.altim  != null ? Math.round(m.altim)  : null,
+                    wind: m.wdir   != null && m.wspd != null
+                        ? `${m.wdir}°/${m.wspd}kt` : null,
+                    temp: m.temp   != null ? Math.round(m.temp)   : null,
+                    dew:  m.dewp   != null ? Math.round(m.dewp)   : null,
                 });
+            })
+            .catch(() => setWx('unavailable'));
+    }, [icao]);
 
-                // Aggiunge solo il controllo zoom, senza compass (più pulito)
-                map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+    // Skeleton di caricamento — stili inline con animazione shimmer
+    if (wx === 'loading') return (
+        <>
+            <style>{`
+                @keyframes hub-shimmer {
+                    0%   { background-position: -200% 0; }
+                    100% { background-position:  200% 0; }
+                }
+                .hub-skel {
+                    background: linear-gradient(
+                        90deg,
+                        var(--color-border) 25%,
+                        var(--color-background) 50%,
+                        var(--color-border) 75%
+                    );
+                    background-size: 200% 100%;
+                    animation: hub-shimmer 1.5s infinite;
+                    border-radius: 4px;
+                }
+            `}</style>
+            <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px',
+                background: 'var(--color-background)',
+                padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border)',
+            }}>
+                {[0,1,2,3].map(i => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                        <div className="hub-skel" style={{ width: 16, height: 16 }} />
+                        <div className="hub-skel" style={{ width: 24, height: 8 }} />
+                        <div className="hub-skel" style={{ width: 34, height: 12 }} />
+                    </div>
+                ))}
+            </div>
+        </>
+    );
 
-                // Attribution compatta in basso a destra
-                map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+    // Dati non disponibili — messaggio discreto con icona
+    if (wx === 'unavailable' || !wx) return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 12px',
+            background: 'var(--color-background)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-hint)',
+            fontSize: '0.75rem',
+        }}>
+            <Gauge size={13} style={{ flexShrink: 0 }} />
+            No weather data available
+        </div>
+    );
 
-                // Disabilita lo scroll zoom per evitare scroll accidentale nella pagina
-                map.scrollZoom.disable();
+    const fields = [
+        { icon: <Gauge size={14} />,       label: 'PRES', value: wx.pres ?? '--' },
+        { icon: <Wind size={14} />,        label: 'WIND', value: wx.wind ?? '--' },
+        { icon: <Thermometer size={14} />, label: 'TEMP', value: wx.temp != null ? `${wx.temp}°` : '--' },
+        { icon: <Droplets size={14} />,    label: 'DEW',  value: wx.dew  != null ? `${wx.dew}°`  : '--' },
+    ];
 
-                mapInstanceRef.current = map;
-                prevIcaoRef.current = icao;
+    return (
+        <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px',
+            background: 'var(--color-background)',
+            padding: '10px 12px', borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)',
+        }}>
+            {fields.map(({ icon, label, value }) => (
+                <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ color: 'var(--color-text-hint)' }}>{icon}</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-hint)' }}>
+                        {label}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 500, fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-primary)' }}>
+                        {value}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
 
-            } else if (prevIcaoRef.current !== icao) {
-                // Cambio hub: animazione flyTo verso le nuove coordinate
-                mapInstanceRef.current.flyTo({
-                    center: [coords.lng, coords.lat],
-                    zoom: 14,
-                    duration: 1400,
-                    essential: true,
-                });
-                prevIcaoRef.current = icao;
-            }
-        };
+// ---------------------------------------------------------------------------
+// HubInfoCard — card destra: dati operativi dell'aeroporto + accesso rapido
+// a Navigraph Charts con link contestuali per ARR, DEP, METAR, Gates.
+// ---------------------------------------------------------------------------
+const HubInfoCard = ({ icao, color, activeHub }) => {
+    const info = AIRPORT_INFO[icao] || {};
+    const maxFlights = activeHub?.totalFlights || 1;
 
-        if (window.mapboxgl) {
-            initMap();
-        } else {
-            // Carica Mapbox GL JS dal CDN se non ancora presente nella pagina
-            if (!document.getElementById('mapbox-gl-js')) {
-                const script = document.createElement('script');
-                script.id = 'mapbox-gl-js';
-                script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js';
-                script.onload = initMap;
-                document.head.appendChild(script);
-            } else {
-                // Script già in caricamento — aspetta che sia disponibile
-                const wait = setInterval(() => {
-                    if (window.mapboxgl) { clearInterval(wait); initMap(); }
-                }, 50);
-            }
-        }
-    }, [icao, coords]);
-
-    // Effetto 2: cambio tema — swappa lo stile Mapbox senza ricreare la mappa
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-        mapInstanceRef.current.setStyle(
-            isDarkMode
-                ? 'mapbox://styles/mapbox/dark-v11'
-                : 'mapbox://styles/mapbox/light-v11'
-        );
-    }, [isDarkMode]);
-
-    // Cleanup alla smontatura
-    useEffect(() => {
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
-    }, []);
+    // Bottoni Navigraph con icone testuali e link diretti alle sezioni
+    const navLinks = [
+        { label: 'ARR',     url: navigraphUrl(icao, 'Charts', 'ARR') },
+        { label: 'DEP',     url: navigraphUrl(icao, 'Charts', 'DEP') },
+        // TAXI punta alla scheda Ground/Taxi di Navigraph Charts
+        { label: 'APT',     url: `https://charts.navigraph.com/airport/${icao}?informationSection=General&section=Charts&chartCategory=APT&procedureSection=Departures&weatherSection=METAR&networksSection=Gates&ATISSection=Real` },
+        { label: 'INFO',    url: `https://charts.navigraph.com/airport/${icao}?section=Information&informationSection=General` },
+    ];
 
     return (
         <div style={{
@@ -597,8 +640,9 @@ const HubMapChart = ({ icao, color, isDarkMode }) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
+            minWidth: '280px',
         }}>
-            {/* Header card */}
+            {/* Header */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '12px 18px',
@@ -606,86 +650,162 @@ const HubMapChart = ({ icao, color, isDarkMode }) => {
                 flexShrink: 0,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={13} style={{ color }} />
+                    <Layers size={13} style={{ color }} />
                     <span style={{ fontSize: '0.68rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)' }}>
-                        Airport Chart
+                        Airport Info
                     </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {MAPBOX_TOKEN && (
+                {/* ICAO + IATA badge affiancati */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {info.iata && (
                         <span style={{
-                            fontSize: '0.62rem', color,
-                            background: `${color}15`,
+                            fontSize: '0.7rem', fontWeight: 600,
+                            fontFamily: 'var(--font-family-mono)',
+                            color: 'var(--color-text-hint)',
+                            background: 'var(--color-background)',
                             padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                            border: `1px solid ${color}30`,
-                            fontWeight: 500,
+                            border: '1px solid var(--color-border)',
                         }}>
-                            Mapbox GL
+                            {info.iata}
                         </span>
                     )}
                     <span style={{
-                        fontSize: '0.62rem', color: 'var(--color-text-hint)',
-                        fontFamily: 'var(--font-family-mono)', fontWeight: 600,
+                        fontSize: '0.7rem', fontWeight: 700,
+                        fontFamily: 'var(--font-family-mono)',
+                        color,
+                        background: `${color}15`,
+                        padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                        border: `1px solid ${color}30`,
                     }}>
                         {icao}
                     </span>
                 </div>
             </div>
 
-            {/* Corpo: mappa Mapbox oppure placeholder se token mancante */}
-            {MAPBOX_TOKEN ? (
-                <div ref={mapRef} style={{ height: '260px', width: '100%' }} />
-            ) : (
-                <div style={{
-                    height: '260px', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: '10px',
-                    padding: '24px', textAlign: 'center',
-                    background: 'var(--color-background)',
-                }}>
-                    <MapPin size={28} strokeWidth={1.2} style={{ color: 'var(--color-text-hint)' }} />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                        Mapbox token required
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: '280px' }}>
-                        Add <code style={{ fontFamily: 'var(--font-family-mono)', background: 'var(--color-border)', padding: '1px 5px', borderRadius: '3px' }}>VITE_MAPBOX_TOKEN</code> to your Vercel environment variables to enable the airport chart.
-                    </div>
-                    <a
-                        href="https://account.mapbox.com"
-                        target="_blank" rel="noopener noreferrer"
-                        style={{
-                            fontSize: '0.72rem', color,
-                            textDecoration: 'none', fontWeight: 500,
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            marginTop: '4px',
-                        }}
-                    >
-                        Get free token at mapbox.com <ExternalLink size={10} />
-                    </a>
-                </div>
-            )}
+            <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-            {/* CSS per i controlli Mapbox — adattati al tema Skydeck */}
-            <style>{`
-                .mapboxgl-ctrl-group {
-                    background: var(--color-surface) !important;
-                    border: 1px solid var(--color-border) !important;
-                    box-shadow: var(--shadow-sm) !important;
-                    border-radius: var(--radius-md) !important;
-                }
-                .mapboxgl-ctrl-group button {
-                    color: var(--color-text-secondary) !important;
-                }
-                .mapboxgl-ctrl-group button:hover {
-                    background: var(--color-background) !important;
-                }
-                .mapboxgl-ctrl-attrib {
-                    background: var(--color-surface) !important;
-                    font-size: 10px !important;
-                }
-            `}</style>
+                {/* Riga paese + fuso orario */}
+                {info.city && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)' }}>
+                            {info.city}, {info.country}
+                        </span>
+                        {info.tz && (
+                            <span style={{
+                                fontSize: '0.72rem', fontFamily: 'var(--font-family-mono)',
+                                color: 'var(--color-text-hint)',
+                            }}>
+                                {info.tz} (UTC{info.utcOffset})
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Frequenze radio */}
+                {(info.tower || info.ground || info.atis) && (
+                    <div style={{
+                        background: 'var(--color-background)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '10px 12px',
+                        display: 'flex', flexDirection: 'column', gap: '6px',
+                    }}>
+                        <div style={{ fontSize: '0.62rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)', marginBottom: '2px' }}>
+                            Radio Frequencies
+                        </div>
+                        {[
+                            { label: 'TWR', value: info.tower },
+                            { label: 'GND', value: info.ground },
+                            { label: 'ATIS', value: info.atis },
+                        ].filter(f => f.value).map(({ label, value }) => (
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--color-text-hint)', fontWeight: 500 }}>{label}</span>
+                                <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-family-mono)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                    {value} MHz
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Piste */}
+                {info.runways && info.runways.length > 0 && (
+                    <div>
+                        <div style={{ fontSize: '0.62rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)', marginBottom: '6px' }}>
+                            Runways
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                            {info.runways.map(rwy => (
+                                <span key={rwy} style={{
+                                    fontSize: '0.72rem', fontFamily: 'var(--font-family-mono)', fontWeight: 600,
+                                    color, background: `${color}12`,
+                                    padding: '3px 8px', borderRadius: 'var(--radius-sm)',
+                                    border: `1px solid ${color}25`,
+                                }}>
+                                    {rwy}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── METAR weather widget — stesso stile di Schedule ── */}
+                <HubWeather icao={icao} />
+
+                {/* ── Navigraph Charts quick-access ── */}
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill={color}>
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-hint)' }}>
+                            Navigraph Charts
+                        </span>
+                    </div>
+                    {/* 4 bottoni equidistribuiti su una riga — flex con flex:1 per fittare la card */}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        {navLinks.map(({ label, url }) => (
+                            <a
+                                key={label}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    flex: 1,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    gap: '4px',
+                                    padding: '8px 4px',
+                                    background: 'var(--color-background)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontSize: '0.72rem', fontWeight: 700,
+                                    color: 'var(--color-text-secondary)',
+                                    textDecoration: 'none',
+                                    transition: 'all 0.15s ease',
+                                    letterSpacing: '0.04em',
+                                    whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.background = `${color}12`;
+                                    e.currentTarget.style.borderColor = `${color}50`;
+                                    e.currentTarget.style.color = color;
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.background = 'var(--color-background)';
+                                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                                }}
+                            >
+                                {label}
+                                <ExternalLink size={8} style={{ opacity: 0.45, flexShrink: 0 }} />
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
+
 
 const KpiCard = ({ icon: Icon, label, value, color }) => (
     <div style={{
@@ -1314,10 +1434,12 @@ export default function Hubs() {
                         </div>
                     </div>
 
-                    {/* ── Maps: Location overview + Airport chart ── */}
-                    <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                    {/* ── Maps: Location overview + Airport chart ──
+                        align-items:stretch fa sì che le due card abbiano la stessa altezza,
+                        così la mappa (flex:1) si estende fino a riempire quella della card destra */}
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'stretch' }}>
                         <HubMapOverview icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
-                        <HubMapChart icao={activeIcao} color={activeColor} isDarkMode={isDarkMode} />
+                        <HubInfoCard icao={activeIcao} color={activeColor} activeHub={activeHub} />
                     </div>
 
                     {/* ── Main grid ── */}
