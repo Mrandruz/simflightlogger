@@ -69,7 +69,6 @@ const WIKI_SLUGS = {
     ZBAA: { airport: 'Beijing_Capital_International_Airport', city: 'Beijing' },
     ZSPD: { airport: 'Shanghai_Pudong_International_Airport', city: 'Shanghai' },
     // Americas
-    KJFK: { airport: 'John_F._Kennedy_International_Airport', city: 'New_York_City' },
     KEWR: { airport: 'Newark_Liberty_International_Airport', city: 'Newark,_New_Jersey' },
     KORD: { airport: "O'Hare_International_Airport",     city: 'Chicago' },
     KATL: { airport: 'Hartsfield–Jackson_Atlanta_International_Airport', city: 'Atlanta' },
@@ -313,6 +312,7 @@ const HubMap = ({ icao, color, isDarkMode }) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const baseTileRef = useRef(null);   // riferimento al layer CartoDB base
+    const markerRef = useRef(null);     // riferimento al marker per riposizionarlo al cambio hub
     const prevIcaoRef = useRef(null);
 
     const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
@@ -376,23 +376,29 @@ const HubMap = ({ icao, color, isDarkMode }) => {
                 iconSize: [28, 28],
                 iconAnchor: [14, 28],
             });
-            L.marker([coords.lat, coords.lng], { icon })
+            const marker = L.marker([coords.lat, coords.lng], { icon })
                 .addTo(map)
                 .bindTooltip(icao, {
                     permanent: true, direction: 'right',
                     className: 'hub-map-tooltip',
                     offset: [10, -14],
                 });
+            markerRef.current = marker;
 
             mapInstanceRef.current = map;
             prevIcaoRef.current = icao;
 
         } else if (prevIcaoRef.current !== icao) {
-            // Cambio hub: animazione flyTo senza ricreare la mappa
+            // Cambio hub: anima la mappa verso le nuove coordinate
             mapInstanceRef.current.flyTo([coords.lat, coords.lng], coords.zoom, {
                 duration: 1.2,
                 easeLinearity: 0.4,
             });
+            // Riposiziona il marker e aggiorna il tooltip con il nuovo ICAO
+            if (markerRef.current) {
+                markerRef.current.setLatLng([coords.lat, coords.lng]);
+                markerRef.current.setTooltipContent(icao);
+            }
             prevIcaoRef.current = icao;
         }
     }, [icao, coords, color]);
@@ -428,6 +434,7 @@ const HubMap = ({ icao, color, isDarkMode }) => {
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
                 baseTileRef.current = null;
+                markerRef.current = null;
             }
         };
     }, []);
