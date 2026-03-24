@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
     MapPin, Clock, Route, TrendingUp, Star, Plane, Calendar,
@@ -118,6 +118,36 @@ const HUB_COLORS = {
     KJFK: { h: 190, label: '#2dd4bf' },
     VTBS: { h: 120, label: '#6ee06e' },
 };
+
+// Coordinate geografiche degli aeroporti — usate per centrare la mappa Leaflet.
+// lat/lng = centro dell'aeroporto, zoom = livello ottimale per vedere le piste.
+const AIRPORT_COORDS = {
+    LFPG: { lat: 49.0097,  lng:  2.5479,  zoom: 13 },
+    LIRF: { lat: 41.8003,  lng: 12.2389,  zoom: 13 },
+    KLAX: { lat: 33.9425,  lng:-118.4081, zoom: 13 },
+    EGLL: { lat: 51.4775,  lng: -0.4614,  zoom: 13 },
+    EDDF: { lat: 50.0379,  lng:  8.5622,  zoom: 13 },
+    EHAM: { lat: 52.3086,  lng:  4.7639,  zoom: 13 },
+    EDDM: { lat: 48.3538,  lng: 11.7861,  zoom: 13 },
+    OMAA: { lat: 24.4330,  lng: 54.6511,  zoom: 13 },
+    KJFK: { lat: 40.6413,  lng:-73.7781,  zoom: 13 },
+    VTBS: { lat: 13.6900,  lng:100.7501,  zoom: 13 },
+    LEMD: { lat: 40.4719,  lng: -3.5626,  zoom: 13 },
+    LEBL: { lat: 41.2971,  lng:  2.0785,  zoom: 13 },
+    LIMC: { lat: 45.6306,  lng:  8.7281,  zoom: 13 },
+    EGKK: { lat: 51.1537,  lng: -0.1821,  zoom: 13 },
+    EGCC: { lat: 53.3537,  lng: -2.2750,  zoom: 13 },
+    LSZH: { lat: 47.4647,  lng:  8.5492,  zoom: 13 },
+    OMDB: { lat: 25.2532,  lng: 55.3657,  zoom: 13 },
+    OTHH: { lat: 25.2731,  lng: 51.6080,  zoom: 13 },
+    VHHH: { lat: 22.3080,  lng:113.9185,  zoom: 13 },
+    WSSS: { lat:  1.3644,  lng:103.9915,  zoom: 13 },
+    KORD: { lat: 41.9742,  lng:-87.9073,  zoom: 13 },
+    KATL: { lat: 33.6407,  lng:-84.4277,  zoom: 13 },
+};
+
+// Fallback per aeroporti non nel dizionario
+const DEFAULT_COORDS = { lat: 48.0, lng: 10.0, zoom: 4 };
 
 // ---------------------------------------------------------------------------
 // Wikipedia cache layer — Firestore-backed, lazy fetch
@@ -262,6 +292,194 @@ function computeHubStats(flights) {
 // Sub-components
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// HubMap — mappa Leaflet con basemap satellite Esri + overlay aeronautico OpenAIP
+// ---------------------------------------------------------------------------
+// La mappa usa due layer sovrapposti:
+//   1. Esri World Imagery — satellite ad alta risoluzione, mostra le piste nitidamente
+//   2. OpenAIP — layer aeronautico (simboli ICAO, frequenze, spazi aerei)
+//      Richiede una API key gratuita da https://www.openaip.net/
+//      Senza key il layer OpenAIP viene semplicemente omesso, la mappa satellite rimane.
+//
+// COME OTTENERE LA OPENAIP KEY:
+//   1. Vai su https://www.openaip.net/ → Register
+//   2. Nella dashboard, genera una API key gratuita
+//   3. Aggiungila come variabile d'ambiente Vercel: VITE_OPENAIP_KEY=tuachiave
+//      oppure in .env.local: VITE_OPENAIP_KEY=tuachiave
+
+const OPENAIP_KEY = import.meta.env.VITE_OPENAIP_KEY || null;
+
+const HubMap = ({ icao, color }) => {
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const prevIcaoRef = useRef(null);
+
+    const coords = AIRPORT_COORDS[icao] || DEFAULT_COORDS;
+
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        // Prima montatura: inizializza la mappa Leaflet
+        if (!mapInstanceRef.current) {
+            const L = window.L;
+            if (!L) return;
+
+            const map = L.map(mapRef.current, {
+                center: [coords.lat, coords.lng],
+                zoom: coords.zoom,
+                zoomControl: true,
+                attributionControl: true,
+                scrollWheelZoom: false, // evita scroll accidentale nella pagina
+            });
+
+            // Layer 1: basemap satellite Esri (no API key necessaria)
+            L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DigitalGlobe',
+                    maxZoom: 19,
+                }
+            ).addTo(map);
+
+            // Layer 2: OpenAIP aeronautico (opzionale — solo se la key è disponibile)
+            if (OPENAIP_KEY) {
+                L.tileLayer(
+                    `https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`,
+                    {
+                        attribution: 'OpenAIP &copy; <a href="https://www.openaip.net">openaip.net</a>',
+                        maxZoom: 14,
+                        opacity: 0.85,
+                    }
+                ).addTo(map);
+            }
+
+            // Marker personalizzato con il colore dell'hub attivo
+            const markerHtml = `
+                <div style="
+                    width: 28px; height: 28px;
+                    background: ${color};
+                    border: 3px solid #fff;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+                "></div>`;
+            const icon = L.divIcon({
+                html: markerHtml,
+                className: '',
+                iconSize: [28, 28],
+                iconAnchor: [14, 28],
+            });
+            L.marker([coords.lat, coords.lng], { icon })
+                .addTo(map)
+                .bindTooltip(icao, {
+                    permanent: true, direction: 'right',
+                    className: 'hub-map-tooltip',
+                    offset: [10, -14],
+                });
+
+            mapInstanceRef.current = map;
+            prevIcaoRef.current = icao;
+        } else if (prevIcaoRef.current !== icao) {
+            // Cambio hub: vola fluidamente alle nuove coordinate
+            mapInstanceRef.current.flyTo([coords.lat, coords.lng], coords.zoom, {
+                duration: 1.2,
+                easeLinearity: 0.4,
+            });
+            prevIcaoRef.current = icao;
+        }
+    }, [icao, coords, color]);
+
+    // Cleanup alla smontatura del componente
+    useEffect(() => {
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
+
+    return (
+        <div style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+            position: 'relative',
+        }}>
+            {/* Header della sezione mappa */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 18px',
+                borderBottom: '1px solid var(--color-border)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin size={13} style={{ color }} />
+                    <span style={{
+                        fontSize: '0.68rem', fontWeight: 500,
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        color: 'var(--color-text-hint)',
+                    }}>
+                        Airport Map
+                    </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {!OPENAIP_KEY && (
+                        <span style={{
+                            fontSize: '0.62rem', color: 'var(--color-text-hint)',
+                            background: 'var(--color-background)',
+                            padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--color-border)',
+                        }}>
+                            Satellite · Add VITE_OPENAIP_KEY for aviation overlay
+                        </span>
+                    )}
+                    {OPENAIP_KEY && (
+                        <span style={{
+                            fontSize: '0.62rem', color,
+                            background: `${color}15`,
+                            padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                            border: `1px solid ${color}30`,
+                        }}>
+                            Satellite + OpenAIP
+                        </span>
+                    )}
+                    <a
+                        href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontSize: '0.7rem', color: 'var(--color-text-hint)',
+                            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px',
+                        }}
+                    >
+                        Open in Maps <ExternalLink size={10} />
+                    </a>
+                </div>
+            </div>
+
+            {/* Container della mappa */}
+            <div ref={mapRef} style={{ height: '300px', width: '100%' }} />
+
+            {/* Tooltip CSS per il marker */}
+            <style>{`
+                .hub-map-tooltip {
+                    background: ${color} !important;
+                    color: #fff !important;
+                    border: none !important;
+                    border-radius: 6px !important;
+                    font-family: var(--font-family-mono) !important;
+                    font-weight: 700 !important;
+                    font-size: 0.8rem !important;
+                    padding: 2px 8px !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+                }
+                .hub-map-tooltip::before { display: none !important; }
+            `}</style>
+        </div>
+    );
+};
+
 const KpiCard = ({ icon: Icon, label, value, color }) => (
     <div style={{
         background: 'var(--color-surface)',
@@ -324,8 +542,88 @@ const MonthlyChart = ({ data, color }) => {
     );
 };
 
-const WikiCard = ({ data, type, color }) => {
-    const [expanded, setExpanded] = useState(false);
+// Sezioni Wikipedia da mostrare (per rilevanza per un aeroporto/città)
+// Tutto il resto (References, See also, Notes, ecc.) viene scartato
+const RELEVANT_SECTIONS = [
+    'history', 'storia', 'overview', 'background', 'description',
+    'terminals', 'terminal', 'infrastructure', 'infrastrutture',
+    'statistics', 'statistiche', 'traffic', 'traffico',
+    'facilities', 'services', 'servizi',
+    'geography', 'geografia', 'climate', 'clima',
+    'culture', 'cultura', 'economy', 'economia',
+    'transport', 'trasporti', 'architecture', 'architettura',
+    'founding', 'foundation', 'development', 'sviluppo',
+];
+
+function isSectionRelevant(title) {
+    if (!title) return false;
+    const t = title.toLowerCase();
+    return RELEVANT_SECTIONS.some(k => t.includes(k));
+}
+
+// Converte i link interni Wikipedia (/wiki/Foo) in link assoluti,
+// e rimuove i tag <sup> (note a piè di pagina) per pulire la lettura
+function cleanWikiHtml(html) {
+    if (!html) return '';
+    return html
+        // Link interni → link assoluti Wikipedia
+        .replace(/href="\/wiki\//g, 'href="https://en.wikipedia.org/wiki/')
+        // Rimuove note a piè di pagina <sup>...</sup>
+        .replace(/<sup[^>]*>.*?<\/sup>/gs, '')
+        // Rimuove i tag <style> inlined
+        .replace(/<style[^>]*>.*?<\/style>/gs, '')
+        // Rimuove table (spesso disallineate fuori dal layout Wikipedia)
+        .replace(/<table[^>]*>.*?<\/table>/gs, '');
+}
+
+async function fetchWikiSections(slug) {
+    // Usiamo l'Action API con origin=* — l'unica Wikipedia API garantita CORS-safe.
+    // L'endpoint /api/rest_v1/page/mobile-sections/ blocca le richieste cross-origin
+    // dal browser, causando il "Could not load full article" che vedevi.
+
+    // Step 1: ottieni l'indice delle sezioni dell'articolo
+    const tocUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(slug)}&prop=sections&format=json&origin=*`;
+    const tocRes = await fetch(tocUrl);
+    if (!tocRes.ok) throw new Error(`Wiki TOC ${tocRes.status}`);
+    const tocData = await tocRes.json();
+    if (tocData.error) throw new Error(tocData.error.info || 'Wiki API error');
+
+    const allSections = tocData?.parse?.sections || [];
+
+    // Teniamo solo le sezioni di primo livello (toclevel=1) che siano rilevanti per l'utente
+    const relevantSections = allSections
+        .filter(s => s.toclevel === 1 && isSectionRelevant(s.line))
+        .slice(0, 5);
+
+    // Step 2: fetch parallela dell'introduzione (section=0) + sezioni rilevanti
+    const fetchSection = async (num) => {
+        const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(slug)}&prop=text&section=${num}&format=json&origin=*&disableeditsection=1`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.parse?.text?.['*'] || null;
+    };
+
+    const sectionNumbers = [0, ...relevantSections.map(s => s.index)];
+    const htmlResults = await Promise.all(sectionNumbers.map(fetchSection));
+
+    const intro = cleanWikiHtml(htmlResults[0] || '');
+    const sections = relevantSections
+        .map((s, i) => ({
+            title: s.line,
+            html: cleanWikiHtml(htmlResults[i + 1] || ''),
+        }))
+        .filter(s => s.html.length > 50); // scarta sezioni vuote o quasi
+
+    return { intro, sections };
+}
+
+const WikiCard = ({ data, type, color, wikiSlug }) => {
+    const [mode, setMode] = useState('preview'); // 'preview' | 'summary' | 'full'
+    const [fullContent, setFullContent] = useState(null); // { intro, sections }
+    const [fullLoading, setFullLoading] = useState(false);
+    const [fullError, setFullError] = useState(false);
+    const [openSection, setOpenSection] = useState(null); // titolo sezione aperta
 
     if (!data) return (
         <div style={{
@@ -339,11 +637,29 @@ const WikiCard = ({ data, type, color }) => {
         </div>
     );
 
-    const fullText = data.extract || '';
-    // Preview: first ~200 chars, cutting at a sentence boundary
-    const previewEnd = fullText.indexOf('. ', 180);
-    const previewText = previewEnd > 0 ? fullText.slice(0, previewEnd + 1) : fullText.slice(0, 220);
-    const hasMore = fullText.length > previewText.length;
+    const fullSummary = data.extract || '';
+    const previewEnd = fullSummary.indexOf('. ', 180);
+    const previewText = previewEnd > 0 ? fullSummary.slice(0, previewEnd + 1) : fullSummary.slice(0, 220);
+    const hasSummaryMore = fullSummary.length > previewText.length;
+
+    // Carica l'articolo completo via mobile-sections quando l'utente vuole leggerlo
+    const loadFullArticle = async () => {
+        if (fullContent) { setMode('full'); return; }
+        if (!wikiSlug) { setFullError(true); return; }
+        setFullLoading(true);
+        setFullError(false);
+        try {
+            const content = await fetchWikiSections(wikiSlug);
+            setFullContent(content);
+            setMode('full');
+            // Apri automaticamente la prima sezione disponibile
+            if (content.sections.length > 0) setOpenSection(content.sections[0].title);
+        } catch {
+            setFullError(true);
+        } finally {
+            setFullLoading(false);
+        }
+    };
 
     return (
         <div style={{
@@ -354,14 +670,13 @@ const WikiCard = ({ data, type, color }) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            transition: 'box-shadow 0.2s ease',
         }}>
+            {/* Hero image */}
             {data.thumbnail && (
                 <div style={{
                     height: '140px',
                     background: `url(${data.thumbnail}) center/cover`,
-                    position: 'relative',
-                    flexShrink: 0,
+                    position: 'relative', flexShrink: 0,
                 }}>
                     <div style={{
                         position: 'absolute', inset: 0,
@@ -369,79 +684,199 @@ const WikiCard = ({ data, type, color }) => {
                     }} />
                 </div>
             )}
-            <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+            <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {type === 'airport' ? <Building2 size={13} style={{ color }} /> : <Globe size={13} style={{ color }} />}
-                    <span style={{
-                        fontSize: '0.68rem', fontWeight: 500,
-                        textTransform: 'uppercase', letterSpacing: '0.07em',
-                        color: 'var(--color-text-hint)',
-                    }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-hint)' }}>
                         {type === 'airport' ? 'Airport' : 'City'}
                     </span>
+                    {mode === 'full' && (
+                        <span style={{
+                            marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 600,
+                            color, background: `${color}18`,
+                            padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                        }}>
+                            Full article
+                        </span>
+                    )}
                 </div>
+
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, fontFamily: 'var(--font-family-display)', color: 'var(--color-text-primary)' }}>
                     {data.title}
                 </div>
 
-                {/* Text body — toggles between preview and full */}
-                <div style={{
-                    fontSize: '0.82rem',
-                    color: 'var(--color-text-secondary)',
-                    lineHeight: 1.65,
-                    flex: 1,
-                    overflow: 'hidden',
-                    position: 'relative',
-                }}>
-                    <span>{expanded ? fullText : previewText}</span>
-                    {/* Fade-out gradient when collapsed */}
-                    {!expanded && hasMore && (
-                        <div style={{
-                            position: 'absolute', bottom: 0, left: 0, right: 0,
-                            height: '40px',
-                            background: 'linear-gradient(to bottom, transparent, var(--color-surface))',
-                            pointerEvents: 'none',
-                        }} />
-                    )}
-                </div>
+                {/* ── PREVIEW MODE ── anteprima del summary */}
+                {mode === 'preview' && (
+                    <>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.65, position: 'relative' }}>
+                            {previewText}
+                            {hasSummaryMore && (
+                                <div style={{
+                                    position: 'absolute', bottom: 0, left: 0, right: 0, height: '36px',
+                                    background: 'linear-gradient(to bottom, transparent, var(--color-surface))',
+                                    pointerEvents: 'none',
+                                }} />
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            {hasSummaryMore && (
+                                <button onClick={() => setMode('summary')} style={{
+                                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                    fontSize: '0.75rem', fontWeight: 600, color,
+                                }}>
+                                    ↓ Read summary
+                                </button>
+                            )}
+                            <button onClick={loadFullArticle} disabled={fullLoading} style={{
+                                background: 'none', border: 'none', cursor: fullLoading ? 'wait' : 'pointer', padding: 0,
+                                fontSize: '0.75rem', fontWeight: 600,
+                                color: fullLoading ? 'var(--color-text-hint)' : color,
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                            }}>
+                                {fullLoading
+                                    ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Loading…</>
+                                    : '↓ Read full article'
+                                }
+                            </button>
+                            {data.url && <WikiLink url={data.url} color={color} />}
+                        </div>
+                        {fullError && <div style={{ fontSize: '0.72rem', color: 'var(--color-danger)' }}>Could not load full article.</div>}
+                    </>
+                )}
 
-                {/* Action row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    {hasMore && (
-                        <button
-                            onClick={() => setExpanded(e => !e)}
-                            style={{
+                {/* ── SUMMARY MODE ── estratto completo del summary */}
+                {mode === 'summary' && (
+                    <>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.65 }}>
+                            {fullSummary}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <button onClick={() => setMode('preview')} style={{
                                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                                 fontSize: '0.75rem', fontWeight: 600, color,
+                            }}>↑ Show less</button>
+                            <button onClick={loadFullArticle} disabled={fullLoading} style={{
+                                background: 'none', border: 'none', cursor: fullLoading ? 'wait' : 'pointer', padding: 0,
+                                fontSize: '0.75rem', fontWeight: 600,
+                                color: fullLoading ? 'var(--color-text-hint)' : color,
                                 display: 'flex', alignItems: 'center', gap: '4px',
-                                transition: 'opacity 0.15s',
-                            }}
-                        >
-                            {expanded ? '↑ Show less' : '↓ Read more'}
-                        </button>
-                    )}
-                    {data.url && (
-                        <a
-                            href={data.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                fontSize: '0.72rem', color: 'var(--color-text-hint)',
-                                textDecoration: 'none', fontWeight: 500,
-                                transition: 'color 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.color = color}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-hint)'}
-                        >
-                            Full article <ExternalLink size={10} />
-                        </a>
-                    )}
-                </div>
+                            }}>
+                                {fullLoading
+                                    ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Loading…</>
+                                    : '↓ Read full article'
+                                }
+                            </button>
+                            {data.url && <WikiLink url={data.url} color={color} />}
+                        </div>
+                        {fullError && <div style={{ fontSize: '0.72rem', color: 'var(--color-danger)' }}>Could not load full article.</div>}
+                    </>
+                )}
+
+                {/* ── FULL MODE ── articolo completo con sezioni accordion */}
+                {mode === 'full' && fullContent && (
+                    <>
+                        {/* Introduzione completa */}
+                        <div
+                            className="wiki-article-body"
+                            style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}
+                            dangerouslySetInnerHTML={{ __html: fullContent.intro }}
+                        />
+
+                        {/* Sezioni in accordion */}
+                        {fullContent.sections.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '8px' }}>
+                                {fullContent.sections.map(section => (
+                                    <div key={section.title} style={{
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        {/* Sezione header — clicca per aprire/chiudere */}
+                                        <button
+                                            onClick={() => setOpenSection(s => s === section.title ? null : section.title)}
+                                            style={{
+                                                width: '100%', display: 'flex', alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '10px 14px',
+                                                background: openSection === section.title ? `${color}10` : 'transparent',
+                                                border: 'none', cursor: 'pointer',
+                                                transition: 'background 0.15s',
+                                            }}
+                                        >
+                                            <span style={{
+                                                fontSize: '0.8rem', fontWeight: 600,
+                                                color: openSection === section.title ? color : 'var(--color-text-primary)',
+                                                fontFamily: 'var(--font-family-display)',
+                                                transition: 'color 0.15s',
+                                            }}>
+                                                {section.title}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.7rem', color,
+                                                transform: openSection === section.title ? 'rotate(180deg)' : 'none',
+                                                transition: 'transform 0.2s ease',
+                                                display: 'inline-block',
+                                            }}>▾</span>
+                                        </button>
+                                        {/* Sezione body */}
+                                        {openSection === section.title && (
+                                            <div
+                                                className="wiki-article-body"
+                                                style={{
+                                                    padding: '4px 14px 14px',
+                                                    fontSize: '0.8rem',
+                                                    color: 'var(--color-text-secondary)',
+                                                    lineHeight: 1.7,
+                                                    borderTop: `1px solid var(--color-border)`,
+                                                    animation: 'fadeIn 0.15s ease',
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: section.html }}
+                                            />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '4px' }}>
+                            <button onClick={() => setMode('preview')} style={{
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                fontSize: '0.75rem', fontWeight: 600, color,
+                            }}>↑ Show less</button>
+                            {data.url && <WikiLink url={data.url} color={color} />}
+                        </div>
+                    </>
+                )}
             </div>
+
+            {/* CSS per il body dell'articolo Wikipedia */}
+            <style>{`
+                .wiki-article-body p { margin-bottom: 0.75em; }
+                .wiki-article-body p:last-child { margin-bottom: 0; }
+                .wiki-article-body a { color: ${color}; text-decoration: none; }
+                .wiki-article-body a:hover { text-decoration: underline; }
+                .wiki-article-body b { color: var(--color-text-primary); font-weight: 600; }
+            `}</style>
         </div>
     );
 };
+
+// Piccolo componente riutilizzabile per il link "Open on Wikipedia"
+const WikiLink = ({ url, color }) => (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{
+        display: 'inline-flex', alignItems: 'center', gap: '4px',
+        fontSize: '0.72rem', color: 'var(--color-text-hint)',
+        textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s',
+    }}
+        onMouseEnter={e => e.currentTarget.style.color = color}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-hint)'}
+    >
+        Open on Wikipedia <ExternalLink size={10} />
+    </a>
+);
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -672,6 +1107,9 @@ export default function Hubs() {
                         </div>
                     </div>
 
+                    {/* ── Airport Map ── */}
+                    <HubMap icao={activeIcao} color={activeColor} />
+
                     {/* ── Main grid ── */}
                     <div style={{
                         display: 'grid',
@@ -816,8 +1254,18 @@ export default function Hubs() {
                             )}
                         </div>
                         <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-                            <WikiCard data={wiki?.airport} type="airport" color={activeColor} />
-                            <WikiCard data={wiki?.city} type="city" color={activeColor} />
+                            <WikiCard
+                                data={wiki?.airport}
+                                type="airport"
+                                color={activeColor}
+                                wikiSlug={WIKI_SLUGS[activeIcao]?.airport}
+                            />
+                            <WikiCard
+                                data={wiki?.city}
+                                type="city"
+                                color={activeColor}
+                                wikiSlug={WIKI_SLUGS[activeIcao]?.city}
+                            />
                         </div>
                     </div>
 
