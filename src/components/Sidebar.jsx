@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Book, MapPin, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar, ShieldCheck, Activity, Trophy } from 'lucide-react';
+import { LayoutDashboard, Book, MapPin, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar, ShieldCheck, Activity, Trophy, Layers } from 'lucide-react';
 
 export default function Sidebar({ 
     isExpanded, 
@@ -111,6 +111,12 @@ export default function Sidebar({
                     <Activity size={20} aria-hidden="true" />
                     <span className="link-text">Hangar</span>
                     {!isExpanded && <span className="tooltip">The Hangar</span>}
+                </NavLink>
+
+                <NavLink to="/hubs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                    <Layers size={20} aria-hidden="true" />
+                    <span className="link-text">Hubs</span>
+                    {!isExpanded && <span className="tooltip">Hubs</span>}
                 </NavLink>
 
                 <NavLink to="/achievements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>

@@ -153,6 +153,7 @@ const buildPrompt = (s) => [
   `- Total distance: ${s.totalMiles} nm`,
   `- Most used aircraft: ${s.topAircraft || s.topAircraftList || "—"}`,
   `- Hub airport: ${s.topAirport || "—"}`,
+  `- Hub airport (by movements): ${s.topAirport || "—"}`,
   `- Most used airline: ${s.topAirline}`,
   `- Favourite route: ${s.topRoute || s.topRouteList || "—"}`,
   `- Flights last month: ${s.flightsLastMonth ?? "—"}`,
@@ -160,7 +161,15 @@ const buildPrompt = (s) => [
   `- Longest flight: ${s.longestFlight}`,
   `- Unique airports visited: ${s.uniqueAirports || "—"}`,
   `- Top 5 aircraft: ${s.topAircraftList}`,
-  `- Top 5 airports: ${s.topAirportList || "—"}`,
+  // Two airport rankings are provided. Use the right one depending on the question:
+  // - "by movements" = departures + arrivals counted separately (same as the Hubs page)
+  //   e.g. a LFPG→LIRF flight counts as 1 movement for LFPG and 1 for LIRF
+  // - "by flights" = number of distinct flights involving the airport (1 per flight)
+  //   e.g. the same LFPG→LIRF flight counts as 1 flight for both LFPG and LIRF
+  // When the user asks "how many flights have I done at/to/from X", use "by flights".
+  // When the user asks about the Hubs page ranking or total operations, use "by movements".
+  `- Top airports by movements (dep+arr, shown in Hubs page): ${s.topAirportList || "—"}`,
+  `- Top airports by flights (distinct flights, intuitive count): ${s.topAirportListByFlights || "—"}`,
   `- Top 10 routes: ${s.topRouteList}`,
   `- Monthly trend: ${s.monthlyDistribution}`,
   `- Last flight: ${s.lastFlight}`,
