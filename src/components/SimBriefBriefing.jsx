@@ -4,6 +4,7 @@ import { RefreshCw, MapPin, Plane, Route, ArrowUp, Zap, Fuel, Clock, AlertTriang
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchSimBriefData, parseSimBriefData } from '../services/simbriefService';
+import { getAuth } from 'firebase/auth';
 
 /* ── OFP PDF Viewer Modal ── */
 function OFPViewer({ url }) {
@@ -129,9 +130,14 @@ function BriefingNarrative({ data }) {
         }
         setAudioLoading(true);
         try {
+            const ttsAuth = getAuth();
+            const ttsToken = await ttsAuth.currentUser?.getIdToken();
             const res = await fetch(TTS_FUNCTION_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(ttsToken ? { 'Authorization': `Bearer ${ttsToken}` } : {}),
+                },
                 body: JSON.stringify({ text: narrative }),
             });
             if (!res.ok) { speakWithBrowser(narrative); return; }
@@ -188,9 +194,15 @@ function BriefingNarrative({ data }) {
         setLoading(true); setNarrative(''); setGenerated(true);
         const prompt = `Write a concise pre-flight briefing narrative for the following flight plan. Write it as a professional flight dispatcher or senior captain would — factual, precise, aviation-toned. Cover: route overview, cruise level, key waypoints if available, fuel load, expected duration, and any notable operational considerations. Keep it to 3-4 short paragraphs. Do not use bullet points.`;
         try {
+            const auth = getAuth();
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error('Not authenticated');
             const res = await fetch(COPILOT_FUNCTION_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ message: prompt, stats: buildStats(), history: [] }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
