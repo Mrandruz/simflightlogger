@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'dompurify';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, AreaChart, Area, ReferenceLine } from 'recharts';
 import { Plane, Clock, MapPin, Globe, Trophy, CalendarDays, ExternalLink, Sparkles, RefreshCw, Send, TrendingUp, BookOpen, Calendar, Zap, Activity, Users, Map } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { usePilotData } from '../hooks/usePilotData';
@@ -298,7 +298,7 @@ function PilotBrief({ flights, generated, loading, brief }) {
 }
 
 /* ── Mini bar chart (inline, no recharts) ── */
-function MiniBarList({ data, colorVar = 'var(--color-primary)' }) {
+function MiniBarList({ data, colorVar = 'var(--color-primary)', monthlyTopName = null }) {
     if (!data.length) return <div style={{ fontSize: '0.75rem', color: 'var(--color-text-hint)' }}>No data yet</div>;
     const max = data[0].count;
     const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'];
@@ -306,7 +306,12 @@ function MiniBarList({ data, colorVar = 'var(--color-primary)' }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {data.map((d, i) => (
                 <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--color-text-primary)', width: 95, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 95, flexShrink: 0, overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                        {i === 0 && monthlyTopName && d.name === monthlyTopName && (
+                            <span style={{ fontSize: '0.58rem', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-bg)', borderRadius: 3, padding: '1px 4px', whiteSpace: 'nowrap', flexShrink: 0 }}>↑ this month</span>
+                        )}
+                    </div>
                     <div style={{ flex: 1, height: 6, background: 'var(--color-background)', borderRadius: 4, overflow: 'hidden', border: '1px solid rgba(0,0,0,0.02)' }}>
                         <div style={{ height: '100%', width: `${(d.count / max) * 100}%`, background: `linear-gradient(90deg, ${colors[i % colors.length]}aa, ${colors[i % colors.length]})`, borderRadius: 4, boxShadow: `0 0 8px ${colors[i % colors.length]}40` }} />
                     </div>
@@ -379,10 +384,32 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const stats = usePilotData(flights);
 
-    // AI Brief State moved here for header integration
+    // AI Brief State
     const [brief, setBrief] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [generated, setGenerated] = useState(false);
+
+    // Auto-generate brief: carica dal localStorage se fresco (< 24h),
+    // altrimenti genera al primo mount — evita di sprecare rate limit
+    // e dà all'utente un brief già pronto quando apre la Dashboard.
+    useEffect(() => {
+        if (!flights.length || generated) return;
+        try {
+            const cached = localStorage.getItem('skydeck_brief_cache');
+            if (cached) {
+                const { text, ts } = JSON.parse(cached);
+                const ageH = (Date.now() - ts) / 3600000;
+                if (ageH < 24 && text) {
+                    setBrief(text);
+                    setGenerated(true);
+                    return;
+                }
+            }
+        } catch (_) {}
+        // Nessuna cache fresca — genera automaticamente
+        handleGenerateBrief();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [flights.length]);
 
     const handleGenerateBrief = async () => {
         if (aiLoading) return;
@@ -434,6 +461,14 @@ export default function Dashboard() {
         }
     };
 
+    // Salva il brief in localStorage ogni volta che cambia e non è un errore
+    useEffect(() => {
+        if (!brief || brief === 'Unable to generate brief.') return;
+        try {
+            localStorage.setItem('skydeck_brief_cache', JSON.stringify({ text: brief, ts: Date.now() }));
+        } catch (_) {}
+    }, [brief]);
+
     const kpis = useMemo(() => {
         if (!flights.length) return { totalFlights: 0, totalMiles: 0, totalHours: 0, daysSinceLastFlight: null, flightsThisMonth: 0, countries: 0 };
         const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -476,6 +511,33 @@ export default function Dashboard() {
         [...flights].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
         , [flights]);
 
+    // Media mensile voli — calcolata fuori dal JSX per evitare IIFE in ternario
+    // che causa "Unexpected token" con il parser Babel di Vite
+    const monthlyAvg = useMemo(() =>
+        timelineStats.length
+            ? +(timelineStats.reduce((s, d) => s + d.flights, 0) / timelineStats.length).toFixed(1)
+            : 0
+    , [timelineStats]);
+
+    // Top performer del mese corrente per ciascuna categoria
+    // usato per mostrare "↑ this month" nella MiniBarList
+    const monthlyTops = useMemo(() => {
+        const now = new Date();
+        const thisMonthFlights = flights.filter(f => {
+            const d = new Date(f.date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        const top1 = (arr) => {
+            const c = {}; arr.forEach(v => { if (v) c[v] = (c[v] || 0) + 1; }); 
+            return Object.entries(c).sort(([,a],[,b]) => b-a)[0]?.[0] || null;
+        };
+        return {
+            airline: top1(thisMonthFlights.map(f => f.airline)),
+            aircraft: top1(thisMonthFlights.map(f => f.aircraft)),
+            airport: top1([...thisMonthFlights.map(f => f.departure), ...thisMonthFlights.map(f => f.arrival)]),
+        };
+    }, [flights]);
+
     const nearestAchievements = useMemo(() => {
         if (!stats.achievements) return [];
         return Object.entries(stats.achievements)
@@ -503,24 +565,73 @@ export default function Dashboard() {
 
     if (!flights.length) return <EmptyState />;
 
+    // Quick Actions contestuali — cambiano in base allo stato dell'utente.
+    // Se ha un piano SimBrief recente → "Open Briefing" con dot verde.
+    // Se non vola da > 7 giorni → "Log a flight" viene evidenziato in prima posizione.
+    const hasRecentPlan = (() => {
+        try { return !!localStorage.getItem('lastPlannedFlight'); } catch { return false; }
+    })();
+    const isInactive = kpis.daysSinceLastFlight !== null && kpis.daysSinceLastFlight > 7;
+
     const QUICK_ACTIONS = [
-        { icon: Calendar, label: 'View schedule', sub: 'Route suggestions', color: '#f59e0b', bg: '#fef3c7', action: () => navigate('/schedule') },
-        { icon: ExternalLink, label: 'Plan on SimBrief', sub: 'Open Briefing', color: '#3b82f6', bg: '#eff6ff', action: () => navigate('/briefing') },
-        { icon: Plane, label: 'Log a flight', sub: 'Add to logbook', color: '#10b981', bg: '#ecfdf5', action: () => navigate('/new-flight') },
-        { icon: BookOpen, label: 'Open logbook', sub: `${kpis.totalFlights} flights`, color: '#8b5cf6', bg: '#f5f3ff', action: () => navigate('/logbook') },
+        {
+            icon: Calendar,
+            label: 'View schedule',
+            sub: 'Route suggestions',
+            color: '#f59e0b', bg: '#fef3c7',
+            action: () => navigate('/schedule'),
+        },
+        {
+            icon: ExternalLink,
+            label: hasRecentPlan ? 'Open Briefing' : 'Plan on SimBrief',
+            sub: hasRecentPlan ? 'Plan ready ✓' : 'Open SimBrief',
+            color: hasRecentPlan ? '#10b981' : '#3b82f6',
+            bg: hasRecentPlan ? '#ecfdf5' : '#eff6ff',
+            highlight: hasRecentPlan,
+            action: () => navigate('/briefing'),
+        },
+        {
+            icon: Plane,
+            label: 'Log a flight',
+            sub: isInactive ? "Time to fly! ✈️" : 'Add to logbook',
+            color: isInactive ? '#ef4444' : '#10b981',
+            bg: isInactive ? '#fef2f2' : '#ecfdf5',
+            highlight: isInactive,
+            action: () => navigate('/new-flight'),
+        },
+        {
+            icon: BookOpen,
+            label: 'Open logbook',
+            sub: `${kpis.totalFlights} flights`,
+            color: '#8b5cf6', bg: '#f5f3ff',
+            action: () => navigate('/logbook'),
+        },
     ];
+    // Se inattivo, porta "Log a flight" in prima posizione
+    if (isInactive) {
+        const logIdx = QUICK_ACTIONS.findIndex(a => a.label === 'Log a flight');
+        if (logIdx > 0) QUICK_ACTIONS.unshift(QUICK_ACTIONS.splice(logIdx, 1)[0]);
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', animation: 'fadeIn .4s ease-out' }}>
 
             {/* ── Hero KPI strip ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 'var(--space-4)' }}>
                 {[
                     { label: 'Total flights', value: kpis.totalFlights.toLocaleString(), icon: Activity, color: '#3b82f6' },
                     { label: 'Block hours', value: fmtHours(kpis.totalHours), icon: Clock, color: '#10b981' },
                     { label: 'Nautical miles', value: fmtMiles(kpis.totalMiles), icon: Map, color: '#8b5cf6' },
                     { label: 'Countries', value: kpis.countries, icon: Globe, color: '#f59e0b' },
                     { label: 'This month', value: kpis.flightsThisMonth, sub: new Date().toLocaleDateString('en-US', { month: 'long' }), icon: CalendarDays, color: '#ec4899' },
+                    {
+                        label: 'Last flight',
+                        value: kpis.daysSinceLastFlight === 0 ? 'Today' : kpis.daysSinceLastFlight === 1 ? 'Yesterday' : `${kpis.daysSinceLastFlight}d ago`,
+                        icon: kpis.daysSinceLastFlight > 10 ? CalendarDays : Plane,
+                        color: daysSinceColor(kpis.daysSinceLastFlight).dot,
+                        statusDot: daysSinceColor(kpis.daysSinceLastFlight).dot,
+                        sub: kpis.daysSinceLastFlight > 7 ? 'Time to fly!' : kpis.daysSinceLastFlight > 3 ? 'Keep it up' : 'On a streak!',
+                    },
                 ].map((kpi, i) => (
                     <div key={kpi.label} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: `1px solid ${kpi.color}25`, boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}>
                         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: `radial-gradient(circle, ${kpi.color}15 0%, transparent 70%)`, borderRadius: '50%' }} />
@@ -540,11 +651,11 @@ export default function Dashboard() {
 
             {/* ── Quick Actions ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 'var(--space-4)' }}>
-                {QUICK_ACTIONS.map(({ icon: Icon, label, sub, color, bg, action }) => (
+                {QUICK_ACTIONS.map(({ icon: Icon, label, sub, color, bg, action, highlight }) => (
                     <div key={label} onClick={action}
-                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 'var(--radius-lg)', background: `linear-gradient(135deg, ${bg} 0%, var(--color-surface) 100%)`, cursor: 'pointer', transition: 'all .25s ease', border: `1px solid ${color}30`, boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 'var(--radius-lg)', background: `linear-gradient(135deg, ${bg} 0%, var(--color-surface) 100%)`, cursor: 'pointer', transition: 'all .25s ease', border: `1px solid ${highlight ? color : color+'30'}`, boxShadow: highlight ? `0 4px 15px ${color}25` : '0 4px 15px rgba(0,0,0,0.02)', position: 'relative' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 20px ${color}20`; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = `${color}30`; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)'; }}>
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = highlight ? color : `${color}30`; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = highlight ? `0 4px 15px ${color}25` : '0 4px 15px rgba(0,0,0,0.02)'; }}>
                         <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${color}20`, boxShadow: `0 2px 10px ${color}15` }}>
                             <Icon size={18} style={{ color }} />
                         </div>
@@ -620,6 +731,8 @@ export default function Dashboard() {
                                         <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-hint)', fontSize: 11, fontWeight: 500 }} dy={10} />
                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-hint)', fontSize: 11, fontWeight: 500 }} allowDecimals={false} />
                                         <RechartsTooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }} cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                                        <ReferenceLine y={monthlyAvg} stroke="var(--color-text-hint)" strokeDasharray="4 3" strokeWidth={1.5}
+                                            label={{ value: `avg ${monthlyAvg}`, position: 'insideTopRight', fill: 'var(--color-text-hint)', fontSize: 10, fontWeight: 600 }} />
                                         <Area type="monotone" dataKey="flights" name="Flights" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#gradFl)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--color-primary)' }} />
                                     </AreaChart>
                                 </ResponsiveContainer>
@@ -630,13 +743,13 @@ export default function Dashboard() {
                     {/* Stats 3-col */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 'var(--space-5)' }}>
                         {[
-                            { title: 'Top airlines', data: airlineStats },
-                            { title: 'Top aircraft', data: aircraftStats },
-                            { title: 'Top airports', data: airportStats },
-                        ].map(({ title, data }) => (
+                            { title: 'Top airlines', data: airlineStats, topMonth: monthlyTops.airline },
+                            { title: 'Top aircraft', data: aircraftStats, topMonth: monthlyTops.aircraft },
+                            { title: 'Top airports', data: airportStats, topMonth: monthlyTops.airport },
+                        ].map(({ title, data, topMonth }) => (
                             <div key={title} className="card" style={{ padding: '20px' }}>
                                 <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--color-text-hint)', marginBottom: 'var(--space-4)' }}>{title}</div>
-                                <MiniBarList data={data} />
+                                <MiniBarList data={data} monthlyTopName={topMonth} />
                             </div>
                         ))}
                     </div>
@@ -647,7 +760,10 @@ export default function Dashboard() {
 
                     {/* Suggested next flight */}
                     <div className="card" style={{ padding: '20px' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--color-text-hint)', marginBottom: 'var(--space-4)' }}>Suggested next flight</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--color-text-hint)' }}>Last landing</div>
+                            <button onClick={() => navigate('/schedule')} style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85 }}>AI suggestions →</button>
+                        </div>
                         <SuggestedFlight flights={flights} />
                     </div>
 
@@ -668,8 +784,21 @@ export default function Dashboard() {
                                             {f.airline || '—'} · {f.aircraft || '—'}
                                         </div>
                                     </div>
-                                    <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--color-text-hint)', flexShrink: 0, textAlign: 'right' }}>
-                                        {new Date(f.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                                        <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--color-text-hint)' }}>
+                                            {new Date(f.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                        {f.departure && f.arrival && (
+                                            <a
+                                                href={`https://dispatch.simbrief.com/options/custom?orig=${f.departure}&dest=${f.arrival}${f.aircraft ? `&type=${encodeURIComponent(f.aircraft)}` : ''}`}
+                                                target="_blank" rel="noopener noreferrer"
+                                                onClick={e => e.stopPropagation()}
+                                                title="Fly again on SimBrief"
+                                                style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-primary)', opacity: 0.8, whiteSpace: 'nowrap', transition: 'opacity .15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                                onMouseLeave={e => e.currentTarget.style.opacity = 0.8}
+                                            >↺ fly again</a>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -700,6 +829,11 @@ export default function Dashboard() {
                                                 <div style={{ height: 4, background: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
                                                     <div style={{ height: '100%', width: `${Math.min(100, a.progress)}%`, background: 'var(--color-warning)', borderRadius: 2 }} />
                                                 </div>
+                                                {a.goal - a.current > 0 && (
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: 4, opacity: 0.85 }}>
+                                                        {a.goal - a.current} more to unlock ✦
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     );
