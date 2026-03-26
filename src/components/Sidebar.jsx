@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Book, MapPin, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar, ShieldCheck, Activity, Trophy, Layers } from 'lucide-react';
+import { LayoutDashboard, Book, MapPin, ChevronLeft, ChevronRight, Moon, Sun, LogOut, Download, Upload, Calendar, ShieldCheck, Activity, Trophy, Layers, Users } from 'lucide-react';
 
 export default function Sidebar({ 
     isExpanded, 
@@ -125,6 +125,17 @@ export default function Sidebar({
                     {!isExpanded && <span className="tooltip">Achievements</span>}
                 </NavLink>
 
+                {isAdmin && (
+                    <NavLink
+                        to="/crew"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        style={{ '--link-accent': '#8b5cf6' }}
+                    >
+                        <Users size={20} aria-hidden="true" style={{ color: 'var(--color-text-secondary)' }} />
+                        <span className="link-text">The Crew</span>
+                        {!isExpanded && <span className="tooltip">The Crew</span>}
+                    </NavLink>
+                )}
                 {isAdmin && (
                     <NavLink
                         to="/admin"

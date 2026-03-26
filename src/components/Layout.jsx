@@ -75,6 +75,10 @@ export default function Layout({
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
     const location = useLocation();
     const isNewFlightPage = location.pathname === '/new-flight';
+    // The Crew is a standalone career page — PilotProfileCard belongs to
+    // the standard Skydeck stats system and should not appear here
+    const isCrewPage = location.pathname === '/crew';
+    const hideProfileCard = isNewFlightPage || isCrewPage;
 
     const toggleSidebar = () => {
         setIsSidebarExpanded(!isSidebarExpanded);
@@ -104,8 +108,8 @@ export default function Layout({
                     justifyContent: isNewFlightPage ? 'center' : 'flex-start',
                     minHeight: isNewFlightPage ? 'calc(100vh - 120px)' : 'auto'
                 }}>
-                    {/* Hide Pilot Profile on New Flight page to save space */}
-                    {!isNewFlightPage && (
+                    {/* Hide Pilot Profile on New Flight page and The Crew career page */}
+                    {!hideProfileCard && (
                         <div style={{ marginBottom: 'var(--space-6)' }}>
                             <PilotProfileCard flights={flights} user={user} />
                         </div>
