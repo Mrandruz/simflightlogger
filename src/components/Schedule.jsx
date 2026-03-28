@@ -23,44 +23,44 @@ const MAJOR_DESTINATIONS = [...majorDestinations]
 const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
 
 const ALLIANCE_MAP = {
-    'United Airlines':'Star Alliance','Lufthansa':'Star Alliance','Air Canada':'Star Alliance',
-    'Singapore Airlines':'Star Alliance','ANA':'Star Alliance','Thai Airways':'Star Alliance',
-    'Turkish Airlines':'Star Alliance','Swiss':'Star Alliance','Austrian Airlines':'Star Alliance',
-    'Brussels Airlines':'Star Alliance','TAP Air Portugal':'Star Alliance','LOT Polish Airlines':'Star Alliance',
-    'Scandinavian Airlines':'Star Alliance','Air China':'Star Alliance','Shenzhen Airlines':'Star Alliance',
-    'Air India':'Star Alliance','Copa Airlines':'Star Alliance','Avianca':'Star Alliance',
-    'South African Airways':'Star Alliance','Ethiopian Airlines':'Star Alliance','Egyptair':'Star Alliance',
-    'Croatia Airlines':'Star Alliance','Adria Airways':'Star Alliance',
-    'Air France':'SkyTeam','KLM':'SkyTeam','Delta Air Lines':'SkyTeam','Alitalia':'SkyTeam',
-    'Korean Air':'SkyTeam','China Southern':'SkyTeam','China Eastern':'SkyTeam',
-    'Aeromexico':'SkyTeam','Czech Airlines':'SkyTeam','Air Europa':'SkyTeam','TAROM':'SkyTeam',
-    'Vietnam Airlines':'SkyTeam','Garuda Indonesia':'SkyTeam','Middle East Airlines':'SkyTeam',
-    'Kenya Airways':'SkyTeam','Saudia':'SkyTeam','Etihad':'SkyTeam',
-    'American Airlines':'Oneworld','British Airways':'Oneworld','Iberia':'Oneworld',
-    'Cathay Pacific':'Oneworld','Qatar Airways':'Oneworld','Japan Airlines':'Oneworld',
-    'Finnair':'Oneworld','Malaysia Airlines':'Oneworld','Royal Jordanian':'Oneworld',
-    'Royal Air Maroc':'Oneworld','Alaska Airlines':'Oneworld','SriLankan Airlines':'Oneworld',
+    'United Airlines': 'Star Alliance', 'Lufthansa': 'Star Alliance', 'Air Canada': 'Star Alliance',
+    'Singapore Airlines': 'Star Alliance', 'ANA': 'Star Alliance', 'Thai Airways': 'Star Alliance',
+    'Turkish Airlines': 'Star Alliance', 'Swiss': 'Star Alliance', 'Austrian Airlines': 'Star Alliance',
+    'Brussels Airlines': 'Star Alliance', 'TAP Air Portugal': 'Star Alliance', 'LOT Polish Airlines': 'Star Alliance',
+    'Scandinavian Airlines': 'SkyTeam', 'Air China': 'Star Alliance', 'Shenzhen Airlines': 'Star Alliance',
+    'Air India': 'Star Alliance', 'Copa Airlines': 'Star Alliance', 'Avianca': 'Star Alliance',
+    'South African Airways': 'Star Alliance', 'Ethiopian Airlines': 'Star Alliance', 'Egyptair': 'Star Alliance',
+    'Croatia Airlines': 'Star Alliance', 'Adria Airways': 'Star Alliance',
+    'Air France': 'SkyTeam', 'KLM': 'SkyTeam', 'Delta Air Lines': 'SkyTeam', 'Alitalia': 'Star Alliance',
+    'Korean Air': 'SkyTeam', 'China Southern': 'SkyTeam', 'China Eastern': 'SkyTeam',
+    'Aeromexico': 'SkyTeam', 'Czech Airlines': 'SkyTeam', 'Air Europa': 'SkyTeam', 'TAROM': 'SkyTeam',
+    'Vietnam Airlines': 'SkyTeam', 'Garuda Indonesia': 'SkyTeam', 'Middle East Airlines': 'SkyTeam',
+    'Kenya Airways': 'SkyTeam', 'Saudia': 'SkyTeam', 'Etihad': 'SkyTeam',
+    'American Airlines': 'Oneworld', 'British Airways': 'Oneworld', 'Iberia': 'Oneworld',
+    'Cathay Pacific': 'Oneworld', 'Qatar Airways': 'Oneworld', 'Japan Airlines': 'Oneworld',
+    'Finnair': 'Oneworld', 'Malaysia Airlines': 'Oneworld', 'Royal Jordanian': 'Oneworld',
+    'Royal Air Maroc': 'Oneworld', 'Alaska Airlines': 'Oneworld', 'SriLankan Airlines': 'Oneworld',
 };
 
 const haversineNm = (lat1, lon1, lat2, lon2) => {
-    if (lat1==null||lon1==null||lat2==null||lon2==null) return 0;
-    const R=3440.065, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
-    const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return 0;
+    const R = 3440.065, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
 
 
 
 const HAUL_TYPES = [
-    { key:'SHORT',  label:'Short haul',  color:'#10b981', rgb:'16,185,129',  min:300,  max:1500, xpMult:1.5  },
-    { key:'MEDIUM', label:'Medium haul', color:'#3b82f6', rgb:'59,130,246',  min:1500, max:3000, xpMult:1.25 },
-    { key:'LONG',   label:'Long haul',   color:'#f59e0b', rgb:'245,158,11',  min:3000, max:7000, xpMult:1.0  },
+    { key: 'SHORT', label: 'Short haul', color: '#10b981', rgb: '16,185,129', min: 300, max: 1500, xpMult: 1.5 },
+    { key: 'MEDIUM', label: 'Medium haul', color: '#3b82f6', rgb: '59,130,246', min: 1500, max: 3000, xpMult: 1.25 },
+    { key: 'LONG', label: 'Long haul', color: '#f59e0b', rgb: '245,158,11', min: 3000, max: 7000, xpMult: 1.0 },
 ];
 
 const ALLIANCES = [
-    { name:'Star Alliance', color:'var(--color-alliance-star)' },
-    { name:'SkyTeam',       color:'var(--color-alliance-skyteam)' },
-    { name:'Oneworld',      color:'var(--color-alliance-oneworld)' },
+    { name: 'Star Alliance', color: 'var(--color-alliance-star)' },
+    { name: 'SkyTeam', color: 'var(--color-alliance-skyteam)' },
+    { name: 'Oneworld', color: 'var(--color-alliance-oneworld)' },
 ];
 
 
@@ -118,52 +118,52 @@ function icaoToSubRegion(icao) {
  */
 const ALLIANCE_AIRLINES = {
     'Star Alliance': [
-        { iata:'LH', icao:'DLH', name:'Lufthansa',          domestic:['EU','EU-DE'],          international:['US','AS','AF','ME','SA']       },
-        { iata:'UA', icao:'UAL', name:'United Airlines',     domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
-        { iata:'AC', icao:'ACA', name:'Air Canada',          domestic:['CA','US'],              international:['EU','AS','ME']                 },
-        { iata:'SQ', icao:'SIA', name:'Singapore Airlines',  domestic:['AS-SEA'],               international:['EU','OC','US','AS','ME']       },
-        { iata:'NH', icao:'ANA', name:'ANA',                 domestic:['AS-JP'],                international:['US','EU','AS','OC']            },
-        { iata:'TG', icao:'THA', name:'Thai Airways',        domestic:['AS-SEA'],               international:['EU','AS','OC']                 },
-        { iata:'TK', icao:'THY', name:'Turkish Airlines',    domestic:['EU','ME-TR'],           international:['US','AF','AS','ME','SA','OC']  },
-        { iata:'OS', icao:'AUA', name:'Austrian Airlines',   domestic:['EU','EU-C'],            international:['US','ME','AS']                 },
-        { iata:'SK', icao:'SAS', name:'SAS',                 domestic:['EU','EU-N'],            international:['US','AS']                      },
-        { iata:'TP', icao:'TAP', name:'TAP Air Portugal',    domestic:['EU','EU-PT'],           international:['SA','AF','US']                 },
-        { iata:'LO', icao:'LOT', name:'LOT Polish Airlines', domestic:['EU','EU-C'],            international:['US','AS']                      },
-        { iata:'CA', icao:'CCA', name:'Air China',           domestic:['AS','AS-CN'],           international:['EU','US','OC','ME']            },
-        { iata:'ET', icao:'ETH', name:'Ethiopian Airlines',  domestic:['AF'],                   international:['EU','ME','AS','US']            },
-        { iata:'MS', icao:'MSR', name:'EgyptAir',            domestic:['AF','ME'],              international:['EU','AS']                      },
-        { iata:'AI', icao:'AIC', name:'Air India',           domestic:['AS','AS-IN'],           international:['EU','US','ME']                 },
-        { iata:'AV', icao:'AVA', name:'Avianca',             domestic:['SA','LA'],              international:['US','EU']                      },
+        { iata: 'LH', icao: 'DLH', name: 'Lufthansa', domestic: ['EU', 'EU-DE'], international: ['US', 'AS', 'AF', 'ME', 'SA'] },
+        { iata: 'UA', icao: 'UAL', name: 'United Airlines', domestic: ['US', 'CA'], international: ['EU', 'AS', 'SA', 'OC', 'ME'] },
+        { iata: 'AC', icao: 'ACA', name: 'Air Canada', domestic: ['CA', 'US'], international: ['EU', 'AS', 'ME'] },
+        { iata: 'SQ', icao: 'SIA', name: 'Singapore Airlines', domestic: ['AS-SEA'], international: ['EU', 'OC', 'US', 'AS', 'ME'] },
+        { iata: 'NH', icao: 'ANA', name: 'ANA', domestic: ['AS-JP'], international: ['US', 'EU', 'AS', 'OC'] },
+        { iata: 'TG', icao: 'THA', name: 'Thai Airways', domestic: ['AS-SEA'], international: ['EU', 'AS', 'OC'] },
+        { iata: 'TK', icao: 'THY', name: 'Turkish Airlines', domestic: ['EU', 'ME-TR'], international: ['US', 'AF', 'AS', 'ME', 'SA', 'OC'] },
+        { iata: 'OS', icao: 'AUA', name: 'Austrian Airlines', domestic: ['EU', 'EU-C'], international: ['US', 'ME', 'AS'] },
+        { iata: 'SK', icao: 'SAS', name: 'SAS', domestic: ['EU', 'EU-N'], international: ['US', 'AS'] },
+        { iata: 'TP', icao: 'TAP', name: 'TAP Air Portugal', domestic: ['EU', 'EU-PT'], international: ['SA', 'AF', 'US'] },
+        { iata: 'LO', icao: 'LOT', name: 'LOT Polish Airlines', domestic: ['EU', 'EU-C'], international: ['US', 'AS'] },
+        { iata: 'CA', icao: 'CCA', name: 'Air China', domestic: ['AS', 'AS-CN'], international: ['EU', 'US', 'OC', 'ME'] },
+        { iata: 'ET', icao: 'ETH', name: 'Ethiopian Airlines', domestic: ['AF'], international: ['EU', 'ME', 'AS', 'US'] },
+        { iata: 'MS', icao: 'MSR', name: 'EgyptAir', domestic: ['AF', 'ME'], international: ['EU', 'AS'] },
+        { iata: 'AI', icao: 'AIC', name: 'Air India', domestic: ['AS', 'AS-IN'], international: ['EU', 'US', 'ME'] },
+        { iata: 'AV', icao: 'AVA', name: 'Avianca', domestic: ['SA', 'LA'], international: ['US', 'EU'] },
     ],
     'SkyTeam': [
-        { iata:'AF', icao:'AFR', name:'Air France',          domestic:['EU','EU-FR'],           international:['US','AF','AS','ME','SA','OC']  },
-        { iata:'KL', icao:'KLM', name:'KLM',                 domestic:['EU','EU-BNL'],          international:['US','AS','AF','ME','OC','SA']  },
-        { iata:'DL', icao:'DAL', name:'Delta Air Lines',     domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
-        { iata:'AM', icao:'AMX', name:'Aeromexico',          domestic:['LA','US'],              international:['EU','AS']                      },
-        { iata:'MU', icao:'CES', name:'China Eastern',       domestic:['AS','AS-CN'],           international:['EU','US','OC','AS-SEA']        },
-        { iata:'CZ', icao:'CSN', name:'China Southern',      domestic:['AS','AS-CN','AS-SEA'],  international:['EU','US','OC','ME']            },
-        { iata:'KE', icao:'KAL', name:'Korean Air',          domestic:['AS-KR','AS'],           international:['US','EU','OC']                 },
-        { iata:'VN', icao:'HVN', name:'Vietnam Airlines',    domestic:['AS-SEA'],               international:['EU','AS','OC']                 },
-        { iata:'GA', icao:'GIA', name:'Garuda Indonesia',    domestic:['AS-SEA'],               international:['OC','EU','AS']                 },
-        { iata:'ME', icao:'MEA', name:'Middle East Airlines',domestic:['ME'],                   international:['EU','AF','AS']                 },
-        { iata:'KQ', icao:'KQA', name:'Kenya Airways',       domestic:['AF'],                   international:['EU','ME','AS']                 },
-        { iata:'SV', icao:'SVA', name:'Saudia',              domestic:['ME','ME-GULF'],         international:['AS','EU','AF','US']            },
-        { iata:'EY', icao:'ETD', name:'Etihad',              domestic:['ME','ME-GULF'],         international:['EU','AS','OC','US','AF']       },
-        { iata:'RO', icao:'ROT', name:'TAROM',               domestic:['EU','EU-C'],            international:['ME']                           },
+        { iata: 'AF', icao: 'AFR', name: 'Air France', domestic: ['EU', 'EU-FR'], international: ['US', 'AF', 'AS', 'ME', 'SA', 'OC'] },
+        { iata: 'KL', icao: 'KLM', name: 'KLM', domestic: ['EU', 'EU-BNL'], international: ['US', 'AS', 'AF', 'ME', 'OC', 'SA'] },
+        { iata: 'DL', icao: 'DAL', name: 'Delta Air Lines', domestic: ['US', 'CA'], international: ['EU', 'AS', 'SA', 'OC', 'ME'] },
+        { iata: 'AM', icao: 'AMX', name: 'Aeromexico', domestic: ['LA', 'US'], international: ['EU', 'AS'] },
+        { iata: 'MU', icao: 'CES', name: 'China Eastern', domestic: ['AS', 'AS-CN'], international: ['EU', 'US', 'OC', 'AS-SEA'] },
+        { iata: 'CZ', icao: 'CSN', name: 'China Southern', domestic: ['AS', 'AS-CN', 'AS-SEA'], international: ['EU', 'US', 'OC', 'ME'] },
+        { iata: 'KE', icao: 'KAL', name: 'Korean Air', domestic: ['AS-KR', 'AS'], international: ['US', 'EU', 'OC'] },
+        { iata: 'VN', icao: 'HVN', name: 'Vietnam Airlines', domestic: ['AS-SEA'], international: ['EU', 'AS', 'OC'] },
+        { iata: 'GA', icao: 'GIA', name: 'Garuda Indonesia', domestic: ['AS-SEA'], international: ['OC', 'EU', 'AS'] },
+        { iata: 'ME', icao: 'MEA', name: 'Middle East Airlines', domestic: ['ME'], international: ['EU', 'AF', 'AS'] },
+        { iata: 'KQ', icao: 'KQA', name: 'Kenya Airways', domestic: ['AF'], international: ['EU', 'ME', 'AS'] },
+        { iata: 'SV', icao: 'SVA', name: 'Saudia', domestic: ['ME', 'ME-GULF'], international: ['AS', 'EU', 'AF', 'US'] },
+        { iata: 'EY', icao: 'ETD', name: 'Etihad', domestic: ['ME', 'ME-GULF'], international: ['EU', 'AS', 'OC', 'US', 'AF'] },
+        { iata: 'RO', icao: 'ROT', name: 'TAROM', domestic: ['EU', 'EU-C'], international: ['ME'] },
     ],
     'Oneworld': [
-        { iata:'AA', icao:'AAL', name:'American Airlines',   domestic:['US','CA'],              international:['EU','AS','SA','OC','ME']       },
-        { iata:'BA', icao:'BAW', name:'British Airways',     domestic:['EU','EU-UK'],           international:['US','AS','AF','ME','SA','OC']  },
-        { iata:'IB', icao:'IBE', name:'Iberia',              domestic:['EU','EU-ES'],           international:['SA','US','AF']                 },
-        { iata:'QR', icao:'QTR', name:'Qatar Airways',       domestic:['ME','ME-GULF'],         international:['EU','US','AS','AF','OC','SA']  },
-        { iata:'CX', icao:'CPA', name:'Cathay Pacific',      domestic:['AS-SEA','AS-CN'],       international:['EU','US','OC','AS']            },
-        { iata:'JL', icao:'JAL', name:'Japan Airlines',      domestic:['AS-JP'],                international:['US','EU','AS','OC']            },
-        { iata:'AY', icao:'FIN', name:'Finnair',             domestic:['EU','EU-N'],            international:['AS','US']                      },
-        { iata:'MH', icao:'MAS', name:'Malaysia Airlines',   domestic:['AS-SEA'],               international:['EU','OC','AS']                 },
-        { iata:'RJ', icao:'RJA', name:'Royal Jordanian',     domestic:['ME'],                   international:['EU','AF','AS']                 },
-        { iata:'AS', icao:'ASA', name:'Alaska Airlines',     domestic:['US','CA'],              international:[]                               },
-        { iata:'QF', icao:'QFA', name:'Qantas',              domestic:['OC'],                   international:['AS','EU','US']                 },
-        { iata:'SN', icao:'BEL', name:'Brussels Airlines',   domestic:['EU','EU-BNL'],          international:['AF']                           },
+        { iata: 'AA', icao: 'AAL', name: 'American Airlines', domestic: ['US', 'CA'], international: ['EU', 'AS', 'SA', 'OC', 'ME'] },
+        { iata: 'BA', icao: 'BAW', name: 'British Airways', domestic: ['EU', 'EU-UK'], international: ['US', 'AS', 'AF', 'ME', 'SA', 'OC'] },
+        { iata: 'IB', icao: 'IBE', name: 'Iberia', domestic: ['EU', 'EU-ES'], international: ['SA', 'US', 'AF'] },
+        { iata: 'QR', icao: 'QTR', name: 'Qatar Airways', domestic: ['ME', 'ME-GULF'], international: ['EU', 'US', 'AS', 'AF', 'OC', 'SA'] },
+        { iata: 'CX', icao: 'CPA', name: 'Cathay Pacific', domestic: ['AS-SEA', 'AS-CN'], international: ['EU', 'US', 'OC', 'AS'] },
+        { iata: 'JL', icao: 'JAL', name: 'Japan Airlines', domestic: ['AS-JP'], international: ['US', 'EU', 'AS', 'OC'] },
+        { iata: 'AY', icao: 'FIN', name: 'Finnair', domestic: ['EU', 'EU-N'], international: ['AS', 'US'] },
+        { iata: 'MH', icao: 'MAS', name: 'Malaysia Airlines', domestic: ['AS-SEA'], international: ['EU', 'OC', 'AS'] },
+        { iata: 'RJ', icao: 'RJA', name: 'Royal Jordanian', domestic: ['ME'], international: ['EU', 'AF', 'AS'] },
+        { iata: 'AS', icao: 'ASA', name: 'Alaska Airlines', domestic: ['US', 'CA'], international: [] },
+        { iata: 'QF', icao: 'QFA', name: 'Qantas', domestic: ['OC'], international: ['AS', 'EU', 'US'] },
+        { iata: 'SN', icao: 'BEL', name: 'Brussels Airlines', domestic: ['EU', 'EU-BNL'], international: ['AF'] },
     ],
 };
 
@@ -172,11 +172,11 @@ function pickAirlineForRoute(allianceName, originIcao, destIcao) {
     if (!options.length) return null;
 
     const originCont = icaoToContinent(originIcao);
-    const destCont   = icaoToContinent(destIcao);
-    const originSub  = icaoToSubRegion(originIcao);
-    const destSub    = icaoToSubRegion(destIcao);
-    const seed       = routeSeed(originIcao, destIcao);
-    const isIntra    = originCont === destCont;
+    const destCont = icaoToContinent(destIcao);
+    const originSub = icaoToSubRegion(originIcao);
+    const destSub = icaoToSubRegion(destIcao);
+    const seed = routeSeed(originIcao, destIcao);
+    const isIntra = originCont === destCont;
 
     const scored = options.map((a, i) => {
         let score = 0;
@@ -189,21 +189,21 @@ function pickAirlineForRoute(allianceName, originIcao, destIcao) {
 
             // Bonus for sub-region precision (e.g. EU-N airline on EU-N→EU-UK)
             if (originSub && a.domestic.includes(originSub)) score += 4;
-            if (destSub   && a.domestic.includes(destSub))   score += 4;
+            if (destSub && a.domestic.includes(destSub)) score += 4;
 
         } else {
             // Intercontinental: airline must cover BOTH sides
             const coversOrigin = a.domestic.some(d => d === originCont || d === originSub || originCont.startsWith(d))
-                              || a.international.some(d => d === originCont || (originSub && originSub.startsWith(d)));
-            const coversDest   = a.domestic.some(d => d === destCont   || d === destSub   || destCont.startsWith(d))
-                              || a.international.some(d => d === destCont   || (destSub   && destSub.startsWith(d)));
+                || a.international.some(d => d === originCont || (originSub && originSub.startsWith(d)));
+            const coversDest = a.domestic.some(d => d === destCont || d === destSub || destCont.startsWith(d))
+                || a.international.some(d => d === destCont || (destSub && destSub.startsWith(d)));
 
             if (!coversOrigin || !coversDest) return { a, score: 0, tiebreak: 0 };
             score += 10;
 
             // Bonus for home-side match (airline from origin continent)
             if (a.domestic.some(d => d === originCont || (originSub && originSub.startsWith(d)))) score += 5;
-            if (a.domestic.some(d => d === destCont   || (destSub   && destSub.startsWith(d))))   score += 3;
+            if (a.domestic.some(d => d === destCont || (destSub && destSub.startsWith(d)))) score += 3;
         }
 
         return { a, score, tiebreak: (seed + i * 37) % 1000 };
@@ -223,22 +223,22 @@ function pickAirlineForRoute(allianceName, originIcao, destIcao) {
 
 // Aircraft per haul
 const HAUL_AIRCRAFT = {
-    SHORT:  [
-        { simbrief:'A319', label:'Airbus A319' },
-        { simbrief:'A320', label:'Airbus A320' },
+    SHORT: [
+        { simbrief: 'A319', label: 'Airbus A319' },
+        { simbrief: 'A320', label: 'Airbus A320' },
     ],
     MEDIUM: [
-        { simbrief:'A320', label:'Airbus A320' },
-        { simbrief:'A321', label:'Airbus A321' },
-        { simbrief:'A332', label:'Airbus A330' },
-        { simbrief:'A359', label:'Airbus A350' },
+        { simbrief: 'A320', label: 'Airbus A320' },
+        { simbrief: 'A321', label: 'Airbus A321' },
+        { simbrief: 'A332', label: 'Airbus A330' },
+        { simbrief: 'A359', label: 'Airbus A350' },
     ],
     LONG: [
-        { simbrief:'A332', label:'Airbus A330' },
-        { simbrief:'A359', label:'Airbus A350' },
-        { simbrief:'A388', label:'Airbus A380' },
-        { simbrief:'B77W', label:'Boeing 777'  },
-        { simbrief:'B789', label:'Boeing 787'  },
+        { simbrief: 'A332', label: 'Airbus A330' },
+        { simbrief: 'A359', label: 'Airbus A350' },
+        { simbrief: 'A388', label: 'Airbus A380' },
+        { simbrief: 'B77W', label: 'Boeing 777' },
+        { simbrief: 'B789', label: 'Boeing 787' },
     ],
 };
 
@@ -261,9 +261,9 @@ function buildFlightNumber(airline, haulKey, originIcao, destIcao) {
     const icaoCode = airline?.icao || 'SKY';
     const seed = routeSeed(originIcao, destIcao);
     let num;
-    if (haulKey === 'SHORT')       num = (seed % 400) + 100;   // 100–499
+    if (haulKey === 'SHORT') num = (seed % 400) + 100;   // 100–499
     else if (haulKey === 'MEDIUM') num = (seed % 500) + 500;   // 500–999
-    else                           num = (seed % 900) + 1;     // 1–899 (long haul often low numbers)
+    else num = (seed % 900) + 1;     // 1–899 (long haul often low numbers)
     return `${icaoCode}${num}`;
 }
 
@@ -272,17 +272,17 @@ function buildSimbriefUrl(suggestion, airline, aircraft) {
     const baseUrl = 'https://dispatch.simbrief.com/options/custom';
     const seed = routeSeed(suggestion.origin.icao, suggestion.dest.icao);
     let fltnumOnly;
-    if (suggestion.key === 'SHORT')       fltnumOnly = (seed % 400) + 100;   // 100–499
+    if (suggestion.key === 'SHORT') fltnumOnly = (seed % 400) + 100;   // 100–499
     else if (suggestion.key === 'MEDIUM') fltnumOnly = (seed % 500) + 500;   // 500–999
-    else                                  fltnumOnly = (seed % 900) + 1;     // 1–899
+    else fltnumOnly = (seed % 900) + 1;     // 1–899
     const cruise = suggestion.key === 'LONG' ? '350' : suggestion.key === 'MEDIUM' ? '360' : '370';
     const params = new URLSearchParams({
         airline: airline?.icao || 'SKY',
-        fltnum:  String(fltnumOnly),
-        orig:    suggestion.origin.icao,
-        dest:    suggestion.dest.icao,
-        type:    aircraft?.simbrief || 'A320',
-        cruise:  cruise,
+        fltnum: String(fltnumOnly),
+        orig: suggestion.origin.icao,
+        dest: suggestion.dest.icao,
+        type: aircraft?.simbrief || 'A320',
+        cruise: cruise,
     });
     return `${baseUrl}?${params.toString()}`;
 }
@@ -307,24 +307,24 @@ function buildScheduleStats(flights, allianceName) {
         if (f.date) { const m = f.date.slice(0, 7); monthCount[m] = (monthCount[m] || 0) + 1; }
         totalMiles += Number(f.miles || 0);
     });
-    const top = (obj, n = 5) => Object.entries(obj).sort(([,a],[,b]) => b-a).slice(0,n).map(([k,v]) => `${k}(${v})`).join(', ');
-    const sorted = [...alFlights].sort((a,b) => new Date(b.date)-new Date(a.date));
+    const top = (obj, n = 5) => Object.entries(obj).sort(([, a], [, b]) => b - a).slice(0, n).map(([k, v]) => `${k}(${v})`).join(', ');
+    const sorted = [...alFlights].sort((a, b) => new Date(b.date) - new Date(a.date));
     const last = sorted[0];
     return {
         totalFlights: alFlights.length,
-        totalHours: alFlights.reduce((a,f) => a + (Number(f.flightTime)||0), 0).toFixed(1),
+        totalHours: alFlights.reduce((a, f) => a + (Number(f.flightTime) || 0), 0).toFixed(1),
         totalMiles: Math.round(totalMiles).toLocaleString(),
-        topAirline: Object.entries(airlineCount).sort(([,a],[,b])=>b-a)[0]?.[0] || '—',
+        topAirline: Object.entries(airlineCount).sort(([, a], [, b]) => b - a)[0]?.[0] || '—',
         topAirlineList: top(airlineCount),
         topRouteList: top(routeCount, 8),
         topDestList: top(destCount, 8),
-        monthlyDistribution: Object.entries(monthCount).sort(([a],[b])=>a.localeCompare(b)).slice(-6).map(([m,c])=>`${m}:${c}`).join(', '),
-        lastFlight: last ? `${last.departure}→${last.arrival} on ${last.date} (${last.aircraft||'?'})` : '—',
-        aircraftLogbook: top(alFlights.reduce((acc,f) => { if(f.aircraft) acc[f.aircraft]=(acc[f.aircraft]||0)+1; return acc; }, {}), 5),
-        flightsLastMonth: alFlights.filter(f => f.date >= new Date(Date.now()-30*86400000).toISOString().slice(0,10)).length,
-        avgHours: alFlights.length ? (alFlights.reduce((a,f)=>a+(Number(f.flightTime)||0),0)/alFlights.length).toFixed(1) : '0',
-        longestFlight: alFlights.reduce((best,f) => (Number(f.miles)||0) > (Number(best?.miles)||0) ? f : best, null)
-            ? (() => { const b = alFlights.reduce((best,f) => (Number(f.miles)||0) > (Number(best?.miles)||0) ? f : best, alFlights[0]); return `${b.departure}→${b.arrival}(${b.miles}nm)`; })() : '—',
+        monthlyDistribution: Object.entries(monthCount).sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([m, c]) => `${m}:${c}`).join(', '),
+        lastFlight: last ? `${last.departure}→${last.arrival} on ${last.date} (${last.aircraft || '?'})` : '—',
+        aircraftLogbook: top(alFlights.reduce((acc, f) => { if (f.aircraft) acc[f.aircraft] = (acc[f.aircraft] || 0) + 1; return acc; }, {}), 5),
+        flightsLastMonth: alFlights.filter(f => f.date >= new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)).length,
+        avgHours: alFlights.length ? (alFlights.reduce((a, f) => a + (Number(f.flightTime) || 0), 0) / alFlights.length).toFixed(1) : '0',
+        longestFlight: alFlights.reduce((best, f) => (Number(f.miles) || 0) > (Number(best?.miles) || 0) ? f : best, null)
+            ? (() => { const b = alFlights.reduce((best, f) => (Number(f.miles) || 0) > (Number(best?.miles) || 0) ? f : best, alFlights[0]); return `${b.departure}→${b.arrival}(${b.miles}nm)`; })() : '—',
         nextFlight: last ? `Last was ${last.departure}→${last.arrival}` : 'no data',
     };
 }
@@ -356,14 +356,14 @@ async function callCopilot(message, flights, allianceName) {
 function RouteInsight({ suggestion, flights, allianceName, haulColor }) {
     const [insight, setInsight] = useState('');
     const [loading, setLoading] = useState(false);
-    const [shown, setShown]     = useState(false);
+    const [shown, setShown] = useState(false);
 
     const handleGenerate = async (e) => {
         e.stopPropagation();
         if (loading || insight) return;
         setLoading(true); setShown(true);
         const origin = suggestion.origin.icao;
-        const dest   = suggestion.dest.icao;
+        const dest = suggestion.dest.icao;
         const visitCount = suggestion.visitCount || 0;
         const prompt = `In 2 sentences max, explain why ${origin}→${dest} is a good next flight suggestion for this ${allianceName} pilot. They have flown this route ${visitCount} time(s). Be specific, concise, aviation-toned. No bullet points.`;
         try {
@@ -380,7 +380,7 @@ function RouteInsight({ suggestion, flights, allianceName, haulColor }) {
                     if (!line.startsWith('data: ')) continue;
                     const raw = line.slice(6).trim();
                     if (raw === '[DONE]') break;
-                    try { const { text } = JSON.parse(raw); if (text) setInsight(p => p + text); } catch (_) {}
+                    try { const { text } = JSON.parse(raw); if (text) setInsight(p => p + text); } catch (_) { }
                 }
             }
         } catch (e) {
@@ -393,12 +393,12 @@ function RouteInsight({ suggestion, flights, allianceName, haulColor }) {
     return (
         <div className="fcard-insight" onClick={e => e.stopPropagation()}>
             {!shown ? (
-                <button className="insight-trigger" onClick={handleGenerate} style={{'--haul-c': haulColor}}>
-                    <Sparkles size={11}/> Why this route?
+                <button className="insight-trigger" onClick={handleGenerate} style={{ '--haul-c': haulColor }}>
+                    <Sparkles size={11} /> Why this route?
                 </button>
             ) : (
                 <div className="insight-body">
-                    <Sparkles size={11} style={{ color: haulColor, flexShrink: 0, marginTop: 2 }}/>
+                    <Sparkles size={11} style={{ color: haulColor, flexShrink: 0, marginTop: 2 }} />
                     <span>
                         {loading && !insight && <span className="insight-loading">Analyzing…</span>}
                         {insight}
@@ -412,10 +412,10 @@ function RouteInsight({ suggestion, flights, allianceName, haulColor }) {
 
 /* ── Option C: ScheduleChat ── */
 function ScheduleChat({ flights, allianceName }) {
-    const [query, setQuery]   = useState('');
+    const [query, setQuery] = useState('');
     const [answer, setAnswer] = useState('');
     const [loading, setLoading] = useState(false);
-    const [asked, setAsked]   = useState(false);
+    const [asked, setAsked] = useState(false);
     const inputRef = useRef(null);
 
     const SUGGESTIONS = [
@@ -443,7 +443,7 @@ function ScheduleChat({ flights, allianceName }) {
                     if (!line.startsWith('data: ')) continue;
                     const raw = line.slice(6).trim();
                     if (raw === '[DONE]') break;
-                    try { const { text: chunk } = JSON.parse(raw); if (chunk) setAnswer(p => p + chunk); } catch (_) {}
+                    try { const { text: chunk } = JSON.parse(raw); if (chunk) setAnswer(p => p + chunk); } catch (_) { }
                 }
             }
         } catch {
@@ -461,8 +461,8 @@ function ScheduleChat({ flights, allianceName }) {
     return (
         <div className="card sched-chat">
             <div className="sched-chat-header">
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div className="sched-chat-icon"><Sparkles size={14} color="#fff"/></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="sched-chat-icon"><Sparkles size={14} color="#fff" /></div>
                     <div>
                         <div className="sched-chat-title">Schedule Assistant</div>
                         <div className="sched-chat-sub">Ask anything about your {allianceName} flights</div>
@@ -479,7 +479,7 @@ function ScheduleChat({ flights, allianceName }) {
                             onKeyDown={e => e.key === 'Enter' && handleQuery()} />
                         <button className="btn btn-primary sched-chat-send"
                             onClick={() => handleQuery()} disabled={!query.trim() || loading}>
-                            <Send size={14}/>
+                            <Send size={14} />
                         </button>
                     </div>
                     <div className="sched-chat-pills">
@@ -497,7 +497,7 @@ function ScheduleChat({ flights, allianceName }) {
                     <div className="sched-chat-answer">
                         {loading && !answer && (
                             <div className="sched-chat-loading">
-                                <div className="sched-chat-spinner"/>
+                                <div className="sched-chat-spinner" />
                                 Thinking…
                             </div>
                         )}
@@ -506,7 +506,7 @@ function ScheduleChat({ flights, allianceName }) {
                     </div>
                     {!loading && (
                         <button className="btn btn-secondary sched-chat-reset" onClick={handleReset}>
-                            <RotateCcw size={13}/> Ask another
+                            <RotateCcw size={13} /> Ask another
                         </button>
                     )}
                 </div>
@@ -521,59 +521,59 @@ function RouteMap({ origin, dest, isDarkMode }) {
     const mapInstanceRef = useRef(null);
 
     useEffect(() => {
-        if (!origin?.latitude||!dest?.latitude||!mapRef.current) return;
-        if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current=null; }
+        if (!origin?.latitude || !dest?.latitude || !mapRef.current) return;
+        if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
 
         const tileUrl = isDarkMode
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
             : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
         const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
-        const map = L.map(mapRef.current).setView([0,0],2);
+        const map = L.map(mapRef.current).setView([0, 0], 2);
         mapInstanceRef.current = map;
-        L.tileLayer(tileUrl,{attribution}).addTo(map);
+        L.tileLayer(tileUrl, { attribution }).addTo(map);
 
         const greenIcon = new L.Icon({
-            iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-            shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41],
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
         });
         const redIcon = new L.Icon({
-            iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-            shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41],
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
         });
 
-        const oLat=origin.latitude, oLon=origin.longitude;
-        const dLat=dest.latitude,   dLon=dest.longitude;
+        const oLat = origin.latitude, oLon = origin.longitude;
+        const dLat = dest.latitude, dLon = dest.longitude;
 
-        L.marker([oLat,oLon],{icon:greenIcon}).addTo(map)
-            .bindPopup(`<strong>${origin.icao}</strong><br/>${origin.name}<br/><span style="color:#6b7280;font-size:11px">${origin.country||''}</span>`,{maxWidth:200});
-        L.marker([dLat,dLon],{icon:redIcon}).addTo(map)
-            .bindPopup(`<strong>${dest.icao}</strong><br/>${dest.name}<br/><span style="color:#6b7280;font-size:11px">${dest.country||''}</span>`,{maxWidth:200});
+        L.marker([oLat, oLon], { icon: greenIcon }).addTo(map)
+            .bindPopup(`<strong>${origin.icao}</strong><br/>${origin.name}<br/><span style="color:#6b7280;font-size:11px">${origin.country || ''}</span>`, { maxWidth: 200 });
+        L.marker([dLat, dLon], { icon: redIcon }).addTo(map)
+            .bindPopup(`<strong>${dest.icao}</strong><br/>${dest.name}<br/><span style="color:#6b7280;font-size:11px">${dest.country || ''}</span>`, { maxWidth: 200 });
 
         // Great circle
-        const gcPoints=[], steps=60;
-        for (let i=0;i<=steps;i++) {
-            const t=i/steps;
-            const lat1r=oLat*Math.PI/180, lon1r=oLon*Math.PI/180;
-            const lat2r=dLat*Math.PI/180, lon2r=dLon*Math.PI/180;
-            const d=2*Math.asin(Math.sqrt(Math.sin((lat2r-lat1r)/2)**2+Math.cos(lat1r)*Math.cos(lat2r)*Math.sin((lon2r-lon1r)/2)**2));
-            if (d===0){gcPoints.push([oLat,oLon]);continue;}
-            const A=Math.sin((1-t)*d)/Math.sin(d), B=Math.sin(t*d)/Math.sin(d);
-            const x=A*Math.cos(lat1r)*Math.cos(lon1r)+B*Math.cos(lat2r)*Math.cos(lon2r);
-            const y=A*Math.cos(lat1r)*Math.sin(lon1r)+B*Math.cos(lat2r)*Math.sin(lon2r);
-            const z=A*Math.sin(lat1r)+B*Math.sin(lat2r);
-            gcPoints.push([Math.atan2(z,Math.sqrt(x*x+y*y))*180/Math.PI, Math.atan2(y,x)*180/Math.PI]);
+        const gcPoints = [], steps = 60;
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const lat1r = oLat * Math.PI / 180, lon1r = oLon * Math.PI / 180;
+            const lat2r = dLat * Math.PI / 180, lon2r = dLon * Math.PI / 180;
+            const d = 2 * Math.asin(Math.sqrt(Math.sin((lat2r - lat1r) / 2) ** 2 + Math.cos(lat1r) * Math.cos(lat2r) * Math.sin((lon2r - lon1r) / 2) ** 2));
+            if (d === 0) { gcPoints.push([oLat, oLon]); continue; }
+            const A = Math.sin((1 - t) * d) / Math.sin(d), B = Math.sin(t * d) / Math.sin(d);
+            const x = A * Math.cos(lat1r) * Math.cos(lon1r) + B * Math.cos(lat2r) * Math.cos(lon2r);
+            const y = A * Math.cos(lat1r) * Math.sin(lon1r) + B * Math.cos(lat2r) * Math.sin(lon2r);
+            const z = A * Math.sin(lat1r) + B * Math.sin(lat2r);
+            gcPoints.push([Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI, Math.atan2(y, x) * 180 / Math.PI]);
         }
         const routeColor = isDarkMode ? '#94a3b8' : '#64748b';
-        L.polyline(gcPoints,{color:routeColor,weight:2.5,opacity:0.85,dashArray:'6,8'}).addTo(map);
-        map.fitBounds(L.latLngBounds([[oLat,oLon],[dLat,dLon]]),{padding:[50,50]});
+        L.polyline(gcPoints, { color: routeColor, weight: 2.5, opacity: 0.85, dashArray: '6,8' }).addTo(map);
+        map.fitBounds(L.latLngBounds([[oLat, oLon], [dLat, dLon]]), { padding: [50, 50] });
 
-        return () => { if (mapInstanceRef.current){mapInstanceRef.current.remove();mapInstanceRef.current=null;} };
-    },[origin?.icao,dest?.icao,isDarkMode]);
+        return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
+    }, [origin?.icao, dest?.icao, isDarkMode]);
 
-    return <div ref={mapRef} style={{width:'100%',height:'100%'}} />;
+    return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
 }
 
 
@@ -586,7 +586,7 @@ function classifyWx(wx) {
         return { color: 'var(--color-text-hint)', label: 'Unknown', dot: '○' };
     }
     const wspd = wx.wind ? parseInt(wx.wind.split('/')[1]) : 0;
-    const pres  = wx.pres || 1013;
+    const pres = wx.pres || 1013;
     // Condizioni severe: vento forte o pressione molto bassa
     if (wspd > 25 || pres < 990) {
         return { color: 'var(--color-danger)', label: 'Severe', dot: '●' };
@@ -606,11 +606,11 @@ function WxStrip({ icao, wx }) {
             <div className="wx-strip">
                 <div className="wx-strip-lbl">{icao}</div>
                 <div className="wx-grid-wrap">
-                    {[0,1,2,3].map(i => (
+                    {[0, 1, 2, 3].map(i => (
                         <div key={i} className="wx-chip-col">
-                            <div className="skeleton" style={{width:16,height:16,borderRadius:4,marginBottom:2}}/>
-                            <div className="skeleton skeleton-text" style={{width:28,height:8,marginBottom:4}}/>
-                            <div className="skeleton skeleton-text" style={{width:36,height:12}}/>
+                            <div className="skeleton" style={{ width: 16, height: 16, borderRadius: 4, marginBottom: 2 }} />
+                            <div className="skeleton skeleton-text" style={{ width: 28, height: 8, marginBottom: 4 }} />
+                            <div className="skeleton skeleton-text" style={{ width: 36, height: 12 }} />
                         </div>
                     ))}
                 </div>
@@ -630,22 +630,22 @@ function WxStrip({ icao, wx }) {
             <div className="wx-strip-lbl">{icao}</div>
             <div className="wx-grid-wrap">
                 <div className="wx-chip-col">
-                    <Gauge size={14} style={{color:'var(--color-text-hint)',marginBottom:2}} aria-hidden="true"/>
+                    <Gauge size={14} style={{ color: 'var(--color-text-hint)', marginBottom: 2 }} aria-hidden="true" />
                     <span className="wx-cl">Pres</span>
                     <span className="wx-cv">{wx.pres ?? '--'}</span>
                 </div>
                 <div className="wx-chip-col">
-                    <Wind size={14} style={{color:'var(--color-text-hint)',marginBottom:2}} aria-hidden="true"/>
+                    <Wind size={14} style={{ color: 'var(--color-text-hint)', marginBottom: 2 }} aria-hidden="true" />
                     <span className="wx-cl">Wind</span>
                     <span className="wx-cv">{wx.wind ?? '--'}</span>
                 </div>
                 <div className="wx-chip-col">
-                    <Thermometer size={14} style={{color:'var(--color-text-hint)',marginBottom:2}} aria-hidden="true"/>
+                    <Thermometer size={14} style={{ color: 'var(--color-text-hint)', marginBottom: 2 }} aria-hidden="true" />
                     <span className="wx-cl">Temp</span>
                     <span className="wx-cv">{wx.temp != null ? `${wx.temp}°` : '--'}</span>
                 </div>
                 <div className="wx-chip-col">
-                    <Droplets size={14} style={{color:'var(--color-text-hint)',marginBottom:2}} aria-hidden="true"/>
+                    <Droplets size={14} style={{ color: 'var(--color-text-hint)', marginBottom: 2 }} aria-hidden="true" />
                     <span className="wx-cl">Dew</span>
                     <span className="wx-cv">{wx.dew != null ? `${wx.dew}°` : '--'}</span>
                 </div>
@@ -654,17 +654,17 @@ function WxStrip({ icao, wx }) {
     );
 }
 
-export default function Schedule({ flights=[], user }) {
+export default function Schedule({ flights = [], user }) {
     const context = useOutletContext();
     const isDarkMode = context?.isDarkMode ?? false;
 
-    const [suggestions, setSuggestions]   = useState({});
-    const [loading, setLoading]           = useState(true);
+    const [suggestions, setSuggestions] = useState({});
+    const [loading, setLoading] = useState(true);
     const [selectedHaul, setSelectedHaul] = useState('SHORT');
     const [weatherCache, setWeatherCache] = useState({});
     // Timestamp dell'ultima generazione — mostrato come "Updated X ago"
     // per dare contesto all'utente su quanto sono fresche le suggestions
-    const [generatedAt, setGeneratedAt]   = useState(null);
+    const [generatedAt, setGeneratedAt] = useState(null);
     // Traccia quale haul ha appena fatto dispatch verso SimBrief
     // null = nessun dispatch recente; 'SHORT'|'MEDIUM'|'LONG' = dispatched
     const [dispatchedHaul, setDispatchedHaul] = useState(null);
@@ -672,13 +672,13 @@ export default function Schedule({ flights=[], user }) {
     /* ── Derive default alliance from last flight ── */
     const defaultAlliance = useMemo(() => {
         if (!Array.isArray(flights) || flights.length === 0) return 'Star Alliance';
-        const sorted = [...flights].filter(f => f?.date).sort((a,b) => new Date(b.date)-new Date(a.date));
+        const sorted = [...flights].filter(f => f?.date).sort((a, b) => new Date(b.date) - new Date(a.date));
         for (const f of sorted) {
             let al = f.alliance;
             if (!al) al = f.airline === 'ITA Airways'
                 ? (new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam')
                 : ALLIANCE_MAP[f.airline];
-            if (al && ['Star Alliance','SkyTeam','Oneworld'].includes(al)) return al;
+            if (al && ['Star Alliance', 'SkyTeam', 'Oneworld'].includes(al)) return al;
         }
         return 'Star Alliance';
     }, [flights]);
@@ -697,36 +697,36 @@ export default function Schedule({ flights=[], user }) {
     /* ── Analysis ── */
     const analysis = useMemo(() => {
         const res = {
-            visitedAirports:new Set(), visitedCountries:new Set(), longHaulCount:0,
-            allianceLastFlights:{'Star Alliance':null,'SkyTeam':null,'Oneworld':null},
-            allianceFlightCounts:{'Star Alliance':0,'SkyTeam':0,'Oneworld':0},
+            visitedAirports: new Set(), visitedCountries: new Set(), longHaulCount: 0,
+            allianceLastFlights: { 'Star Alliance': null, 'SkyTeam': null, 'Oneworld': null },
+            allianceFlightCounts: { 'Star Alliance': 0, 'SkyTeam': 0, 'Oneworld': 0 },
         };
         if (!Array.isArray(flights)) return res;
-        if (process.env.NODE_ENV==='development'&&flights.length>0)
-            console.log('[Schedule] flight keys:',Object.keys(flights[0]),'sample:',flights[0]);
-        flights.forEach(f=>{
+        if (process.env.NODE_ENV === 'development' && flights.length > 0)
+            console.log('[Schedule] flight keys:', Object.keys(flights[0]), 'sample:', flights[0]);
+        flights.forEach(f => {
             if (!f) return;
-            const dep=String(f.departure||'').toUpperCase();
-            const arr=String(f.arrival||'').toUpperCase();
+            const dep = String(f.departure || '').toUpperCase();
+            const arr = String(f.arrival || '').toUpperCase();
             if (dep) res.visitedAirports.add(dep);
             if (arr) res.visitedAirports.add(arr);
-            const dAp=findAirport(dep), aAp=findAirport(arr);
+            const dAp = findAirport(dep), aAp = findAirport(arr);
             if (dAp?.country) res.visitedCountries.add(dAp.country);
             if (aAp?.country) res.visitedCountries.add(aAp.country);
-            const dist=Number(f.miles||f.distance||f.nm||0);
-            if (dist>3000) res.longHaulCount++;
-            let al=f.alliance;
-            if (!al) al = f.airline==='ITA Airways'
-                ? (new Date(f.date)>=new Date('2024-11-01')?'Star Alliance':'SkyTeam')
+            const dist = Number(f.miles || f.distance || f.nm || 0);
+            if (dist > 3000) res.longHaulCount++;
+            let al = f.alliance;
+            if (!al) al = f.airline === 'ITA Airways'
+                ? (new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam')
                 : ALLIANCE_MAP[f.airline];
-            if (al&&res.allianceLastFlights.hasOwnProperty(al)) {
+            if (al && res.allianceLastFlights.hasOwnProperty(al)) {
                 res.allianceFlightCounts[al]++;
-                if (!res.allianceLastFlights[al]||new Date(f.date)>new Date(res.allianceLastFlights[al].date))
-                    res.allianceLastFlights[al]=f;
+                if (!res.allianceLastFlights[al] || new Date(f.date) > new Date(res.allianceLastFlights[al].date))
+                    res.allianceLastFlights[al] = f;
             }
         });
         return res;
-    },[flights]);
+    }, [flights]);
 
     // Pre-calcola le stats dell'alleanza attiva per l'header AI context.
     // Deve stare QUI — dopo selectedAlliance (riga ~683) perché ne dipende.
@@ -736,22 +736,22 @@ export default function Schedule({ flights=[], user }) {
         () => buildScheduleStats(flights, selectedAlliance),
         [flights, selectedAlliance]
     );
-    const aiContextTopRoute   = schedStats?.topRouteList?.split(',')[0]?.split('(')[0]?.trim() || null;
+    const aiContextTopRoute = schedStats?.topRouteList?.split(',')[0]?.split('(')[0]?.trim() || null;
     const aiContextTopAirline = schedStats?.topAirline !== '—' ? schedStats?.topAirline : null;
 
     /* ── Generate suggestions ── */
-    const generateSuggestions = (allianceName, forceRandom=false) => {
+    const generateSuggestions = (allianceName, forceRandom = false) => {
         try {
-            const lf=analysis.allianceLastFlights[allianceName];
+            const lf = analysis.allianceLastFlights[allianceName];
             if (!lf?.arrival) return [];
-            const originCode=String(lf.arrival).toUpperCase();
-            const originAp=findAirport(originCode);
+            const originCode = String(lf.arrival).toUpperCase();
+            const originAp = findAirport(originCode);
             if (!originAp?.latitude) return [];
 
             // Option 4: visited airports + all large/medium airports from airport-data
             const visitedIcaos = new Set([
-                ...flights.map(f => String(f.departure||'').toUpperCase()),
-                ...flights.map(f => String(f.arrival||'').toUpperCase()),
+                ...flights.map(f => String(f.departure || '').toUpperCase()),
+                ...flights.map(f => String(f.arrival || '').toUpperCase()),
             ]);
 
             // Filter airport-data: valid ICAO (4 chars), has coordinates, is a sizeable airport
@@ -780,84 +780,84 @@ export default function Schedule({ flights=[], user }) {
                 top200Icaos.has(a.icao) || visitedIcaos.has(a.icao)
             );
 
-            return HAUL_TYPES.map(range=>{
+            return HAUL_TYPES.map(range => {
                 // Use restricted pool for long haul, full pool for short/medium
                 const pool = range.key === 'LONG' ? longHaulDests : allDests;
                 try {
-                    let cands=pool.filter(ap=>{
-                        if (ap.icao===originCode) return false;
-                        const d=haversineNm(originAp.latitude,originAp.longitude,ap.latitude,ap.longitude);
-                        return d>=range.min&&d<=range.max;
-                    }).map(ap=>({
-                        icao:ap.icao, name:ap.name, city:ap.city, country:ap.country,
-                        latitude:ap.latitude, longitude:ap.longitude,
-                        elevation:ap.elevation??ap.alt??null,
-                        distance:haversineNm(originAp.latitude,originAp.longitude,ap.latitude,ap.longitude),
+                    let cands = pool.filter(ap => {
+                        if (ap.icao === originCode) return false;
+                        const d = haversineNm(originAp.latitude, originAp.longitude, ap.latitude, ap.longitude);
+                        return d >= range.min && d <= range.max;
+                    }).map(ap => ({
+                        icao: ap.icao, name: ap.name, city: ap.city, country: ap.country,
+                        latitude: ap.latitude, longitude: ap.longitude,
+                        elevation: ap.elevation ?? ap.alt ?? null,
+                        distance: haversineNm(originAp.latitude, originAp.longitude, ap.latitude, ap.longitude),
                     }));
                     if (!cands.length) return null;
-                    cands.sort((a,b)=>{
-                        if (forceRandom) return Math.random()-.5;
-                        const aV=analysis.visitedAirports.has(a.icao), bV=analysis.visitedAirports.has(b.icao);
-                        if (aV!==bV) return aV?1:-1;
-                        if (range.key==='LONG'&&analysis.longHaulCount<120) return b.distance-a.distance;
-                        return a.distance-b.distance||a.icao.localeCompare(b.icao);
+                    cands.sort((a, b) => {
+                        if (forceRandom) return Math.random() - .5;
+                        const aV = analysis.visitedAirports.has(a.icao), bV = analysis.visitedAirports.has(b.icao);
+                        if (aV !== bV) return aV ? 1 : -1;
+                        if (range.key === 'LONG' && analysis.longHaulCount < 120) return b.distance - a.distance;
+                        return a.distance - b.distance || a.icao.localeCompare(b.icao);
                     });
-                    const best=cands[0]; if (!best) return null;
-                    const hrs=best.distance/450, h=Math.floor(hrs), m=Math.round((hrs-h)*60);
-                    const baseXP=Math.floor((best.distance/10)+(hrs*50)+250);
-                    const totalXP=Math.round(baseXP*range.xpMult);
-                    let achievement=null;
-                    if (range.key==='LONG') achievement={label:'Long Haul Ace',icon:'✈️'};
-                    else if (!analysis.visitedCountries.has(best.country)) achievement={label:'World Traveler',icon:'🌍'};
-                    else if (!analysis.visitedAirports.has(best.icao)) achievement={label:'New Discovery',icon:'📍'};
-                    const visitCount=flights.filter(f=>f&&(
-                        String(f.arrival||'').toUpperCase()===best.icao||
-                        String(f.departure||'').toUpperCase()===best.icao
+                    const best = cands[0]; if (!best) return null;
+                    const hrs = best.distance / 450, h = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+                    const baseXP = Math.floor((best.distance / 10) + (hrs * 50) + 250);
+                    const totalXP = Math.round(baseXP * range.xpMult);
+                    let achievement = null;
+                    if (range.key === 'LONG') achievement = { label: 'Long Haul Ace', icon: '✈️' };
+                    else if (!analysis.visitedCountries.has(best.country)) achievement = { label: 'World Traveler', icon: '🌍' };
+                    else if (!analysis.visitedAirports.has(best.icao)) achievement = { label: 'New Discovery', icon: '📍' };
+                    const visitCount = flights.filter(f => f && (
+                        String(f.arrival || '').toUpperCase() === best.icao ||
+                        String(f.departure || '').toUpperCase() === best.icao
                     )).length;
-                    return {...range,dest:best,origin:originAp,duration:`${h}h ${m}m`,baseXP,xp:totalXP,achievement,visitCount};
-                } catch {return null;}
+                    return { ...range, dest: best, origin: originAp, duration: `${h}h ${m}m`, baseXP, xp: totalXP, achievement, visitCount };
+                } catch { return null; }
             }).filter(Boolean);
-        } catch {return [];}
+        } catch { return []; }
     };
 
     /* ── Firestore sync ── */
-    useEffect(()=>{
-        const sync=async()=>{
+    useEffect(() => {
+        const sync = async () => {
             if (!user) return;
             setLoading(true);
             try {
-                const local={};
-                ALLIANCES.forEach(al=>{local[al.name]=generateSuggestions(al.name);});
+                const local = {};
+                ALLIANCES.forEach(al => { local[al.name] = generateSuggestions(al.name); });
                 setSuggestions(local);
-                const ref=doc(db,'users',user.uid,'settings','schedule');
-                const snap=await getDoc(ref);
+                const ref = doc(db, 'users', user.uid, 'settings', 'schedule');
+                const snap = await getDoc(ref);
                 if (snap.exists()) {
-                    const pd=snap.data(), synced={...local}; let needsUpdate=false;
-                    ALLIANCES.forEach(al=>{
-                        const lf=analysis.allianceLastFlights[al.name];
-                        const cur=lf?.arrival?.toUpperCase()||null;
-                        if (pd[al.name]?.baseAirport&&cur===pd[al.name].baseAirport) synced[al.name]=pd[al.name].suggestions;
-                        else if (cur){needsUpdate=true;pd[al.name]={baseAirport:cur,suggestions:local[al.name]};}
+                    const pd = snap.data(), synced = { ...local }; let needsUpdate = false;
+                    ALLIANCES.forEach(al => {
+                        const lf = analysis.allianceLastFlights[al.name];
+                        const cur = lf?.arrival?.toUpperCase() || null;
+                        if (pd[al.name]?.baseAirport && cur === pd[al.name].baseAirport) synced[al.name] = pd[al.name].suggestions;
+                        else if (cur) { needsUpdate = true; pd[al.name] = { baseAirport: cur, suggestions: local[al.name] }; }
                     });
-                    if (needsUpdate) await setDoc(ref,pd,{merge:true});
+                    if (needsUpdate) await setDoc(ref, pd, { merge: true });
                     setSuggestions(synced);
                 } else {
-                    const init={};
-                    ALLIANCES.forEach(al=>{
-                        const lf=analysis.allianceLastFlights[al.name];
-                        init[al.name]={baseAirport:lf?.arrival?.toUpperCase()||null,suggestions:local[al.name]};
+                    const init = {};
+                    ALLIANCES.forEach(al => {
+                        const lf = analysis.allianceLastFlights[al.name];
+                        init[al.name] = { baseAirport: lf?.arrival?.toUpperCase() || null, suggestions: local[al.name] };
                     });
-                    await setDoc(ref,init);
+                    await setDoc(ref, init);
                 }
-            } catch(e){console.error('Schedule sync',e);}
-            finally{setLoading(false);}
+            } catch (e) { console.error('Schedule sync', e); }
+            finally { setLoading(false); }
         };
-        if (flights?.length>0) sync(); else setLoading(false);
-    },[flights,analysis,user]);
+        if (flights?.length > 0) sync(); else setLoading(false);
+    }, [flights, analysis, user]);
 
     /* ── METAR fetch ── */
-    const activeSuggestions = suggestions[selectedAlliance]||[];
-    const activeHaul = activeSuggestions.find(s=>s.key===selectedHaul);
+    const activeSuggestions = suggestions[selectedAlliance] || [];
+    const activeHaul = activeSuggestions.find(s => s.key === selectedHaul);
 
     // Fetch METAR for all icaos in active suggestions — one effect, no race conditions
     useEffect(() => {
@@ -883,12 +883,14 @@ export default function Schedule({ flights=[], user }) {
                 .then(data => {
                     if (!Array.isArray(data) || data.length === 0) throw new Error('empty');
                     const m = data[0];
-                    setWeatherCache(p => ({ ...p, [icao]: {
-                        pres: m.altim  != null ? Math.round(m.altim) : null,
-                        wind: m.wdir   != null && m.wspd != null ? `${m.wdir}°/${m.wspd}kt` : null,
-                        temp: m.temp   != null ? Math.round(m.temp)  : null,
-                        dew:  m.dewp   != null ? Math.round(m.dewp)  : null,
-                    }}));
+                    setWeatherCache(p => ({
+                        ...p, [icao]: {
+                            pres: m.altim != null ? Math.round(m.altim) : null,
+                            wind: m.wdir != null && m.wspd != null ? `${m.wdir}°/${m.wspd}kt` : null,
+                            temp: m.temp != null ? Math.round(m.temp) : null,
+                            dew: m.dewp != null ? Math.round(m.dewp) : null,
+                        }
+                    }));
                 })
                 .catch(e => {
                     console.warn(`[Schedule] METAR failed ${icao}:`, e.message);
@@ -897,36 +899,36 @@ export default function Schedule({ flights=[], user }) {
         });
     }, [selectedAlliance, activeSuggestions.map(s => s.dest.icao).join(',')]);
 
-    const handleRegenerate = async()=>{
-        const newS=generateSuggestions(selectedAlliance,true);
-        setSuggestions(p=>({...p,[selectedAlliance]:newS}));
+    const handleRegenerate = async () => {
+        const newS = generateSuggestions(selectedAlliance, true);
+        setSuggestions(p => ({ ...p, [selectedAlliance]: newS }));
         setGeneratedAt(Date.now());
         if (user) {
             try {
-                const ref=doc(db,'users',user.uid,'settings','schedule');
-                const lf=analysis.allianceLastFlights[selectedAlliance];
-                await setDoc(ref,{[selectedAlliance]:{baseAirport:lf?.arrival?.toUpperCase()||null,suggestions:newS}},{merge:true});
-            } catch(e){console.error('Regen save',e);}
+                const ref = doc(db, 'users', user.uid, 'settings', 'schedule');
+                const lf = analysis.allianceLastFlights[selectedAlliance];
+                await setDoc(ref, { [selectedAlliance]: { baseAirport: lf?.arrival?.toUpperCase() || null, suggestions: newS } }, { merge: true });
+            } catch (e) { console.error('Regen save', e); }
         }
     };
 
     const handleRegenerateHaul = async (haulKey) => {
         // Regenerate only the specified haul type, leave the others intact
         const current = suggestions[selectedAlliance] || [];
-        const others  = current.filter(s => s.key !== haulKey);
-        const haul    = HAUL_TYPES.find(h => h.key === haulKey);
+        const others = current.filter(s => s.key !== haulKey);
+        const haul = HAUL_TYPES.find(h => h.key === haulKey);
         if (!haul) return;
 
         // Generate fresh candidates for this haul only (forceRandom=true)
         const lf = analysis.allianceLastFlights[selectedAlliance];
         if (!lf?.arrival) return;
         const originCode = String(lf.arrival).toUpperCase();
-        const originAp   = findAirport(originCode);
+        const originAp = findAirport(originCode);
         if (!originAp?.latitude) return;
 
         const visitedIcaos = new Set([
-            ...flights.map(f => String(f.departure||'').toUpperCase()),
-            ...flights.map(f => String(f.arrival||'').toUpperCase()),
+            ...flights.map(f => String(f.departure || '').toUpperCase()),
+            ...flights.map(f => String(f.arrival || '').toUpperCase()),
         ]);
         const largeAirports = airports.filter(a =>
             a.icao && a.icao.length === 4 &&
@@ -960,22 +962,22 @@ export default function Schedule({ flights=[], user }) {
         // Shuffle and pick
         cands.sort(() => Math.random() - 0.5);
         const best = cands[0];
-        const hrs  = best.distance / 450;
-        const h    = Math.floor(hrs), m = Math.round((hrs - h) * 60);
-        const baseXP  = Math.floor((best.distance / 10) + (hrs * 50) + 250);
+        const hrs = best.distance / 450;
+        const h = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+        const baseXP = Math.floor((best.distance / 10) + (hrs * 50) + 250);
         const totalXP = Math.round(baseXP * haul.xpMult);
         let achievement = null;
         if (haulKey === 'LONG') achievement = { label: 'Long Haul Ace', icon: '✈️' };
         else if (!analysis.visitedCountries.has(best.country)) achievement = { label: 'World Traveler', icon: '🌍' };
         else if (!analysis.visitedAirports.has(best.icao)) achievement = { label: 'New Discovery', icon: '📍' };
         const visitCount = flights.filter(f => f && (
-            String(f.arrival||'').toUpperCase()  === best.icao ||
-            String(f.departure||'').toUpperCase() === best.icao
+            String(f.arrival || '').toUpperCase() === best.icao ||
+            String(f.departure || '').toUpperCase() === best.icao
         )).length;
 
         const newSuggestion = { ...haul, dest: best, origin: originAp, duration: `${h}h ${m}m`, baseXP, xp: totalXP, achievement, visitCount };
-        const newS = [...others, newSuggestion].sort((a,b) =>
-            HAUL_TYPES.findIndex(h=>h.key===a.key) - HAUL_TYPES.findIndex(h=>h.key===b.key)
+        const newS = [...others, newSuggestion].sort((a, b) =>
+            HAUL_TYPES.findIndex(h => h.key === a.key) - HAUL_TYPES.findIndex(h => h.key === b.key)
         );
         setSuggestions(p => ({ ...p, [selectedAlliance]: newS }));
         setGeneratedAt(Date.now());
@@ -983,21 +985,21 @@ export default function Schedule({ flights=[], user }) {
             try {
                 const ref = doc(db, 'users', user.uid, 'settings', 'schedule');
                 const lf2 = analysis.allianceLastFlights[selectedAlliance];
-                await setDoc(ref, { [selectedAlliance]: { baseAirport: lf2?.arrival?.toUpperCase()||null, suggestions: newS } }, { merge: true });
-            } catch(e) { console.error('Regen haul save', e); }
+                await setDoc(ref, { [selectedAlliance]: { baseAirport: lf2?.arrival?.toUpperCase() || null, suggestions: newS } }, { merge: true });
+            } catch (e) { console.error('Regen haul save', e); }
         }
     };
 
-    const totalFlights=Object.values(analysis.allianceFlightCounts).reduce((a,b)=>a+b,0);
-    const activeAl=ALLIANCES.find(a=>a.name===selectedAlliance);
-    const activeLastFlight=analysis.allianceLastFlights[selectedAlliance];
+    const totalFlights = Object.values(analysis.allianceFlightCounts).reduce((a, b) => a + b, 0);
+    const activeAl = ALLIANCES.find(a => a.name === selectedAlliance);
+    const activeLastFlight = analysis.allianceLastFlights[selectedAlliance];
 
-    if (!flights||flights.length===0) return (
+    if (!flights || flights.length === 0) return (
         <div className="schedule-page">
             <header className="page-header">
-                <h1 className="page-title"><Calendar className="title-icon"/> Flight Schedule</h1>
+                <h1 className="page-title"><Calendar className="title-icon" /> Flight Schedule</h1>
             </header>
-            <div className="card" style={{padding:'2rem',textAlign:'center'}}>
+            <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
                 <p>No flights logged yet. Add your first flight to get started.</p>
             </div>
         </div>
@@ -1009,7 +1011,7 @@ export default function Schedule({ flights=[], user }) {
             {/* ── Page header ── */}
             <header className="sched-header">
                 <div className="sched-header-left">
-                    <h1 className="page-title"><Calendar className="title-icon"/> Flight Schedule</h1>
+                    <h1 className="page-title"><Calendar className="title-icon" /> Flight Schedule</h1>
                     {activeLastFlight && (
                         <p className="sched-header-sub">
                             Departing from <strong>{String(activeLastFlight.arrival).toUpperCase()}</strong>
@@ -1025,36 +1027,36 @@ export default function Schedule({ flights=[], user }) {
                     {/* Timestamp ultima generazione — "Updated X ago" */}
                     {generatedAt && (() => {
                         const diffMin = Math.round((Date.now() - generatedAt) / 60000);
-                        const label = diffMin < 1 ? 'Just now' : diffMin < 60 ? `${diffMin}m ago` : `${Math.round(diffMin/60)}h ago`;
+                        const label = diffMin < 1 ? 'Just now' : diffMin < 60 ? `${diffMin}m ago` : `${Math.round(diffMin / 60)}h ago`;
                         return (
                             <span style={{
                                 fontSize: '0.68rem', color: 'var(--color-text-hint)',
                                 display: 'flex', alignItems: 'center', gap: '4px',
                                 fontFamily: 'var(--font-family-mono)',
                             }}>
-                                <RefreshCw size={10}/> Updated {label}
+                                <RefreshCw size={10} /> Updated {label}
                             </span>
                         );
                     })()}
-                    {ALLIANCES.map(al=>{
-                        const count=analysis.allianceFlightCounts[al.name];
-                        const isActive=selectedAlliance===al.name;
+                    {ALLIANCES.map(al => {
+                        const count = analysis.allianceFlightCounts[al.name];
+                        const isActive = selectedAlliance === al.name;
                         if (!analysis.allianceLastFlights[al.name]) return null;
                         return (
                             <button
                                 key={al.name}
-                                className={`al-tab-btn ${isActive?'active':''}`}
-                                style={{'--al-color':al.color}}
-                                onClick={()=>{setSelectedAlliance(al.name);setSelectedHaul('SHORT');setWeatherCache({});}}
+                                className={`al-tab-btn ${isActive ? 'active' : ''}`}
+                                style={{ '--al-color': al.color }}
+                                onClick={() => { setSelectedAlliance(al.name); setSelectedHaul('SHORT'); setWeatherCache({}); }}
                             >
-                                <span className="al-tab-dot" style={{background:al.color}}/>
+                                <span className="al-tab-dot" style={{ background: al.color }} />
                                 {al.name}
                                 <span className="al-tab-count">{count}</span>
                             </button>
                         );
                     })}
                     <button className="btn regen-btn" onClick={handleRegenerate} style={{ display: 'none' }}>
-                        <RefreshCw size={13}/> Regenerate
+                        <RefreshCw size={13} /> Regenerate
                     </button>
                 </div>
             </header>
@@ -1072,24 +1074,24 @@ export default function Schedule({ flights=[], user }) {
 
                 {/* Left: flight cards */}
                 <div className="sched-left" key={selectedAlliance}>
-                    {HAUL_TYPES.map((haul,idx)=>{
-                        const s=activeSuggestions.find(x=>x.key===haul.key);
-                        const isActive=selectedHaul===haul.key;
-                        const wx_dep=s?(weatherCache[s.origin.icao]??null):null;
-                        const wx_arr=s?(weatherCache[s.dest.icao]??null):null;
+                    {HAUL_TYPES.map((haul, idx) => {
+                        const s = activeSuggestions.find(x => x.key === haul.key);
+                        const isActive = selectedHaul === haul.key;
+                        const wx_dep = s ? (weatherCache[s.origin.icao] ?? null) : null;
+                        const wx_arr = s ? (weatherCache[s.dest.icao] ?? null) : null;
                         const suggestedAirline = s ? pickAirlineForRoute(selectedAlliance, s.origin.icao, s.dest.icao) : null;
                         const suggestedAircraft = s ? pickAircraftForHaul(haul.key, s.origin.icao, s.dest.icao) : null;
                         const sbUrl = s ? buildSimbriefUrl(s, suggestedAirline, suggestedAircraft) : null;
                         // Hub accent color — se l'aeroporto di partenza è un hub noto, usiamo il suo colore
                         const HUB_ACCENT = {
-                            LFPG:'#4d8eff',LIRF:'#ff6b6b',KLAX:'#00c4f4',EGLL:'#ff5c7a',
-                            EDDF:'#ffaa44',EHAM:'#3de0a0',EDDM:'#a78bfa',OMAA:'#ffd166',
-                            KJFK:'#2dd4bf',VTBS:'#6ee06e',LEMD:'#f97316',
+                            LFPG: '#4d8eff', LIRF: '#ff6b6b', KLAX: '#00c4f4', EGLL: '#ff5c7a',
+                            EDDF: '#ffaa44', EHAM: '#3de0a0', EDDM: '#a78bfa', OMAA: '#ffd166',
+                            KJFK: '#2dd4bf', VTBS: '#6ee06e', LEMD: '#f97316',
                         };
                         const hubAccent = s ? (HUB_ACCENT[s.origin.icao] || null) : null;
                         // Classificazione condizioni meteo origine e destinazione
                         const wxOriginCond = classifyWx(wx_dep);
-                        const wxDestCond   = classifyWx(wx_arr);
+                        const wxDestCond = classifyWx(wx_arr);
                         // Stima sessione di simulazione: distanza / 450 ktas + 30min pre/post
                         const sessionHours = s ? ((s.dest.distance / 450) + 0.5).toFixed(1) : null;
                         // Flag per micro-stato post-dispatch
@@ -1097,13 +1099,13 @@ export default function Schedule({ flights=[], user }) {
                         return (
                             <div
                                 key={haul.key}
-                                className={`fcard card ${isActive?'fcard-active':''}`}
+                                className={`fcard card ${isActive ? 'fcard-active' : ''}`}
                                 style={{
                                     '--haul-c': hubAccent || haul.color,
                                     '--haul-rgb': haul.rgb,
-                                    '--anim-delay': `${idx*70}ms`,
+                                    '--anim-delay': `${idx * 70}ms`,
                                 }}
-                                onClick={()=>s&&setSelectedHaul(haul.key)}
+                                onClick={() => s && setSelectedHaul(haul.key)}
                             >
                                 {/* Top bar */}
                                 <div className="fcard-topbar">
@@ -1117,13 +1119,13 @@ export default function Schedule({ flights=[], user }) {
                                         </span>
                                     )}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-                                        {s&&<span className="fcard-xp"><Zap size={11}/> +{s.xp} XP</span>}
+                                        {s && <span className="fcard-xp"><Zap size={11} /> +{s.xp} XP</span>}
                                         <button
                                             className="fcard-regen-btn"
                                             title="Regenerate this suggestion"
                                             onClick={e => { e.stopPropagation(); handleRegenerateHaul(haul.key); }}
                                         >
-                                            <RefreshCw size={11}/>
+                                            <RefreshCw size={11} />
                                         </button>
                                     </div>
                                 </div>
@@ -1137,21 +1139,21 @@ export default function Schedule({ flights=[], user }) {
                                                     <div className="fcard-ap-label fcard-ap-label-origin">Origin</div>
                                                     <div className="fcard-icao">{s.origin.icao}</div>
                                                     <div className="fcard-apname">{s.origin.name}</div>
-                                                    {s.origin.country&&<div className="fcard-country"><MapPin size={10}/>{s.origin.country}</div>}
+                                                    {s.origin.country && <div className="fcard-country"><MapPin size={10} />{s.origin.country}</div>}
                                                 </div>
                                                 <div className="fcard-route-mid">
                                                     <span className="fcard-dur">{s.duration}</span>
                                                     <div className="fcard-route-line">
-                                                        <div className="fcard-route-line-bar"/>
-                                                        <MapPin size={12} className="fcard-route-plane"/>
-                                                        <div className="fcard-route-line-bar"/>
+                                                        <div className="fcard-route-line-bar" />
+                                                        <MapPin size={12} className="fcard-route-plane" />
+                                                        <div className="fcard-route-line-bar" />
                                                     </div>
                                                 </div>
                                                 <div className="fcard-ap">
                                                     <div className="fcard-ap-label fcard-ap-label-dest">Destination</div>
                                                     <div className="fcard-icao">{s.dest.icao}</div>
                                                     <div className="fcard-apname">{s.dest.name}</div>
-                                                    {s.dest.country&&<div className="fcard-country"><MapPin size={10}/>{s.dest.country}</div>}
+                                                    {s.dest.country && <div className="fcard-country"><MapPin size={10} />{s.dest.country}</div>}
                                                 </div>
                                             </div>
                                             <div className="fcard-route-info">
@@ -1169,7 +1171,7 @@ export default function Schedule({ flights=[], user }) {
                                                 </div>
                                                 <div className="fcard-info-item">
                                                     <span className="fcard-info-l">Route type</span>
-                                                    <span className="fcard-info-v">{s.origin.country===s.dest.country?'Domestic':'International'}</span>
+                                                    <span className="fcard-info-v">{s.origin.country === s.dest.country ? 'Domestic' : 'International'}</span>
                                                 </div>
                                                 {/* Session estimator — quanto tempo serve per questo volo */}
                                                 {sessionHours && (
@@ -1193,18 +1195,18 @@ export default function Schedule({ flights=[], user }) {
                                                         {wxDestCond.label}
                                                     </span>
                                                 </div>
-                                                {s.visitCount>0 ? (
+                                                {s.visitCount > 0 ? (
                                                     <div className="fcard-info-item">
                                                         <span className="fcard-info-l">Status</span>
                                                         <span className="fcard-badge fcard-badge-visited">
-                                                            <span className="fcard-badge-dot" style={{background:'var(--color-success)'}}/> Flown {s.visitCount}×
+                                                            <span className="fcard-badge-dot" style={{ background: 'var(--color-success)' }} /> Flown {s.visitCount}×
                                                         </span>
                                                     </div>
                                                 ) : s.achievement ? (
                                                     <div className="fcard-info-item">
                                                         <span className="fcard-info-l">Achievement</span>
                                                         <span className="fcard-badge fcard-badge-new">
-                                                            <span className="fcard-badge-dot" style={{background:'var(--color-primary)'}}/> {s.achievement.label}
+                                                            <span className="fcard-badge-dot" style={{ background: 'var(--color-primary)' }} /> {s.achievement.label}
                                                         </span>
                                                     </div>
                                                 ) : null}
@@ -1217,11 +1219,11 @@ export default function Schedule({ flights=[], user }) {
                                         <div className="fcard-wx">
                                             <div className="fcard-wx-section">
                                                 <span className="fcard-wx-label">Origin Weather</span>
-                                                <WxStrip icao={s.origin.icao} wx={wx_dep}/>
+                                                <WxStrip icao={s.origin.icao} wx={wx_dep} />
                                             </div>
                                             <div className="fcard-wx-section">
                                                 <span className="fcard-wx-label">Dest Weather</span>
-                                                <WxStrip icao={s.dest.icao} wx={wx_arr}/>
+                                                <WxStrip icao={s.dest.icao} wx={wx_arr} />
                                             </div>
                                         </div>
 
@@ -1247,7 +1249,7 @@ export default function Schedule({ flights=[], user }) {
                                                             onClick={e => { e.stopPropagation(); setDispatchedHaul(null); }}
                                                             title="Plan again"
                                                         >
-                                                            <RefreshCw size={11}/>
+                                                            <RefreshCw size={11} />
                                                         </button>
                                                     </div>
                                                 ) : (
@@ -1260,10 +1262,10 @@ export default function Schedule({ flights=[], user }) {
                                                             e.stopPropagation();
                                                             // Segna questo haul come dispatched e salva nel localStorage
                                                             setDispatchedHaul(haul.key);
-                                                            try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch {}
+                                                            try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch { }
                                                         }}
                                                     >
-                                                        <ExternalLink size={13}/>
+                                                        <ExternalLink size={13} />
                                                         Plan on SimBrief
                                                         <span className="simbrief-route">{s.origin.icao} → {s.dest.icao}</span>
                                                     </a>
@@ -1291,17 +1293,17 @@ export default function Schedule({ flights=[], user }) {
                 <div className="sched-map-col">
                     <div className="sched-map-box card">
                         {activeHaul ? (
-                            <RouteMap origin={activeHaul.origin} dest={activeHaul.dest} isDarkMode={isDarkMode}/>
+                            <RouteMap origin={activeHaul.origin} dest={activeHaul.dest} isDarkMode={isDarkMode} />
                         ) : (
                             <div className="map-placeholder">
-                                <Calendar size={24}/>
+                                <Calendar size={24} />
                                 <span>Select a flight</span>
                             </div>
                         )}
                     </div>
                     {activeHaul && (() => {
                         const wxO = classifyWx(weatherCache[activeHaul.origin.icao] ?? null);
-                        const wxD = classifyWx(weatherCache[activeHaul.dest.icao]   ?? null);
+                        const wxD = classifyWx(weatherCache[activeHaul.dest.icao] ?? null);
                         return (
                             <div className="map-info-bar">
                                 {/* Colonna sinistra: distanza + sessione */}
@@ -1331,9 +1333,9 @@ export default function Schedule({ flights=[], user }) {
                 </div>
             </div>
 
-            {loading&&(
+            {loading && (
                 <div className="persistence-loader">
-                    <RefreshCw size={14} className="spin"/>
+                    <RefreshCw size={14} className="spin" />
                     <span>Syncing schedule...</span>
                 </div>
             )}

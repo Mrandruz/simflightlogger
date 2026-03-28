@@ -31,11 +31,11 @@ export const airlineAlliances = {
     'AV': 'Star Alliance',   // Avianca
     'CM': 'Star Alliance',   // Copa Airlines
     'LO': 'Star Alliance',   // LOT Polish Airlines
-    'JP': 'Star Alliance',   // Adria Airways
-    'OU': 'Star Alliance',   // Croatia Airlines
-    'SM': 'Star Alliance',   // Saudia (leaves SkyTeam 2025 — verify)
     'ZH': 'Star Alliance',   // Shenzhen Airlines
-    // ITA Airways (AZ) — exited SkyTeam April 2025, joining Star Alliance April 2026
+    'A3': 'Star Alliance',   // Aegean Airlines
+    'NZ': 'Star Alliance',   // Air New Zealand
+    'OU': 'Star Alliance',   // Croatia Airlines
+    // ITA Airways (AZ) — exited SkyTeam April 2025, joining Star Alliance April 1, 2026
     'AZ': 'Star Alliance',
 
     // ── SkyTeam ───────────────────────────────────────────────────
@@ -45,7 +45,6 @@ export const airlineAlliances = {
     'AM': 'SkyTeam',         // Aeromexico
     'AR': 'SkyTeam',         // Aerolíneas Argentinas
     'MU': 'SkyTeam',         // China Eastern
-    'CZ': 'SkyTeam',         // China Southern
     'CI': 'SkyTeam',         // China Airlines
     'KE': 'SkyTeam',         // Korean Air
     'SK': 'SkyTeam',         // SAS (joined September 2024)
@@ -68,13 +67,12 @@ export const airlineAlliances = {
     'IB': 'Oneworld',        // Iberia
     'CX': 'Oneworld',        // Cathay Pacific
     'QR': 'Oneworld',        // Qatar Airways
-    'LA': 'Oneworld',        // LATAM Airlines
     'MH': 'Oneworld',        // Malaysia Airlines
     'RJ': 'Oneworld',        // Royal Jordanian
     'AT': 'Oneworld',        // Royal Air Maroc
     'AS': 'Oneworld',        // Alaska Airlines
-    'S7': 'Oneworld',        // S7 Airlines
     'UL': 'Oneworld',        // SriLankan Airlines
+    'FJ': 'Oneworld',        // Fiji Airways
     'WY': 'Oneworld',        // Oman Air
 };
 
