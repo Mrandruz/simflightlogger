@@ -61,14 +61,40 @@ interface ScheduledFlight {
   reason: string;
 }
 
-// Usa Record<string,any> per tollerare qualsiasi variazione di schema
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type WeatherData = Record<string, any>;
-
 interface ChatMessage {
   role: 'aria' | 'pilot';
   content: string;
   timestamp: Date;
+}
+
+
+// ─── Tipi Piano Operativo (caricato da /velar-ops-plan.json) ─────────────────
+
+interface VelarRoute {
+  dest: string; city: string; aircraft: string;
+  freq: string; flight: string; note: string;
+}
+interface VelarHub {
+  icao: string; city: string; role: string;
+  description: string; routes: VelarRoute[];
+}
+interface VelarFleetItem {
+  type: string; count: number; role: string; mission: string; capacity: number;
+}
+interface CrewMember {
+  name: string; rank: string; base: string;
+  todayFlight: {
+    flightNumber: string; dep: string; arr: string;
+    depCity: string; arrCity: string; aircraft: string; time: string;
+  } | null;
+}
+interface RankDef { name: string; minXp: number; aircraft: string[]; }
+interface VelarPlan {
+  _meta: { version: string; name: string; updated: string; motto: string; };
+  fleet: VelarFleetItem[];
+  hubs: VelarHub[];
+  crew: CrewMember[];
+  aria_ops: { tone: string; language: string; priorities: string[]; rank_progression: RankDef[]; };
 }
 
 // ─── Costanti (speculari a usePilotData.js) ───────────────────────────────────
@@ -86,89 +112,34 @@ const ONE_DAY_MS = 86400000;
 
 // ─── Piano Operativo Velar v1.0 ───────────────────────────────────────────────
 
-const VELAR_FLEET = `
-FLOTTA VELAR (Fase di Lancio v1.0):
-- 1x Airbus A350-900 (Flagship): rotte intercontinentali LIRF↔KBOS e LIRF↔WIII
-- 3x Airbus A320-200 (Feeders): connessioni europee verso l'hub di Roma Fiumicino (LIRF)
-`;
-
-const VELAR_ROUTES_LONGHAUL = `
-ROTTE LUNGO RAGGIO (A350-900) — rotazione settimanale:
-- Lunedì:    VLR101 LIRF→KBOS dep 10:30 arr 13:00 | VLR102 KBOS→LIRF dep 15:30 arr 05:00(+1) [red-eye]
-- Martedì:   VLR201 LIRF→WIII dep 11:30 arr 07:00(+1) "Nusantara Soul"
-- Mercoledì: VLR202 WIII→LIRF dep 10:30 arr 19:00
-- Giovedì:   BUFFER / MANUTENZIONE (Fleet Check)
-- Venerdì:   VLR101 LIRF→KBOS dep 10:30 arr 13:00 | VLR102 KBOS→LIRF dep 15:30 arr 05:00(+1)
-- Sabato:    VLR201 LIRF→WIII dep 11:30 arr 07:00(+1)
-- Domenica: VLR202 WIII→LIRF dep 10:30 arr 19:00
-`;
-
-const VELAR_ROUTES_SHORTHAUL = `
-ROTTE CORTO/MEDIO RAGGIO (A320-200) — operatività giornaliera:
-- A320-1: VLR311 LIML→LIRF dep 07:00 arr 08:10 | VLR312 LIRF→LIML dep 20:30 arr 21:40
-- A320-2: VLR411 EGLL→LIRF dep 06:00 arr 09:20 | VLR412 LIRF→EGLL dep 20:00 arr 21:40
-- A320-3: VLR511 LFPG→LIRF dep 06:45 arr 08:45 | VLR512 LIRF→LFPG dep 20:15 arr 22:15
-`;
-
 const ARIA_PROTOCOL = `
-PROTOCOLLO ARIA — Tono e Comportamento:
-- Empatia Professionale: amichevole e rassicurante, ma estremamente conciso. Non interferire con le fasi critiche del volo.
+PROTOCOLLO ARIA OPS — Tono e Comportamento:
+- Sintetico, tecnico, autoritativo ma collaborativo.
 - Supporto, non comando: proponi soluzioni, l'ultima parola spetta sempre al Comandante.
-- Priorità: 1) Sicurezza (safety first) 2) Puntualità 3) Pianificazione crew.
+- Priorità: 1) Sicurezza (safety first) 2) Puntualità 3) Efficienza carburante.
 - Motto Velar: "Motion, simplified."
+- Posizionamento: Boutique Tech-Luxury Airline.
 - Esempio di tono: "Comandante [nome], il check della cabina per il volo VLR101 è completo. Ho rilevato [info]. Suggerisco [azione]."
 `;
 
 
 // ─── Piano Operativo Velar v2.0 ──────────────────────────────────────────────
 
-const VELAR_FLEET_V2 = [
-  { type: 'Airbus A319', count: 5, role: 'Executive Shuttle', mission: 'Rotte regionali ad alto rendimento' },
-  { type: 'Airbus A320', count: 10, role: 'Core Fleet', mission: 'Europeo e asiatico ad alta frequenza' },
-  { type: 'Airbus A321LR', count: 5, role: 'Long Range NB', mission: 'Transcontinentale a densità media' },
-  { type: 'Airbus A330neo', count: 2, role: 'High Cap Long Haul', mission: 'Transatlantico e oceanico' },
-  { type: 'Airbus A350-900', count: 3, role: 'Flagship', mission: 'Ultra-long-haul Hub-to-Hub' },
-];
 
-const VELAR_HUBS = [
-  {
-    icao: 'LIRF', city: 'Roma Fiumicino', role: 'Global Hub',
-    description: 'Baricentro operativo Velar, collegando l'Europa al mondo.',
-    routes: [
-      { dest: 'KBOS', city: 'Boston', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 101/102', note: 'Hub-to-Hub' },
-      { dest: 'WIII', city: 'Giacarta', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 201/202', note: 'Hub-to-Hub' },
-      { dest: 'KJFK', city: 'New York JFK', aircraft: 'A330neo', freq: 'Daily', flight: 'VLR 111/112', note: 'Premium Business' },
-      { dest: 'OMDB', city: 'Dubai', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 211/212', note: 'ME Gateway' },
-      { dest: 'EGLL', city: 'Londra', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 411-416', note: 'Feeders' },
-      { dest: 'LFPG', city: 'Parigi CDG', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 511-516', note: 'Luxury' },
-      { dest: 'LIML', city: 'Milano Linate', aircraft: 'A320', freq: '4x Daily', flight: 'VLR 311-318', note: 'Domestic Executive' },
-      { dest: 'LSZH', city: 'Zurigo', aircraft: 'A319', freq: '2x Daily', flight: 'VLR 611-614', note: 'Finance Shuttle' },
-      { dest: 'EDDB', city: 'Berlino', aircraft: 'A320', freq: 'Daily', flight: 'VLR 711/712', note: 'Tech Feeder' },
-    ],
-  },
-  {
-    icao: 'WIII', city: 'Giacarta Soekarno-Hatta', role: 'Asian Gateway',
-    description: 'Cuore dell'ospitalità Nusantara e porta per l'Oceania.',
-    routes: [
-      { dest: 'LIRF', city: 'Roma', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 201/202', note: 'Hub-to-Hub' },
-      { dest: 'YSSY', city: 'Sydney', aircraft: 'A330neo', freq: '4x Weekly', flight: 'VLR 811/812', note: 'Oceania' },
-      { dest: 'WSSS', city: 'Singapore', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 821-826', note: 'Asian Business' },
-      { dest: 'RJTT', city: 'Tokyo Haneda', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 831/832', note: 'Tech Capital' },
-      { dest: 'WADD', city: 'Bali', aircraft: 'A320', freq: '2x Daily', flight: 'VLR 841-844', note: 'Premium Leisure' },
-    ],
-  },
-  {
-    icao: 'KBOS', city: 'Boston Logan', role: 'Tech Corridor',
-    description: 'Porto d'ingresso per l'innovazione e il mercato Nord Americano.',
-    routes: [
-      { dest: 'LIRF', city: 'Roma', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 101/102', note: 'Hub-to-Hub' },
-      { dest: 'KSFO', city: 'San Francisco', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 911/912', note: 'Tech Bridge' },
-      { dest: 'KAUS', city: 'Austin', aircraft: 'A321LR', freq: '4x Weekly', flight: 'VLR 921/922', note: 'Silicon Hills' },
-      { dest: 'CYYZ', city: 'Toronto', aircraft: 'A319', freq: 'Daily', flight: 'VLR 931/932', note: 'NE Connection' },
-      { dest: 'EGLL', city: 'Londra', aircraft: 'A330neo', freq: 'Daily', flight: 'VLR 941/942', note: 'Academic/Finance' },
-    ],
-  },
-];
+// ─── Crew Board Velar — piloti fittizi piano v2.0 ────────────────────────────
+
+const DAYS_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+interface CrewMember {
+  name: string;
+  rank: string;
+  base: string;
+  baseCity: string;
+  todayFlight: { flightNumber: string; dep: string; arr: string; depCity: string; arrCity: string; aircraft: string; time: string } | null;
+}
+
+// Mappa hub ICAO → nome
+// HUB_NAMES è ora derivato dinamicamente da opsPlan.hubs
 
 // ─── Calcolo profilo pilota ───────────────────────────────────────────────────
 
@@ -250,66 +221,7 @@ function computePilotProfile(flights: Flight[]): PilotProfile {
 // ─── Weather ──────────────────────────────────────────────────────────────────
 
 // Normalizza un record METAR raw nel formato semplice usato internamente
-function normalizeMETAR(m: Record<string, any>): WeatherData {
-  return {
-    icaoId: m.icaoId || m.icao || '',
-    name: m.name || '',
-    pres: m.altim != null ? Math.round(m.altim) : null,
-    wind: m.wdir != null && m.wspd != null ? `${m.wdir}°/${m.wspd}kt` : null,
-    temp: m.temp != null ? Math.round(m.temp) : null,
-    dew: m.dewp != null ? Math.round(m.dewp) : null,
-    fltCat: m.fltCat || null,
-    cover: m.cover || null,
-    rawOb: m.rawOb || m.raw_text || null,
-  };
-}
-
-async function fetchMetar(icaoCodes: string[]): Promise<WeatherData[]> {
-  // Usa lo stesso endpoint di Schedule.jsx — /api/metar è già configurato
-  // nel vite.config.js come proxy verso aviationweather.gov
-  const ids = icaoCodes.join(',');
-  try {
-    const res = await fetch(`/api/metar?ids=${ids}&format=json`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return [];
-    return data.map(normalizeMETAR);
-  } catch (e) {
-    console.warn('[ARIA] METAR fetch failed:', e);
-    return [];
-  }
-}
-
-function computeFlightCategory(w: WeatherData): string {
-  // Se già disponibile nel payload, usalo
-  if (w.flight_category) return w.flight_category.toUpperCase();
-
-  // Calcola da visibilità e ceiling (standard FAA)
-  const vis = typeof w.visib === 'string' ? parseFloat(w.visib) : (w.visib ?? w.visibility_statute_mi ?? 10);
-  
-  // Estrai ceiling dal campo clouds nuovo schema (es. "BKN045 OVC080") o sky_condition
-  let ceilingFt = 99999;
-  if (w.clouds) {
-    const matches = w.clouds.matchAll(/(BKN|OVC)(\d{3})/g);
-    for (const m of matches) {
-      const ft = parseInt(m[2]) * 100;
-      if (ft < ceilingFt) ceilingFt = ft;
-    }
-  } else if (w.sky_condition) {
-    for (const s of w.sky_condition) {
-      if ((s.sky_cover === 'BKN' || s.sky_cover === 'OVC') && s.cloud_base_ft_agl) {
-        if (s.cloud_base_ft_agl < ceilingFt) ceilingFt = s.cloud_base_ft_agl;
-      }
-    }
-  }
-
-  if (vis < 1 || ceilingFt < 500) return 'LIFR';
-  if (vis < 3 || ceilingFt < 1000) return 'IFR';
-  if (vis <= 5 || ceilingFt <= 3000) return 'MVFR';
-  return 'VFR';
-}
-
-function flightCategory(w: WeatherData): { label: string; color: string } {
+ {
   const cat = computeFlightCategory(w);
   if (cat === 'VFR') return { label: 'VFR', color: 'var(--color-success)' };
   if (cat === 'MVFR') return { label: 'MVFR', color: 'var(--color-primary)' };
@@ -358,7 +270,7 @@ interface ARIAProps {
   pilotName?: string;
 }
 
-type ViewState = 'chat' | 'schedule' | 'weather' | 'fleet';
+type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet';
 
 export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -374,12 +286,21 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [schedule, setSchedule] = useState<ScheduledFlight[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<ScheduledFlight | null>(null);
+  const [scheduleTab, setScheduleTab] = useState<'mine' | 'crew'>('mine');
 
-  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
-  const [weatherLoading, setWeatherLoading] = useState(false);
-  const [weatherAirports, setWeatherAirports] = useState('');
   const [fleetBriefing, setFleetBriefing] = useState('');
   const [fleetBriefingLoading, setFleetBriefingLoading] = useState(false);
+  const [overviewData, setOverviewData] = useState<any>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [opsPlan, setOpsPlan] = useState<VelarPlan | null>(null);
+
+  // ── Carica piano operativo da /velar-ops-plan.json ──────────────────────────
+  useEffect(() => {
+    fetch('/velar-ops-plan.json')
+      .then(r => r.json())
+      .then((plan: VelarPlan) => setOpsPlan(plan))
+      .catch(() => console.warn('[ARIA Ops] Piano operativo non trovato'));
+  }, []);
 
 
   // ── Carica voli da Firestore ──────────────────────────────────────────────
@@ -414,10 +335,6 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 Sei ARIA (Adaptive Route Intelligence Assistant), il co-pilota virtuale e coordinatore operativo della compagnia aerea virtuale Velar su Skydeck SimFlightLogger.
 
 ${ARIA_PROTOCOL}
-${VELAR_FLEET}
-${VELAR_ROUTES_LONGHAUL}
-${VELAR_ROUTES_SHORTHAUL}
-
 PROFILO PILOTA ATTIVO:
 - Nome: ${pilotName || 'Comandante'}
 - Rank: ${p.currentRank.name}
@@ -433,7 +350,8 @@ REGOLE:
 - Fai riferimento alle rotte e alla flotta ufficiale Velar quando pertinente
 - Non generare schedule nella chat: rimanda al tab "Schedule" dedicato
 - Il motto di Velar è "Motion, simplified" — riflettilo nel tuo stile comunicativo
-`.trim(), [pilotName]);
+`.trim();
+  }, [pilotName, opsPlan]);
 
   // ── Invia messaggio ───────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
@@ -477,25 +395,31 @@ REGOLE:
     setScheduleLoading(true);
     setSchedule([]);
 
+    // Base attuale del pilota = ultimo arrivo logbook
+    const pilotBase = profile.latestFlight?.arrival?.toUpperCase() || 'LIRF';
+    const pilotBaseHub = opsPlan?.hubs.find(h => h.icao === pilotBase);
     const isLongHaulQualified = ['Captain', 'Senior Captain', 'Chief Captain'].includes(profile.currentRank.name);
 
     const prompt = `
 Sei ARIA, il sistema di pianificazione voli di Velar Virtual Airline.
 
-${VELAR_FLEET}
-${VELAR_ROUTES_LONGHAUL}
-${VELAR_ROUTES_SHORTHAUL}
+${opsPlan ? `PIANO OPERATIVO v${opsPlan._meta.version}:
+${opsPlan.hubs.map(h =>
+  h.icao + ' ' + h.city + ':\n' +
+  h.routes.map(r => '  ' + r.flight + ' ' + h.icao + '→' + r.dest + ' ' + r.aircraft + ' ' + r.freq).join('\n')
+).join('\n')}` : 'Piano non disponibile'}
 
 PILOTA: ${pilotName || 'Comandante'} — Rank: ${profile.currentRank.name} — Ore totali: ${profile.totalHours.toFixed(0)}h
+BASE ATTUALE: ${pilotBase} (${pilotBaseHub?.city || pilotBase}) — ${pilotBaseHub?.role || 'Hub'}
 ABILITAZIONE LUNGO RAGGIO: ${isLongHaulQualified ? 'SÌ (A350-900 disponibile)' : 'NO (solo A320-200 feeder)'}
+AEROMOBILI ABILITATI PER IL RANK: ${opsPlan?.aria_ops.rank_progression.find(r => r.name === profile.currentRank.name)?.aircraft.join(', ') || 'A320'}
 
 Genera la schedule settimanale (Lunedì → Domenica, 7 voli) rispettando RIGOROSAMENTE queste regole:
-1. Usa SOLO le rotte e gli aeromobili ufficiali Velar elencati sopra
-2. Se il pilota è abilitato al lungo raggio: includi almeno 2 rotte A350 e completa con feeder A320
-3. Se non abilitato: usa solo le rotte feeder A320 (VLR311/312, VLR411/412, VLR511/512)
-4. Rispetta gli orari di partenza/arrivo ufficiali
-5. Giovedì può essere buffer/manutenzione se serve bilanciare la rotazione A350
-6. Il campo "reason" deve spiegare perché ARIA ha assegnato quel volo quel giorno (stile co-pilota professionale)
+1. Il PRIMO volo DEVE partire da ${pilotBase} — base corrente del pilota
+2. Ogni volo successivo parte dall'arrivo del volo precedente (catena geografica coerente)
+3. Usa SOLO le rotte del piano operativo che partono dalla base corrente o dagli hub raggiunti
+4. Usa SOLO aeromobili abilitati per il rank del pilota
+5. Il campo "reason" deve spiegare la scelta operativa (stile ARIA Ops, conciso)
 
 Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
 [
@@ -543,6 +467,116 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
   }, [profile, pilotName]);
 
 
+
+  // ── Genera Overview dinamico ──────────────────────────────────────────────
+  const generateOverview = useCallback(async () => {
+    if (!profile || overviewLoading || overviewData) return;
+    setOverviewLoading(true);
+
+    const prompt = `Sei ARIA, il sistema operativo di Velar Airlines.
+Genera un report operativo JSON per il Chief Officer ${pilotName || 'Comandante'} con dati realistici per OGGI.
+
+La flotta Velar ha 25 aeromobili su 3 hub: LIRF (Global Hub), WIII (Asian Gateway), KBOS (Tech Corridor).
+
+Rotte attive oggi (con relative capacità aeromobile):
+- VLR101 LIRF→KBOS (A350-900, cap 369 pax)
+- VLR102 KBOS→LIRF (A350-900, cap 369 pax)
+- VLR201 LIRF→WIII (A350-900, cap 369 pax)
+- VLR202 WIII→LIRF (A350-900, cap 369 pax)
+- VLR111 LIRF→KJFK (A330neo, cap 287 pax)
+- VLR211 LIRF→OMDB (A321LR, cap 182 pax)
+- VLR311 LIML→LIRF (A320, cap 180 pax)
+- VLR411 EGLL→LIRF (A320, cap 180 pax)
+- VLR511 LFPG→LIRF (A320, cap 180 pax)
+- VLR811 WIII→YSSY (A330neo, cap 287 pax)
+- VLR831 WIII→RJTT (A321LR, cap 182 pax)
+- VLR911 KBOS→KSFO (A321LR, cap 182 pax)
+- VLR941 KBOS→EGLL (A330neo, cap 287 pax)
+
+Rispondi SOLO con JSON valido, nessun testo extra, nessun markdown:
+{
+  "briefing": "Frase di stato operativo stile ARIA 2.0 — max 2 frasi concise",
+  "operationalStatus": {
+    "fleetOperational": <numero 23-25>,
+    "fleetTotal": 25,
+    "flightsToday": <numero 12-16>,
+    "onTimePercentage": <numero 85-99>
+  },
+  "hubs": [
+    {
+      "icao": "LIRF",
+      "role": "Global Hub",
+      "status": "Operational",
+      "activeFlights": <2-5>,
+      "paxToday": <numero realistico>,
+      "alertMessage": null
+    },
+    {
+      "icao": "WIII",
+      "role": "Asian Gateway",
+      "status": "Operational",
+      "activeFlights": <2-4>,
+      "paxToday": <numero realistico>,
+      "alertMessage": null
+    },
+    {
+      "icao": "KBOS",
+      "role": "Tech Corridor",
+      "status": "Operational",
+      "activeFlights": <1-3>,
+      "paxToday": <numero realistico>,
+      "alertMessage": null
+    }
+  ],
+  "flights": [
+    {
+      "flightNumber": "VLR101",
+      "dep": "LIRF",
+      "arr": "KBOS",
+      "aircraft": "A350-900",
+      "paxBoarded": <0-369>,
+      "paxCapacity": 369,
+      "loadFactor": <percentuale 0-100>,
+      "status": "On Time" | "Boarding" | "Departed" | "Delayed" | "Arrived",
+      "depTime": "10:30"
+    }
+  ],
+  "passengerSummary": {
+    "totalPaxToday": <somma realistica>,
+    "avgLoadFactor": <media percentuale>,
+    "vipPax": <numero 0-12>,
+    "connectionPax": <numero realisti>
+  }
+}`;
+
+    try {
+      const res = await fetch('/api/aria-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const raw = data.content?.[0]?.text || '{}';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      setOverviewData(parsed);
+    } catch {
+      setOverviewData(null);
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, [profile, pilotName, overviewLoading, overviewData]);
+
+  useEffect(() => {
+    if (view === 'overview' && profile && !overviewData && !overviewLoading) {
+      generateOverview();
+    }
+  }, [view, profile, overviewData, overviewLoading, generateOverview]);
+
   // ── Genera briefing flotta ────────────────────────────────────────────────
   const generateFleetBriefing = useCallback(async () => {
     if (!profile || fleetBriefingLoading || fleetBriefing) return;
@@ -583,23 +617,6 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
     }
   }, [view, profile, fleetBriefing, fleetBriefingLoading, generateFleetBriefing]);
 
-  // ── Fetch meteo ───────────────────────────────────────────────────────────
-  const fetchWeather = useCallback(async () => {
-    const codes = weatherAirports.toUpperCase().split(/[\s,]+/).filter(s => s.length === 4);
-    if (!codes.length) return;
-    setWeatherLoading(true);
-    const data = await fetchMetar(codes);
-    setWeatherData(data);
-    setWeatherLoading(false);
-  }, [weatherAirports]);
-
-  useEffect(() => {
-    if (view === 'weather' && schedule.length > 0 && weatherAirports === '') {
-      const airports = [...new Set(schedule.flatMap(f => [f.departure, f.arrival]))];
-      setWeatherAirports(airports.join(' '));
-    }
-  }, [view, schedule, weatherAirports]);
-
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -638,10 +655,10 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
       {/* ── Nav ── */}
       <div style={s.nav}>
-        {(['chat', 'schedule', 'weather'] as ViewState[]).map(v => (
+        {(['chat', 'overview', 'schedule', 'fleet'] as ViewState[]).map(v => (
           <button key={v} onClick={() => setView(v)}
             style={{ ...s.navBtn, ...(view === v ? s.navBtnActive : {}) }}>
-            {v === 'chat' ? '💬 Chat' : v === 'schedule' ? '📅 Schedule' : '🌤 Meteo'}
+            {v === 'chat' ? '💬 Chat' : v === 'overview' ? '📊 Overview' : v === 'schedule' ? '📅 Schedule' : '🛫 Fleet'}
           </button>
         ))}
       </div>
@@ -711,174 +728,328 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
       )}
 
-      {/* ── SCHEDULE ── */}
-      {view === 'schedule' && (
-        <div style={s.scheduleContainer}>
-          {schedule.length === 0 ? (
-            <div style={s.emptyState}>
-              <p style={s.emptyText}>Nessuna schedule generata.</p>
-              <p style={s.emptySubText}>
-                ARIA costruirà la tua settimana rispettando il Piano Operativo Velar v1.0 e il tuo rank attuale.
-              </p>
-              <button style={s.generateBtn} onClick={generateSchedule} disabled={scheduleLoading}>
-                {scheduleLoading ? 'Generazione in corso...' : '✦ Genera Schedule Settimanale'}
-              </button>
+
+      {/* ── OVERVIEW ── */}
+      {view === 'overview' && (
+        <div style={s.overviewContainer}>
+          {overviewLoading || !overviewData ? (
+            <div style={s.overviewLoading}>
+              <div style={s.loadingSpinner} />
+              <p style={s.loadingText}>ARIA sta compilando il report operativo...</p>
             </div>
           ) : (
             <>
-              <div style={s.scheduleHeader}>
-                <span style={s.scheduleTitle}>Schedule settimanale · Velar</span>
-                <button style={s.regenBtn} onClick={generateSchedule} disabled={scheduleLoading}>
-                  {scheduleLoading ? '...' : '↻ Rigenera'}
-                </button>
+              {/* Briefing ARIA */}
+              <div style={s.ovBriefingCard}>
+                <div style={s.fleetBriefingHeader}>
+                  <div style={s.ariaAvatar}>A</div>
+                  <div>
+                    <p style={s.fleetBriefingLabel}>ARIA · Daily Operations Report</p>
+                    <p style={s.fleetBriefingTime}>
+                      {new Date().toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <button
+                    style={s.ovRefreshBtn}
+                    onClick={() => { setOverviewData(null); }}
+                    title="Aggiorna report"
+                  >↻</button>
+                </div>
+                <p style={s.fleetBriefingText}>{overviewData.briefing}</p>
               </div>
-              <div style={s.flightList}>
-                {schedule.map((f, i) => {
-                  const isLongHaul = f.aircraft.includes('A350') || f.aircraft.includes('A330') ||
-                    f.aircraft.includes('777') || f.aircraft.includes('787');
-                  const isSelected = selectedFlight === f;
-                  return (
-                    <div key={i}
-                      style={{ ...s.flightCard, ...(isSelected ? s.flightCardSelected : {}) }}
-                      onClick={() => setSelectedFlight(isSelected ? null : f)}>
 
-                      <div style={s.flightCardTop}>
-                        <span style={s.flightDay}>{f.day}</span>
-                        <span style={s.flightNumber}>{f.flightNumber}</span>
-                        {isLongHaul && <span style={s.longHaulBadge}>LONG HAUL</span>}
-                        <span style={s.flightAircraft}>{f.aircraft}</span>
-                      </div>
+              {/* KPI bar */}
+              {overviewData.operationalStatus && (
+                <div style={s.ovKpiBar}>
+                  <div style={s.ovKpi}>
+                    <span style={s.ovKpiValue}>{overviewData.operationalStatus.fleetOperational}/{overviewData.operationalStatus.fleetTotal}</span>
+                    <span style={s.ovKpiLabel}>Aeromobili operativi</span>
+                  </div>
+                  <div style={s.ovKpiDivider} />
+                  <div style={s.ovKpi}>
+                    <span style={s.ovKpiValue}>{overviewData.operationalStatus.flightsToday}</span>
+                    <span style={s.ovKpiLabel}>Voli oggi</span>
+                  </div>
+                  <div style={s.ovKpiDivider} />
+                  <div style={s.ovKpi}>
+                    <span style={{ ...s.ovKpiValue, color: overviewData.operationalStatus.onTimePercentage >= 90 ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                      {overviewData.operationalStatus.onTimePercentage}%
+                    </span>
+                    <span style={s.ovKpiLabel}>On-time performance</span>
+                  </div>
+                  <div style={s.ovKpiDivider} />
+                  {overviewData.passengerSummary && (
+                    <div style={s.ovKpi}>
+                      <span style={s.ovKpiValue}>{overviewData.passengerSummary.totalPaxToday?.toLocaleString('it-IT')}</span>
+                      <span style={s.ovKpiLabel}>Passeggeri oggi</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-                      <div style={s.flightRoute}>
-                        <div style={s.routePoint}>
-                          <span style={s.icao}>{f.departure}</span>
-                          <span style={s.routeCity}>{f.departureCity}</span>
-                          {f.departureTime && <span style={s.flightTime}>{f.departureTime}</span>}
+              {/* Hub status */}
+              {overviewData.hubs && (
+                <div style={s.ovSection}>
+                  <span style={s.fleetSectionTitle}>Stato Hub</span>
+                  <div style={s.ovHubGrid}>
+                    {overviewData.hubs.map((hub: any, i: number) => (
+                      <div key={i} style={s.ovHubCard}>
+                        <div style={s.ovHubHeader}>
+                          <div>
+                            <span style={s.ovHubIcao}>{hub.icao}</span>
+                            <span style={s.ovHubRole}>{hub.role}</span>
+                          </div>
+                          <span style={{
+                            ...s.ovHubStatus,
+                            color: hub.status === 'Operational' ? 'var(--color-success)' : 'var(--color-warning)'
+                          }}>● {hub.status}</span>
                         </div>
-                        <div style={s.routeArrow}>
-                          <svg width="40" height="12" viewBox="0 0 40 12">
-                            <line x1="0" y1="6" x2="34" y2="6" stroke="var(--color-border)" strokeWidth="1.5"/>
-                            <path d="M34 2l6 4-6 4" fill="none" stroke="var(--color-border)" strokeWidth="1.5"/>
-                          </svg>
-                          <span style={s.routeMeta}>{f.distance} · {f.estimatedDuration}</span>
-                        </div>
-                        <div style={{ ...s.routePoint, textAlign: 'right' as const }}>
-                          <span style={s.icao}>{f.arrival}</span>
-                          <span style={s.routeCity}>{f.arrivalCity}</span>
-                          {f.arrivalTime && <span style={s.flightTime}>{f.arrivalTime}</span>}
-                        </div>
-                      </div>
-
-                      {isSelected && (
-                        <div style={s.flightDetail}>
-                          <p style={s.flightReason}>💬 {f.reason}</p>
-                          <div style={s.flightActions}>
-                            <a
-                              href={buildSimbriefUrl(f)}
-                              target="_blank" rel="noopener noreferrer"
-                              style={s.simbriefBtn}
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
-                                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                              Apri in SimBrief
-                            </a>
-                            <button style={s.meteoBtn}
-                              onClick={e => {
-                                e.stopPropagation();
-                                setWeatherAirports(`${f.departure} ${f.arrival}`);
-                                setView('weather');
-                              }}>
-                              🌤 Meteo rotta
-                            </button>
+                        <div style={s.ovHubStats}>
+                          <div style={s.ovHubStat}>
+                            <span style={s.ovHubStatVal}>{hub.activeFlights}</span>
+                            <span style={s.ovHubStatLbl}>Voli attivi</span>
+                          </div>
+                          <div style={s.ovHubStat}>
+                            <span style={s.ovHubStatVal}>{hub.paxToday?.toLocaleString('it-IT')}</span>
+                            <span style={s.ovHubStatLbl}>Pax oggi</span>
                           </div>
                         </div>
-                      )}
+                        {hub.alertMessage && (
+                          <p style={s.ovHubAlert}>⚠ {hub.alertMessage}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Flight board */}
+              {overviewData.flights && (
+                <div style={s.ovSection}>
+                  <span style={s.fleetSectionTitle}>Voli in corso · Passeggeri & Load Factor</span>
+                  <div style={s.ovFlightList}>
+                    {overviewData.flights.map((f: any, i: number) => {
+                      const lf = Number(f.loadFactor) || 0;
+                      const lfColor = lf >= 85 ? 'var(--color-success)' : lf >= 60 ? 'var(--color-primary)' : 'var(--color-warning)';
+                      const statusColor: Record<string, string> = {
+                        'On Time': 'var(--color-success)', 'Departed': 'var(--color-primary)',
+                        'Boarding': 'var(--color-warning)', 'Arrived': 'var(--color-text-hint)',
+                        'Delayed': 'var(--color-danger)',
+                      };
+                      return (
+                        <div key={i} style={s.ovFlightRow}>
+                          <span style={s.ovFlightNum}>{f.flightNumber}</span>
+                          <span style={s.ovFlightRoute}>{f.dep} → {f.arr}</span>
+                          <span style={s.ovFlightAc}>{f.aircraft}</span>
+                          <span style={s.ovFlightTime}>{f.depTime}</span>
+                          <div style={s.ovLoadBar}>
+                            <div style={{
+                              ...s.ovLoadFill,
+                              width: `${Math.min(lf, 100)}%`,
+                              background: lfColor,
+                            }} />
+                          </div>
+                          <span style={{ ...s.ovLoadPct, color: lfColor }}>{lf}%</span>
+                          <span style={s.ovFlightPax}>{f.paxBoarded}/{f.paxCapacity}</span>
+                          <span style={{ ...s.ovFlightStatus, color: statusColor[f.status] || 'var(--color-text-hint)' }}>
+                            {f.status}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Passenger summary */}
+              {overviewData.passengerSummary && (
+                <div style={s.ovSection}>
+                  <span style={s.fleetSectionTitle}>Riepilogo Passeggeri</span>
+                  <div style={s.ovPaxGrid}>
+                    <div style={s.ovPaxCard}>
+                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.avgLoadFactor}%</span>
+                      <span style={s.ovPaxLbl}>Load Factor medio</span>
                     </div>
-                  );
-                })}
+                    <div style={s.ovPaxCard}>
+                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.vipPax}</span>
+                      <span style={s.ovPaxLbl}>Passeggeri VIP</span>
+                    </div>
+                    <div style={s.ovPaxCard}>
+                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.connectionPax?.toLocaleString('it-IT')}</span>
+                      <span style={s.ovPaxLbl}>Pax in connessione</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── SCHEDULE ── */}
+      {view === 'schedule' && (
+        <div style={s.scheduleContainer}>
+
+          {/* Sub-tab switcher */}
+          <div style={s.schedSubNav}>
+            <button
+              style={{ ...s.schedSubBtn, ...(scheduleTab === 'mine' ? s.schedSubBtnActive : {}) }}
+              onClick={() => setScheduleTab('mine')}>
+              ✈️ I miei voli
+            </button>
+            <button
+              style={{ ...s.schedSubBtn, ...(scheduleTab === 'crew' ? s.schedSubBtnActive : {}) }}
+              onClick={() => setScheduleTab('crew')}>
+              👨‍✈️ Crew Board
+            </button>
+          </div>
+
+          {/* ── TAB: I MIEI VOLI ── */}
+          {scheduleTab === 'mine' && (
+            <>
+              {/* Badge base corrente */}
+              <div style={s.baseBadge}>
+                <span style={s.baseDot}>📍</span>
+                <span style={s.baseIcao}>{currentBase}</span>
+                <span style={s.baseSep}>·</span>
+                <span style={s.baseCity}>{currentBaseCity}</span>
+                {currentHubRole && <span style={s.baseRole}>{currentHubRole}</span>}
+              </div>
+
+              {schedule.length === 0 ? (
+                <div style={s.emptyState}>
+                  <p style={s.emptyText}>Nessuna schedule generata.</p>
+                  <p style={s.emptySubText}>
+                    ARIA pianificherà la tua settimana partendo da <strong>{currentBase}</strong>,
+                    rispettando le rotte ufficiali Velar v2.0.
+                  </p>
+                  <button style={s.generateBtn} onClick={generateSchedule} disabled={scheduleLoading}>
+                    {scheduleLoading ? 'Generazione in corso...' : '✦ Genera Schedule Settimanale'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={s.scheduleHeader}>
+                    <span style={s.scheduleTitle}>Settimana · da {currentBase}</span>
+                    <button style={s.regenBtn} onClick={generateSchedule} disabled={scheduleLoading}>
+                      {scheduleLoading ? '...' : '↻ Rigenera'}
+                    </button>
+                  </div>
+                  <div style={s.flightList}>
+                    {schedule.map((f, i) => {
+                      const isLongHaul = f.aircraft.includes('A350') || f.aircraft.includes('A330') ||
+                        f.aircraft.includes('777') || f.aircraft.includes('787');
+                      const isSelected = selectedFlight === f;
+                      return (
+                        <div key={i}
+                          style={{ ...s.flightCard, ...(isSelected ? s.flightCardSelected : {}) }}
+                          onClick={() => setSelectedFlight(isSelected ? null : f)}>
+
+                          <div style={s.flightCardTop}>
+                            <span style={s.flightDay}>{f.day}</span>
+                            <span style={s.flightNumber}>{f.flightNumber}</span>
+                            {isLongHaul && <span style={s.longHaulBadge}>LONG HAUL</span>}
+                            <span style={s.flightAircraft}>{f.aircraft}</span>
+                          </div>
+
+                          <div style={s.flightRoute}>
+                            <div style={s.routePoint}>
+                              <span style={s.icao}>{f.departure}</span>
+                              <span style={s.routeCity}>{f.departureCity}</span>
+                              {f.departureTime && <span style={s.flightTime}>{f.departureTime}</span>}
+                            </div>
+                            <div style={s.routeArrow}>
+                              <svg width="40" height="12" viewBox="0 0 40 12">
+                                <line x1="0" y1="6" x2="34" y2="6" stroke="var(--color-border)" strokeWidth="1.5"/>
+                                <path d="M34 2l6 4-6 4" fill="none" stroke="var(--color-border)" strokeWidth="1.5"/>
+                              </svg>
+                              <span style={s.routeMeta}>{f.distance} · {f.estimatedDuration}</span>
+                            </div>
+                            <div style={{ ...s.routePoint, textAlign: 'right' as const }}>
+                              <span style={s.icao}>{f.arrival}</span>
+                              <span style={s.routeCity}>{f.arrivalCity}</span>
+                              {f.arrivalTime && <span style={s.flightTime}>{f.arrivalTime}</span>}
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <div style={s.flightDetail}>
+                              <p style={s.flightReason}>💬 {f.reason}</p>
+                              <div style={s.flightActions}>
+                                <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer"
+                                  style={s.simbriefBtn} onClick={e => e.stopPropagation()}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+                                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  Apri in SimBrief
+                                </a>
+
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* ── TAB: CREW BOARD ── */}
+          {scheduleTab === 'crew' && (
+            <>
+              <div style={s.scheduleHeader}>
+                <span style={s.scheduleTitle}>Crew Board · {DAYS_IT[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]}</span>
+                <span style={s.crewCount}>{opsPlan?.crew?.length || 0} piloti attivi</span>
+              </div>
+              <div style={s.crewGrid}>
+                {(opsPlan?.crew || []).map((crew: CrewMember, i: number) => (
+                  <div key={i} style={s.crewCard}>
+                    <div style={s.crewCardHeader}>
+                      <div style={s.crewAvatar}>
+                        {crew.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div style={s.crewInfo}>
+                        <span style={s.crewName}>{crew.name}</span>
+                        <span style={s.crewRank}>{crew.rank}</span>
+                      </div>
+                      <div style={s.crewBase}>
+                        <span style={s.crewBaseIcao}>{crew.base}</span>
+                        <span style={s.crewBaseRole}>{opsPlan?.hubs.find(h => h.icao === crew.base)?.role || crew.base}</span>
+                      </div>
+                    </div>
+                    {crew.todayFlight ? (
+                      <div style={s.crewFlight}>
+                        <div style={s.crewFlightRoute}>
+                          <span style={s.crewIcao}>{crew.todayFlight.dep}</span>
+                          <svg width="24" height="10" viewBox="0 0 24 10" style={{ margin: '0 6px' }}>
+                            <line x1="0" y1="5" x2="18" y2="5" stroke="var(--color-border)" strokeWidth="1.2"/>
+                            <path d="M18 2l6 3-6 3" fill="none" stroke="var(--color-border)" strokeWidth="1.2"/>
+                          </svg>
+                          <span style={s.crewIcao}>{crew.todayFlight.arr}</span>
+                        </div>
+                        <div style={s.crewFlightMeta}>
+                          <span style={s.crewFlightNum}>{crew.todayFlight.flightNumber}</span>
+                          <span style={s.crewFlightAc}>{crew.todayFlight.aircraft}</span>
+                          <span style={s.crewFlightTime}>{crew.todayFlight.time}</span>
+                        </div>
+                        <p style={s.crewFlightCities}>{crew.todayFlight.depCity} → {crew.todayFlight.arrCity}</p>
+                      </div>
+                    ) : (
+                      <p style={s.crewOffDuty}>Day off</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </>
           )}
         </div>
       )}
 
-      {/* ── WEATHER ── */}
-      {view === 'weather' && (
-        <div style={s.weatherContainer}>
-          <div style={s.weatherSearch}>
-            <input
-              style={s.weatherInput}
-              value={weatherAirports}
-              onChange={e => setWeatherAirports(e.target.value)}
-              placeholder="Codici ICAO separati da spazio (es. LIRF EGLL LFPG KBOS)"
-            />
-            <button style={s.weatherFetchBtn} onClick={fetchWeather} disabled={weatherLoading}>
-              {weatherLoading ? '...' : 'Fetch METAR'}
-            </button>
-          </div>
 
-          {weatherData.length > 0 && (
-            <div style={s.weatherGrid}>
-              {weatherData.map((w, i) => {
-                const cat = flightCategory(w);
-                return (
-                  <div key={i} style={s.weatherCard}>
-                    <div style={s.weatherCardHeader}>
-                      <span style={s.weatherIcao}>{w.icaoId || '—'}</span>
-                      <span style={{ ...s.weatherCat, color: cat.color, borderColor: cat.color }}>
-                        {cat.label}
-                      </span>
-                    </div>
-                    {w.name && <p style={s.weatherName}>{w.name}</p>}
-                    <div style={s.weatherStats}>
-                      {w.pres != null && (
-                        <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Pres</span>
-                          <span style={s.wStatVal}>{w.pres}</span>
-                        </div>
-                      )}
-                      {w.wind != null && (
-                        <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Wind</span>
-                          <span style={s.wStatVal}>{w.wind}</span>
-                        </div>
-                      )}
-                      {w.temp != null && (
-                        <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Temp</span>
-                          <span style={s.wStatVal}>{w.temp}°</span>
-                        </div>
-                      )}
-                      {w.dew != null && (
-                        <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Dew</span>
-                          <span style={s.wStatVal}>{w.dew}°</span>
-                        </div>
-                      )}
-                    </div>
-                    {w.rawOb && (
-                      <div style={s.rawMetar}>
-                        <span style={s.rawLabel}>METAR</span>
-                        <code style={s.rawCode}>{w.rawOb}</code>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {weatherData.length === 0 && !weatherLoading && (
-            <div style={s.emptyState}>
-              <p style={s.emptyText}>Inserisci i codici ICAO e premi Fetch METAR.</p>
-              <p style={s.emptySubText}>Dati in tempo reale · aviationweather.gov</p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── FLEET
 
       {/* ── FLEET STATUS ── */}
       {view === 'fleet' && (
@@ -912,7 +1083,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           <div style={s.fleetSection}>
             <span style={s.fleetSectionTitle}>Composizione Flotta · 25 Aeromobili</span>
             <div style={s.fleetGrid}>
-              {VELAR_FLEET_V2.map((ac, i) => (
+              {(opsPlan?.fleet || []).map((ac, i) => (
                 <div key={i} style={s.fleetAcCard}>
                   <div style={s.fleetAcTop}>
                     <span style={s.fleetAcCount}>{ac.count}×</span>
@@ -926,7 +1097,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           </div>
 
           {/* Hub operativi */}
-          {VELAR_HUBS.map((hub, hi) => (
+          {(opsPlan?.hubs || []).map((hub: VelarHub, hi: number) => (
             <div key={hi} style={s.fleetSection}>
               <div style={s.hubHeader}>
                 <div>
@@ -1253,95 +1424,317 @@ const s: Record<string, React.CSSProperties> = {
     textDecoration: 'none', cursor: 'pointer',
     fontFamily: 'var(--font-family-sans)',
   },
-  meteoBtn: {
-    padding: '7px 14px',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
+
+  // Schedule sub-nav
+  schedSubNav: {
+    display: 'flex', gap: '4px', padding: '4px',
+    background: 'var(--color-background)',
     borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-border)',
+    flexShrink: 0,
+  },
+  schedSubBtn: {
+    flex: 1, padding: '7px 12px', border: 'none',
+    background: 'transparent',
     color: 'var(--color-text-secondary)',
-    fontSize: '12px', cursor: 'pointer',
+    fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+    borderRadius: 'var(--radius-sm)',
+    fontFamily: 'var(--font-family-sans)',
+    transition: 'all 0.15s',
+  },
+  schedSubBtnActive: {
+    background: 'var(--color-surface)',
+    color: 'var(--color-primary)',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  // Base badge
+  baseBadge: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '8px 12px',
+    background: 'var(--color-primary-light)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--radius-md)',
+    flexShrink: 0,
+  },
+  baseDot: { fontSize: '13px' },
+  baseIcao: {
+    fontSize: '13px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-primary)',
+  },
+  baseSep: { color: 'var(--color-text-hint)', fontSize: '12px' },
+  baseCity: {
+    fontSize: '12px', color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-family-sans)',
+    flex: 1,
+  },
+  baseRole: {
+    fontSize: '10px', fontWeight: 500,
+    color: 'var(--color-primary)',
+    background: 'var(--color-surface)',
+    padding: '2px 8px', borderRadius: 'var(--radius-full)',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.06em',
+  },
+  // Crew Board
+  crewCount: {
+    fontSize: '11px', color: 'var(--color-text-hint)',
     fontFamily: 'var(--font-family-sans)',
   },
-
-  // Weather
-  weatherContainer: {
+  crewGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '8px',
+  },
+  crewCard: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)', padding: '12px',
+    display: 'flex', flexDirection: 'column', gap: '10px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  crewCardHeader: { display: 'flex', alignItems: 'center', gap: '10px' },
+  crewAvatar: {
+    width: '34px', height: '34px', borderRadius: '50%',
+    background: 'var(--color-primary-light)',
+    color: 'var(--color-primary)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '11px', fontWeight: 700,
+    fontFamily: 'var(--font-family-display)',
+    flexShrink: 0,
+  },
+  crewInfo: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 },
+  crewName: {
+    fontSize: '13px', fontWeight: 500,
+    color: 'var(--color-text-primary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  crewRank: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  crewBase: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' },
+  crewBaseIcao: {
+    fontSize: '12px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)',
+  },
+  crewBaseRole: {
+    fontSize: '9px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
+  },
+  crewFlight: {
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', padding: '8px 10px',
+    display: 'flex', flexDirection: 'column', gap: '4px',
+  },
+  crewFlightRoute: { display: 'flex', alignItems: 'center' },
+  crewIcao: {
+    fontSize: '15px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)',
+  },
+  crewFlightMeta: { display: 'flex', gap: '8px', alignItems: 'center' },
+  crewFlightNum: {
+    fontSize: '10px', fontWeight: 600,
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-mono)',
+  },
+  crewFlightAc: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  crewFlightTime: {
+    fontSize: '10px', fontWeight: 500,
+    color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-family-mono)',
+    marginLeft: 'auto',
+  },
+  crewFlightCities: {
+    margin: 0, fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  crewOffDuty: {
+    margin: 0, fontSize: '11px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)', fontStyle: 'italic',
+    textAlign: 'center' as const, padding: '6px 0',
+  },
+  // Overview
+  overviewContainer: {
     flex: 1, overflowY: 'auto', padding: '16px',
     display: 'flex', flexDirection: 'column', gap: '12px',
     background: 'var(--color-background)',
   },
-  weatherSearch: { display: 'flex', gap: '8px' },
-  weatherInput: {
-    flex: 1, padding: '9px 14px',
+  overviewLoading: {
+    flex: 1, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: '14px',
+  },
+  ovBriefingCard: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--radius-lg)', padding: '14px 16px',
+    boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '10px',
+  },
+  ovRefreshBtn: {
+    marginLeft: 'auto', background: 'transparent',
+    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
+    color: 'var(--color-text-hint)', cursor: 'pointer',
+    fontSize: '14px', width: '26px', height: '26px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  ovKpiBar: {
+    display: 'flex', alignItems: 'center',
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--color-text-primary)',
-    fontSize: '13px', outline: 'none',
+    borderRadius: 'var(--radius-lg)', padding: '12px 20px',
+    gap: '0', boxShadow: 'var(--shadow-sm)',
+  },
+  ovKpi: {
+    flex: 1, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: '3px',
+  },
+  ovKpiValue: {
+    fontSize: '22px', fontWeight: 700,
     fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)',
+    lineHeight: 1,
   },
-  weatherFetchBtn: {
-    padding: '9px 18px', background: 'var(--color-primary)',
-    border: 'none', borderRadius: 'var(--radius-md)',
-    color: 'white', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+  ovKpiLabel: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
     fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
   },
-  weatherGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gap: '10px',
+  ovKpiDivider: {
+    width: '1px', height: '36px',
+    background: 'var(--color-border)', flexShrink: 0, margin: '0 4px',
   },
-  weatherCard: {
+  ovSection: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)', padding: '14px',
+    borderRadius: 'var(--radius-lg)', padding: '14px 16px',
+    display: 'flex', flexDirection: 'column', gap: '10px',
     boxShadow: 'var(--shadow-sm)',
   },
-  weatherCardHeader: {
-    display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: '4px',
+  ovHubGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
   },
-  weatherName: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    margin: '0 0 10px', fontFamily: 'var(--font-family-sans)',
+  ovHubCard: {
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', padding: '12px',
+    display: 'flex', flexDirection: 'column', gap: '8px',
   },
-  weatherIcao: {
-    fontSize: '18px', fontWeight: 500,
+  ovHubHeader: {
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+  },
+  ovHubIcao: {
+    display: 'block', fontSize: '16px', fontWeight: 700,
     fontFamily: 'var(--font-family-mono)',
     color: 'var(--color-text-primary)',
   },
-  weatherCat: {
-    fontSize: '10px', fontWeight: 500, padding: '2px 8px',
-    borderRadius: 'var(--radius-sm)', border: '1px solid',
+  ovHubRole: {
+    display: 'block', fontSize: '9px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginTop: '2px',
+  },
+  ovHubStatus: {
+    fontSize: '10px', fontWeight: 500,
     fontFamily: 'var(--font-family-sans)',
   },
-  weatherStats: {
-    display: 'grid', gridTemplateColumns: '1fr 1fr',
-    gap: '8px', marginBottom: '10px',
-  },
-  wStat: { display: 'flex', flexDirection: 'column', gap: '2px' },
-  wStatLabel: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    textTransform: 'uppercase', letterSpacing: '0.05em',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  wStatVal: {
-    fontSize: '13px', fontWeight: 500,
-    color: 'var(--color-text-primary)',
+  ovHubStats: { display: 'flex', gap: '12px' },
+  ovHubStat: { display: 'flex', flexDirection: 'column', gap: '1px' },
+  ovHubStatVal: {
+    fontSize: '18px', fontWeight: 700,
     fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)', lineHeight: 1,
   },
-  rawMetar: {
-    display: 'flex', flexDirection: 'column', gap: '4px',
-    paddingTop: '10px', borderTop: '1px solid var(--color-divider)',
-  },
-  rawLabel: {
+  ovHubStatLbl: {
     fontSize: '9px', color: 'var(--color-text-hint)',
-    textTransform: 'uppercase', letterSpacing: '0.1em',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.04em',
+  },
+  ovHubAlert: {
+    margin: 0, fontSize: '11px', color: 'var(--color-warning)',
     fontFamily: 'var(--font-family-sans)',
   },
-  rawCode: {
+  ovFlightList: {
+    display: 'flex', flexDirection: 'column', gap: '0',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', overflow: 'hidden',
+  },
+  ovFlightRow: {
+    display: 'grid',
+    gridTemplateColumns: '72px 110px 80px 48px 1fr 40px 72px 80px',
+    gap: '8px', padding: '9px 12px',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+  },
+  ovFlightNum: {
+    fontSize: '11px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-primary)',
+  },
+  ovFlightRoute: {
+    fontSize: '12px', fontWeight: 500,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)',
+  },
+  ovFlightAc: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  ovFlightTime: {
+    fontSize: '11px', fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-secondary)',
+  },
+  ovLoadBar: {
+    height: '6px', background: 'var(--color-border)',
+    borderRadius: '3px', overflow: 'hidden',
+  },
+  ovLoadFill: {
+    height: '100%', borderRadius: '3px',
+    transition: 'width 0.4s ease',
+  },
+  ovLoadPct: {
+    fontSize: '11px', fontWeight: 600,
+    fontFamily: 'var(--font-family-mono)',
+    textAlign: 'right' as const,
+  },
+  ovFlightPax: {
     fontSize: '10px', color: 'var(--color-text-secondary)',
     fontFamily: 'var(--font-family-mono)',
-    wordBreak: 'break-all', lineHeight: '1.6',
+    textAlign: 'center' as const,
+  },
+  ovFlightStatus: {
+    fontSize: '10px', fontWeight: 500,
+    fontFamily: 'var(--font-family-sans)',
+    textAlign: 'right' as const,
+  },
+  ovPaxGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
+  },
+  ovPaxCard: {
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', padding: '12px 14px',
+    display: 'flex', flexDirection: 'column', gap: '4px',
+    alignItems: 'center',
+  },
+  ovPaxVal: {
+    fontSize: '22px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-primary)', lineHeight: 1,
+  },
+  ovPaxLbl: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
+    textAlign: 'center' as const,
   },
   // Fleet Status
   fleetContainer: {

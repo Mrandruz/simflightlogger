@@ -1,0 +1,97 @@
+{
+  "_meta": {
+    "version": "3.0",
+    "name": "Velar Airlines Global Strategic Plan",
+    "updated": "2026-03-29",
+    "motto": "Motion, simplified.",
+    "positioning": "Boutique Tech-Luxury Airline"
+  },
+
+  "fleet": [
+    { "type": "Airbus A319",    "count": 5,  "role": "Executive Shuttle",   "mission": "Rotte finanziarie e diplomatiche (Zurigo, Ginevra).",        "capacity": 124 },
+    { "type": "Airbus A320",    "count": 10, "role": "Core Feeders",        "mission": "Connettività quotidiana ad alta frequenza tra gli Hub.",       "capacity": 180 },
+    { "type": "Airbus A321LR",  "count": 5,  "role": "Mid-Range Boutique",  "mission": "Rotte thin a lungo raggio (Dubai, Austin, Tokyo).",            "capacity": 182 },
+    { "type": "Airbus A330neo", "count": 2,  "role": "High Capacity",       "mission": "Rotte transatlantiche e oceaniche ad alta densità (NY, Sydney).", "capacity": 287 },
+    { "type": "Airbus A350-900","count": 3,  "role": "Flagship",            "mission": "Voli ultra-long-haul quotidiani tra i tre Hub principali.",    "capacity": 369 }
+  ],
+
+  "hubs": [
+    {
+      "icao": "LIRF",
+      "city": "Roma Fiumicino",
+      "role": "Global Gateway",
+      "description": "Porta d'ingresso globale di Velar. Cuore intercontinentale e hub europeo principale.",
+      "routes": [
+        { "dest": "KBOS", "city": "Boston",         "aircraft": "A350-900", "freq": "Daily",     "flight": "VLR 101/102", "note": "Hub-to-Hub Flagship" },
+        { "dest": "WIII", "city": "Giacarta",        "aircraft": "A350-900", "freq": "Daily",     "flight": "VLR 201/202", "note": "Hub-to-Hub Flagship" },
+        { "dest": "KJFK", "city": "New York JFK",    "aircraft": "A330neo",  "freq": "Daily",     "flight": "VLR 111/112", "note": "Intercontinental Daily" },
+        { "dest": "KSFO", "city": "San Francisco",   "aircraft": "A350-900", "freq": "4x Weekly", "flight": "VLR 121/122", "note": "Strategic Long-Range" },
+        { "dest": "OMDB", "city": "Dubai",           "aircraft": "A321LR",   "freq": "Daily",     "flight": "VLR 211/212", "note": "Strategic Long-Range" },
+        { "dest": "EGLL", "city": "Londra LHR",      "aircraft": "A320",     "freq": "3x Daily",  "flight": "VLR 411-416", "note": "European Feeder" },
+        { "dest": "LFPG", "city": "Parigi CDG",      "aircraft": "A320",     "freq": "3x Daily",  "flight": "VLR 511-516", "note": "European Feeder" },
+        { "dest": "LIML", "city": "Milano Linate",   "aircraft": "A320",     "freq": "3x Daily",  "flight": "VLR 311-316", "note": "European Feeder" },
+        { "dest": "LSZH", "city": "Zurigo",          "aircraft": "A319",     "freq": "2x Daily",  "flight": "VLR 611-614", "note": "Finance Corridor" },
+        { "dest": "EDDF", "city": "Francoforte",     "aircraft": "A319",     "freq": "2x Daily",  "flight": "VLR 711-714", "note": "Finance Corridor" }
+      ]
+    },
+    {
+      "icao": "WIII",
+      "city": "Giacarta Soekarno-Hatta",
+      "role": "Asian Soul",
+      "description": "Cuore dell'identità Nusantara. Gateway per l'Oceania e l'Asia del Pacifico.",
+      "routes": [
+        { "dest": "LIRF", "city": "Roma",      "aircraft": "A350-900", "freq": "Daily",    "flight": "VLR 201/202", "note": "Hub-to-Hub Flagship" },
+        { "dest": "YSSY", "city": "Sydney",    "aircraft": "A330neo",  "freq": "Daily",    "flight": "VLR 811/812", "note": "Oceania Link" },
+        { "dest": "RJTT", "city": "Tokyo HND", "aircraft": "A321LR",   "freq": "Daily",    "flight": "VLR 831/832", "note": "Tech Heritage" },
+        { "dest": "WSSS", "city": "Singapore", "aircraft": "A320",     "freq": "3x Daily", "flight": "VLR 821-826", "note": "Regional Business" },
+        { "dest": "WADD", "city": "Bali",      "aircraft": "A320",     "freq": "2x Daily", "flight": "VLR 841-844", "note": "Boutique Leisure" }
+      ]
+    },
+    {
+      "icao": "KBOS",
+      "city": "Boston Logan",
+      "role": "Tech Corridor",
+      "description": "Porto d'ingresso per l'innovazione. Connessione tra Europa, East Coast e Silicon Valley.",
+      "routes": [
+        { "dest": "LIRF", "city": "Roma",          "aircraft": "A350-900", "freq": "Daily", "flight": "VLR 101/102", "note": "Hub-to-Hub Flagship" },
+        { "dest": "KSFO", "city": "San Francisco", "aircraft": "A321LR",   "freq": "Daily", "flight": "VLR 911/912", "note": "Transcontinental Tech" },
+        { "dest": "KAUS", "city": "Austin",        "aircraft": "A321LR",   "freq": "Daily", "flight": "VLR 921/922", "note": "Silicon Hills Link" },
+        { "dest": "CYYZ", "city": "Toronto",       "aircraft": "A319",     "freq": "Daily", "flight": "VLR 931/932", "note": "North-East Link" },
+        { "dest": "EGLL", "city": "Londra LHR",    "aircraft": "A330neo",  "freq": "Daily", "flight": "VLR 941/942", "note": "Academic Link" }
+      ]
+    }
+  ],
+
+  "crew": [
+    { "name": "Marco Ferretti",    "rank": "Chief Captain",  "base": "LIRF",
+      "todayFlight": { "flightNumber": "VLR201", "dep": "LIRF", "arr": "WIII", "depCity": "Roma",    "arrCity": "Giacarta",     "aircraft": "A350-900", "time": "11:30" } },
+    { "name": "Sofia Marchetti",   "rank": "Senior Captain", "base": "WIII",
+      "todayFlight": { "flightNumber": "VLR831", "dep": "WIII", "arr": "RJTT", "depCity": "Giacarta","arrCity": "Tokyo",         "aircraft": "A321LR",   "time": "09:00" } },
+    { "name": "Luca Bernardi",     "rank": "Captain",        "base": "KBOS",
+      "todayFlight": { "flightNumber": "VLR911", "dep": "KBOS", "arr": "KSFO", "depCity": "Boston",  "arrCity": "San Francisco", "aircraft": "A321LR",   "time": "08:30" } },
+    { "name": "Elena Conti",       "rank": "Captain",        "base": "LIRF",
+      "todayFlight": { "flightNumber": "VLR111", "dep": "LIRF", "arr": "KJFK", "depCity": "Roma",    "arrCity": "New York",      "aircraft": "A330neo",  "time": "10:15" } },
+    { "name": "Davide Russo",      "rank": "First Officer",  "base": "LIRF",
+      "todayFlight": { "flightNumber": "VLR511", "dep": "LFPG", "arr": "LIRF", "depCity": "Parigi",  "arrCity": "Roma",          "aircraft": "A320",     "time": "06:45" } },
+    { "name": "Chiara Esposito",   "rank": "First Officer",  "base": "WIII",
+      "todayFlight": { "flightNumber": "VLR821", "dep": "WIII", "arr": "WSSS", "depCity": "Giacarta","arrCity": "Singapore",     "aircraft": "A320",     "time": "07:30" } },
+    { "name": "Alessandro Gallo",  "rank": "Junior F.O.",    "base": "KBOS",
+      "todayFlight": { "flightNumber": "VLR941", "dep": "KBOS", "arr": "EGLL", "depCity": "Boston",  "arrCity": "Londra",        "aircraft": "A330neo",  "time": "09:45" } },
+    { "name": "Valentina Serra",   "rank": "First Officer",  "base": "LIRF",
+      "todayFlight": { "flightNumber": "VLR411", "dep": "EGLL", "arr": "LIRF", "depCity": "Londra",  "arrCity": "Roma",          "aircraft": "A320",     "time": "06:00" } }
+  ],
+
+  "aria_ops": {
+    "tone": "Sintetico, tecnico, autoritativo ma collaborativo.",
+    "language": "it",
+    "priorities": ["Sicurezza", "Puntualità", "Efficienza carburante"],
+    "rank_progression": [
+      { "name": "Cadet",          "minXp": 0,      "aircraft": ["Airbus A319"] },
+      { "name": "Junior F.O.",    "minXp": 5000,   "aircraft": ["Airbus A319", "Airbus A320"] },
+      { "name": "First Officer",  "minXp": 15000,  "aircraft": ["Airbus A319", "Airbus A320", "Airbus A321LR"] },
+      { "name": "Captain",        "minXp": 75000,  "aircraft": ["Airbus A320", "Airbus A321LR", "Airbus A330neo"] },
+      { "name": "Senior Captain", "minXp": 400000, "aircraft": ["Airbus A321LR", "Airbus A330neo", "Airbus A350-900"] },
+      { "name": "Chief Captain",  "minXp": 700000, "aircraft": ["Airbus A330neo", "Airbus A350-900"] }
+    ]
+  }
+}
