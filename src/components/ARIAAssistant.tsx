@@ -123,23 +123,7 @@ PROTOCOLLO ARIA OPS — Tono e Comportamento:
 `;
 
 
-// ─── Piano Operativo Velar v2.0 ──────────────────────────────────────────────
-
-
-// ─── Crew Board Velar — piloti fittizi piano v2.0 ────────────────────────────
-
 const DAYS_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-
-interface CrewMember {
-  name: string;
-  rank: string;
-  base: string;
-  baseCity: string;
-  todayFlight: { flightNumber: string; dep: string; arr: string; depCity: string; arrCity: string; aircraft: string; time: string } | null;
-}
-
-// Mappa hub ICAO → nome
-// HUB_NAMES è ora derivato dinamicamente da opsPlan.hubs
 
 // ─── Calcolo profilo pilota ───────────────────────────────────────────────────
 
@@ -218,18 +202,6 @@ function computePilotProfile(flights: Flight[]): PilotProfile {
   };
 }
 
-// ─── Weather ──────────────────────────────────────────────────────────────────
-
-// Normalizza un record METAR raw nel formato semplice usato internamente
- {
-  const cat = computeFlightCategory(w);
-  if (cat === 'VFR') return { label: 'VFR', color: 'var(--color-success)' };
-  if (cat === 'MVFR') return { label: 'MVFR', color: 'var(--color-primary)' };
-  if (cat === 'IFR') return { label: 'IFR', color: 'var(--color-danger)' };
-  if (cat === 'LIFR') return { label: 'LIFR', color: '#a855f7' };
-  return { label: 'N/A', color: 'var(--color-text-hint)' };
-}
-
 // ─── SimBrief ─────────────────────────────────────────────────────────────────
 
 // Altitudini di crociera ottimali per tipo aeromobile
@@ -294,6 +266,12 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [opsPlan, setOpsPlan] = useState<VelarPlan | null>(null);
 
+  // ── Base attuale del pilota (dall'ultimo arrivo nel logbook) ───────────────
+  const currentBase = profile?.latestFlight?.arrival?.toUpperCase() ?? 'LIRF';
+  const currentBaseCity = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.city
+    ?? profile?.latestFlight?.arrival ?? currentBase;
+  const currentHubRole = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.role ?? null;
+
   // ── Carica piano operativo da /velar-ops-plan.json ──────────────────────────
   useEffect(() => {
     fetch('/velar-ops-plan.json')
@@ -331,10 +309,26 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   }, [messages, isTyping]);
 
   // ── System prompt ─────────────────────────────────────────────────────────
-  const buildSystemPrompt = useCallback((p: PilotProfile) => `
-Sei ARIA (Adaptive Route Intelligence Assistant), il co-pilota virtuale e coordinatore operativo della compagnia aerea virtuale Velar su Skydeck SimFlightLogger.
+  const buildSystemPrompt = useCallback((p: PilotProfile) => {
+    const planContext = opsPlan ? `
+PIANO OPERATIVO VELAR v${opsPlan._meta.version} (${opsPlan._meta.updated}):
+Motto: ${opsPlan._meta.motto}
+
+FLOTTA (${opsPlan.fleet.reduce((s: number, f: VelarFleetItem) => s + f.count, 0)} aeromobili):
+${opsPlan.fleet.map((f: VelarFleetItem) => `- ${f.count}x ${f.type} [${f.role}]: ${f.mission}`).join('\n')}
+
+HUB E ROTTE:
+${opsPlan.hubs.map((h: VelarHub) =>
+  `${h.icao} ${h.city} (${h.role}):\n` +
+  h.routes.map((r: VelarRoute) => `  - ${r.flight} ${h.icao}→${r.dest} ${r.aircraft} ${r.freq} [${r.note}]`).join('\n')
+).join('\n')}
+` : '';
+
+    return `
+Sei ARIA OPS, il co-pilota virtuale e coordinatore operativo della compagnia aerea virtuale Velar su Skydeck SimFlightLogger.
 
 ${ARIA_PROTOCOL}
+${planContext}
 PROFILO PILOTA ATTIVO:
 - Nome: ${pilotName || 'Comandante'}
 - Rank: ${p.currentRank.name}
@@ -1048,8 +1042,6 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
       )}
 
-
-      {/* ── FLEET
 
       {/* ── FLEET STATUS ── */}
       {view === 'fleet' && (
