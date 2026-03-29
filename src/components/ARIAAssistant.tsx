@@ -62,27 +62,33 @@ interface ScheduledFlight {
 }
 
 interface WeatherData {
-  // Campi comuni
-  icao?: string;
-  id?: string; // nuovo schema 2025
-  rawOb?: string; // nuovo schema 2025
-  raw_text?: string; // vecchio schema
-  // Flight category (vecchio schema — potrebbe non esserci)
-  flight_category?: string;
+  // Schema aviationweather.gov 2025
+  icaoId?: string;       // es. "LIRF"
+  icao?: string;         // vecchio schema
+  rawOb?: string;        // METAR raw
+  raw_text?: string;     // vecchio schema
+  fltCat?: string;       // "VFR" | "MVFR" | "IFR" | "LIFR"
+  flight_category?: string; // vecchio schema
+  cover?: string;        // "CAVOK" | "CLR" | ecc.
+  clouds?: { cover: string; base?: number }[] | string; // array 2025 o stringa vecchia
   // Vento
-  wind_speed_kt?: number;
-  wspd?: number; // nuovo schema 2025
+  wdir?: number;
+  wspd?: number;
   wind_dir_degrees?: number;
-  wdir?: number; // nuovo schema 2025
+  wind_speed_kt?: number;
   // Visibilità
+  visib?: string | number; // es. "6+" oppure numero
   visibility_statute_mi?: number;
-  visib?: string | number; // nuovo schema 2025
-  // Sky
-  sky_condition?: { sky_cover: string; cloud_base_ft_agl?: number }[];
-  clouds?: string; // nuovo schema 2025 es. "FEW045 SCT080"
   // Temperatura
+  temp?: number;
   temp_c?: number;
-  temp?: number; // nuovo schema 2025
+  dewp?: number;
+  // Pressione
+  altim?: number;
+  // Metadati
+  name?: string;
+  lat?: number;
+  lon?: number;
 }
 
 interface ChatMessage {
@@ -735,47 +741,64 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                 return (
                   <div key={i} style={s.weatherCard}>
                     <div style={s.weatherCardHeader}>
-                      <span style={s.weatherIcao}>{w.icao || w.id}</span>
+                      <span style={s.weatherIcao}>{w.icaoId || w.icao}</span>
                       <span style={{ ...s.weatherCat, color: cat.color, borderColor: cat.color }}>
                         {cat.label}
                       </span>
                     </div>
+                    {w.name && (
+                      <p style={s.weatherName}>{w.name}</p>
+                    )}
                     <div style={s.weatherStats}>
-                      {(w.wind_speed_kt !== undefined || w.wspd !== undefined) && (
+                      {(w.wspd !== undefined || w.wind_speed_kt !== undefined) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Vento</span>
                           <span style={s.wStatVal}>
-                            {w.wind_dir_degrees ?? w.wdir ?? 0}° / {w.wind_speed_kt ?? w.wspd} kt
+                            {w.wdir ?? w.wind_dir_degrees ?? 0}° / {w.wspd ?? w.wind_speed_kt} kt
                           </span>
                         </div>
                       )}
-                      {(w.visibility_statute_mi !== undefined || w.visib !== undefined) && (
+                      {(w.visib !== undefined || w.visibility_statute_mi !== undefined) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Visibilità</span>
-                          <span style={s.wStatVal}>{w.visibility_statute_mi ?? w.visib} SM</span>
+                          <span style={s.wStatVal}>
+                            {String(w.visib ?? w.visibility_statute_mi)} SM
+                          </span>
                         </div>
                       )}
-                      {(w.temp_c !== undefined || w.temp !== undefined) && (
+                      {(w.temp !== undefined || w.temp_c !== undefined) && (
                         <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Temp</span>
-                          <span style={s.wStatVal}>{w.temp_c ?? w.temp}°C</span>
+                          <span style={s.wStatLabel}>Temp / Dew</span>
+                          <span style={s.wStatVal}>
+                            {w.temp ?? w.temp_c}°C / {w.dewp ?? '—'}°C
+                          </span>
                         </div>
                       )}
-                      {(w.clouds || (w.sky_condition && w.sky_condition.length > 0)) && (
+                      {w.altim !== undefined && (
                         <div style={s.wStat}>
+                          <span style={s.wStatLabel}>QNH</span>
+                          <span style={s.wStatVal}>{w.altim} hPa</span>
+                        </div>
+                      )}
+                      {(w.cover || (Array.isArray(w.clouds) && (w.clouds as any[]).length > 0)) && (
+                        <div style={{ ...s.wStat, gridColumn: '1 / -1' }}>
                           <span style={s.wStatLabel}>Sky</span>
                           <span style={s.wStatVal}>
-                            {w.clouds || w.sky_condition!.map(sc =>
-                              `${sc.sky_cover}${sc.cloud_base_ft_agl ? ` @${sc.cloud_base_ft_agl}ft` : ''}`
-                            ).join(' ')}
+                            {w.cover && w.cover !== 'CAVOK' ? w.cover : ''}
+                            {w.cover === 'CAVOK' ? 'CAVOK' : ''}
+                            {Array.isArray(w.clouds) && (w.clouds as any[]).length > 0
+                              ? (w.clouds as { cover: string; base?: number }[])
+                                  .map(c => `${c.cover}${c.base ? ` @${c.base}ft` : ''}`)
+                                  .join(' · ')
+                              : ''}
                           </span>
                         </div>
                       )}
                     </div>
-                    {(w.raw_text || w.rawOb) && (
+                    {(w.rawOb || w.raw_text) && (
                       <div style={s.rawMetar}>
                         <span style={s.rawLabel}>METAR</span>
-                        <code style={s.rawCode}>{w.raw_text || w.rawOb}</code>
+                        <code style={s.rawCode}>{w.rawOb || w.raw_text}</code>
                       </div>
                     )}
                   </div>
@@ -1138,7 +1161,11 @@ const s: Record<string, React.CSSProperties> = {
   },
   weatherCardHeader: {
     display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: '12px',
+    justifyContent: 'space-between', marginBottom: '4px',
+  },
+  weatherName: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    margin: '0 0 10px', fontFamily: 'var(--font-family-sans)',
   },
   weatherIcao: {
     fontSize: '18px', fontWeight: 500,
