@@ -16,6 +16,7 @@ import Hangar from './components/Hangar';
 import Achievements from './components/Achievements';
 import TheCrew from './components/TheCrew';
 import FlightCopilot from './components/FlightCopilot';
+import ARIAPage from './components/ARIAPage';
 
 import { ConfirmProvider, useConfirm } from './context/ConfirmContext';
 
@@ -188,6 +189,7 @@ export default function App() {
                     <Route path="/schedule" element={<Schedule flights={flights} user={user} />} />
                     <Route path="/hangar" element={<Hangar />} />
                     <Route path="/achievements" element={<Achievements flights={flights} />} />
+                    <Route path="/aria" element={<ARIAPage />} />
                     {isAdmin && <Route path="/crew" element={<TheCrew flights={flights} user={user} />} />}
                     {isAdmin && <Route path="/admin" element={<AdminPanel />} />}
                     {isAdmin && <Route path="/admin/recovery" element={<DataRecovery />} />}
