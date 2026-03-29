@@ -61,35 +61,9 @@ interface ScheduledFlight {
   reason: string;
 }
 
-interface WeatherData {
-  // Schema aviationweather.gov 2025
-  icaoId?: string;       // es. "LIRF"
-  icao?: string;         // vecchio schema
-  rawOb?: string;        // METAR raw
-  raw_text?: string;     // vecchio schema
-  fltCat?: string;       // "VFR" | "MVFR" | "IFR" | "LIFR"
-  flight_category?: string; // vecchio schema
-  cover?: string;        // "CAVOK" | "CLR" | ecc.
-  clouds?: { cover: string; base?: number }[] | string; // array 2025 o stringa vecchia
-  // Vento
-  wdir?: number;
-  wspd?: number;
-  wind_dir_degrees?: number;
-  wind_speed_kt?: number;
-  // Visibilità
-  visib?: string | number; // es. "6+" oppure numero
-  visibility_statute_mi?: number;
-  // Temperatura
-  temp?: number;
-  temp_c?: number;
-  dewp?: number;
-  // Pressione
-  altim?: number;
-  // Metadati
-  name?: string;
-  lat?: number;
-  lon?: number;
-}
+// Usa Record<string,any> per tollerare qualsiasi variazione di schema
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WeatherData = Record<string, any>;
 
 interface ChatMessage {
   role: 'aria' | 'pilot';
@@ -741,16 +715,14 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                 return (
                   <div key={i} style={s.weatherCard}>
                     <div style={s.weatherCardHeader}>
-                      <span style={s.weatherIcao}>{w.icaoId || w.icao}</span>
+                      <span style={s.weatherIcao}>{w.icaoId ?? w.icao ?? '—'}</span>
                       <span style={{ ...s.weatherCat, color: cat.color, borderColor: cat.color }}>
                         {cat.label}
                       </span>
                     </div>
-                    {w.name && (
-                      <p style={s.weatherName}>{w.name}</p>
-                    )}
+                    {w.name && <p style={s.weatherName}>{w.name}</p>}
                     <div style={s.weatherStats}>
-                      {(w.wspd !== undefined || w.wind_speed_kt !== undefined) && (
+                      {(w.wspd != null || w.wind_speed_kt != null) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Vento</span>
                           <span style={s.wStatVal}>
@@ -758,7 +730,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                           </span>
                         </div>
                       )}
-                      {(w.visib !== undefined || w.visibility_statute_mi !== undefined) && (
+                      {(w.visib != null || w.visibility_statute_mi != null) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Visibilità</span>
                           <span style={s.wStatVal}>
@@ -766,7 +738,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                           </span>
                         </div>
                       )}
-                      {(w.temp !== undefined || w.temp_c !== undefined) && (
+                      {(w.temp != null || w.temp_c != null) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Temp / Dew</span>
                           <span style={s.wStatVal}>
@@ -774,31 +746,23 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                           </span>
                         </div>
                       )}
-                      {w.altim !== undefined && (
+                      {w.altim != null && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>QNH</span>
                           <span style={s.wStatVal}>{w.altim} hPa</span>
                         </div>
                       )}
-                      {(w.cover || (Array.isArray(w.clouds) && (w.clouds as any[]).length > 0)) && (
+                      {w.cover != null && (
                         <div style={{ ...s.wStat, gridColumn: '1 / -1' }}>
                           <span style={s.wStatLabel}>Sky</span>
-                          <span style={s.wStatVal}>
-                            {w.cover && w.cover !== 'CAVOK' ? w.cover : ''}
-                            {w.cover === 'CAVOK' ? 'CAVOK' : ''}
-                            {Array.isArray(w.clouds) && (w.clouds as any[]).length > 0
-                              ? (w.clouds as { cover: string; base?: number }[])
-                                  .map(c => `${c.cover}${c.base ? ` @${c.base}ft` : ''}`)
-                                  .join(' · ')
-                              : ''}
-                          </span>
+                          <span style={s.wStatVal}>{String(w.cover)}</span>
                         </div>
                       )}
                     </div>
                     {(w.rawOb || w.raw_text) && (
                       <div style={s.rawMetar}>
                         <span style={s.rawLabel}>METAR</span>
-                        <code style={s.rawCode}>{w.rawOb || w.raw_text}</code>
+                        <code style={s.rawCode}>{w.rawOb ?? w.raw_text}</code>
                       </div>
                     )}
                   </div>
