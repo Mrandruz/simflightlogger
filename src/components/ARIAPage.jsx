@@ -2,30 +2,117 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import ARIAAssistant from './ARIAAssistant';
 
+/**
+ * Logo Velar inline come SVG — nessuna dipendenza da file esterni.
+ * Adatta automaticamente i colori alle variabili CSS del tema (light/dark).
+ */
+function VelarLogo({ height = 32 }) {
+    return (
+        <svg
+            height={height}
+            viewBox="0 0 420 160"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="Velar"
+            style={{ display: 'block' }}
+        >
+            {/* ── Icona V ── */}
+            {/* Gradiente blu dell'icona — usa colori Velar originali */}
+            <defs>
+                <linearGradient id="velar-grad-top" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#3ab4f2"/>
+                    <stop offset="100%" stopColor="#146AFF"/>
+                </linearGradient>
+                <linearGradient id="velar-grad-bot" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#146AFF"/>
+                    <stop offset="100%" stopColor="#0e3fa8"/>
+                </linearGradient>
+            </defs>
+
+            {/* Freccia superiore destra (chiara) */}
+            <polygon
+                points="58,10 110,80 85,80 42,22"
+                fill="url(#velar-grad-top)"
+            />
+            {/* Freccia sinistra (scura) */}
+            <polygon
+                points="10,10 58,80 42,80 10,30"
+                fill="url(#velar-grad-bot)"
+            />
+            {/* Freccia inferiore (più chiara) */}
+            <polygon
+                points="42,80 85,80 68,120 26,120"
+                fill="url(#velar-grad-top)"
+                opacity="0.75"
+            />
+
+            {/* ── Testo VELAR ── usa la variabile CSS del testo primario */}
+            <text
+                x="130"
+                y="105"
+                fontFamily="'Poppins', 'Inter', sans-serif"
+                fontSize="82"
+                fontWeight="700"
+                letterSpacing="-2"
+                fill="var(--color-text-primary)"
+            >
+                VELAR
+            </text>
+
+            {/* ── Sottotitolo ── */}
+            <text
+                x="132"
+                y="140"
+                fontFamily="'Inter', sans-serif"
+                fontSize="22"
+                fontWeight="400"
+                letterSpacing="1"
+                fill="var(--color-text-hint)"
+            >
+                Motion, simplified.
+            </text>
+        </svg>
+    );
+}
+
 export default function ARIAPage() {
     const { user } = useAuth();
 
     if (!user) {
         return (
             <div className="page-container" style={styles.centered}>
-                <p style={styles.hint}>Accedi per utilizzare ARIA.</p>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                    Accedi per utilizzare ARIA.
+                </p>
             </div>
         );
     }
 
     return (
         <div className="page-container" style={styles.page}>
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>ARIA</h1>
-                    <p style={styles.subtitle}>Adaptive Route Intelligence Assistant · Velar Virtual Airline</p>
+
+            {/* ── Page header ── */}
+            <div style={styles.pageHeader}>
+                <div style={styles.pageHeaderLeft}>
+                    <div style={styles.sectionLabel}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                                stroke="var(--color-primary)"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                        <span>AI ASSISTANT</span>
+                    </div>
+                    <h1 style={styles.pageTitle}>Flight Planning & Dispatch</h1>
                 </div>
-                <div style={styles.badge}>
-                    <span style={styles.badgeDot} />
-                    Online
-                </div>
+
+                <VelarLogo height={38} />
             </div>
 
+            {/* ── ARIA ── */}
             <ARIAAssistant
                 userId={user.uid}
                 pilotName={user.displayName || 'Pilota'}
@@ -39,9 +126,9 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
-        maxWidth: '860px',
-        margin: '0 auto',
-        padding: '32px 24px',
+        padding: '32px',
+        maxWidth: '1100px',
+        width: '100%',
     },
     centered: {
         display: 'flex',
@@ -49,45 +136,34 @@ const styles = {
         justifyContent: 'center',
         height: '100%',
     },
-    hint: {
-        color: 'var(--color-text-secondary)',
-        fontSize: '14px',
-    },
-    header: {
+    pageHeader: {
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'flex-end',
         justifyContent: 'space-between',
+        gap: '16px',
     },
-    title: {
-        margin: 0,
-        fontSize: '26px',
-        fontWeight: 700,
-        letterSpacing: '0.04em',
-        color: 'var(--color-text-primary)',
+    pageHeaderLeft: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
     },
-    subtitle: {
-        margin: '4px 0 0',
-        fontSize: '13px',
-        color: 'var(--color-text-secondary)',
-        letterSpacing: '0.01em',
-    },
-    badge: {
+    sectionLabel: {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        fontSize: '12px',
+        fontSize: '11px',
         fontWeight: 500,
-        color: '#22c55e',
-        background: 'rgba(34,197,94,0.08)',
-        border: '1px solid rgba(34,197,94,0.2)',
-        borderRadius: '20px',
-        padding: '4px 12px',
+        color: 'var(--color-primary)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        fontFamily: 'var(--font-family-sans)',
     },
-    badgeDot: {
-        width: '6px',
-        height: '6px',
-        borderRadius: '50%',
-        background: '#22c55e',
-        boxShadow: '0 0 6px #22c55e',
+    pageTitle: {
+        margin: 0,
+        fontSize: '28px',
+        fontWeight: 500,
+        fontFamily: 'var(--font-family-display)',
+        color: 'var(--color-text-primary)',
+        lineHeight: 1.2,
     },
 };
