@@ -62,14 +62,27 @@ interface ScheduledFlight {
 }
 
 interface WeatherData {
-  icao: string;
-  raw_text?: string;
+  // Campi comuni
+  icao?: string;
+  id?: string; // nuovo schema 2025
+  rawOb?: string; // nuovo schema 2025
+  raw_text?: string; // vecchio schema
+  // Flight category (vecchio schema — potrebbe non esserci)
   flight_category?: string;
+  // Vento
   wind_speed_kt?: number;
+  wspd?: number; // nuovo schema 2025
   wind_dir_degrees?: number;
+  wdir?: number; // nuovo schema 2025
+  // Visibilità
   visibility_statute_mi?: number;
+  visib?: string | number; // nuovo schema 2025
+  // Sky
   sky_condition?: { sky_cover: string; cloud_base_ft_agl?: number }[];
+  clouds?: string; // nuovo schema 2025 es. "FEW045 SCT080"
+  // Temperatura
   temp_c?: number;
+  temp?: number; // nuovo schema 2025
 }
 
 interface ChatMessage {
@@ -218,8 +231,37 @@ async function fetchMetar(icaoCodes: string[]): Promise<WeatherData[]> {
   }
 }
 
+function computeFlightCategory(w: WeatherData): string {
+  // Se già disponibile nel payload, usalo
+  if (w.flight_category) return w.flight_category.toUpperCase();
+
+  // Calcola da visibilità e ceiling (standard FAA)
+  const vis = typeof w.visib === 'string' ? parseFloat(w.visib) : (w.visib ?? w.visibility_statute_mi ?? 10);
+  
+  // Estrai ceiling dal campo clouds nuovo schema (es. "BKN045 OVC080") o sky_condition
+  let ceilingFt = 99999;
+  if (w.clouds) {
+    const matches = w.clouds.matchAll(/(BKN|OVC)(\d{3})/g);
+    for (const m of matches) {
+      const ft = parseInt(m[2]) * 100;
+      if (ft < ceilingFt) ceilingFt = ft;
+    }
+  } else if (w.sky_condition) {
+    for (const s of w.sky_condition) {
+      if ((s.sky_cover === 'BKN' || s.sky_cover === 'OVC') && s.cloud_base_ft_agl) {
+        if (s.cloud_base_ft_agl < ceilingFt) ceilingFt = s.cloud_base_ft_agl;
+      }
+    }
+  }
+
+  if (vis < 1 || ceilingFt < 500) return 'LIFR';
+  if (vis < 3 || ceilingFt < 1000) return 'IFR';
+  if (vis <= 5 || ceilingFt <= 3000) return 'MVFR';
+  return 'VFR';
+}
+
 function flightCategory(w: WeatherData): { label: string; color: string } {
-  const cat = w.flight_category?.toUpperCase();
+  const cat = computeFlightCategory(w);
   if (cat === 'VFR') return { label: 'VFR', color: 'var(--color-success)' };
   if (cat === 'MVFR') return { label: 'MVFR', color: 'var(--color-primary)' };
   if (cat === 'IFR') return { label: 'IFR', color: 'var(--color-danger)' };
@@ -673,45 +715,47 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                 return (
                   <div key={i} style={s.weatherCard}>
                     <div style={s.weatherCardHeader}>
-                      <span style={s.weatherIcao}>{w.icao}</span>
+                      <span style={s.weatherIcao}>{w.icao || w.id}</span>
                       <span style={{ ...s.weatherCat, color: cat.color, borderColor: cat.color }}>
                         {cat.label}
                       </span>
                     </div>
                     <div style={s.weatherStats}>
-                      {w.wind_speed_kt !== undefined && (
+                      {(w.wind_speed_kt !== undefined || w.wspd !== undefined) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Vento</span>
-                          <span style={s.wStatVal}>{w.wind_dir_degrees || 0}° / {w.wind_speed_kt} kt</span>
+                          <span style={s.wStatVal}>
+                            {w.wind_dir_degrees ?? w.wdir ?? 0}° / {w.wind_speed_kt ?? w.wspd} kt
+                          </span>
                         </div>
                       )}
-                      {w.visibility_statute_mi !== undefined && (
+                      {(w.visibility_statute_mi !== undefined || w.visib !== undefined) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Visibilità</span>
-                          <span style={s.wStatVal}>{w.visibility_statute_mi} SM</span>
+                          <span style={s.wStatVal}>{w.visibility_statute_mi ?? w.visib} SM</span>
                         </div>
                       )}
-                      {w.temp_c !== undefined && (
+                      {(w.temp_c !== undefined || w.temp !== undefined) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Temp</span>
-                          <span style={s.wStatVal}>{w.temp_c}°C</span>
+                          <span style={s.wStatVal}>{w.temp_c ?? w.temp}°C</span>
                         </div>
                       )}
-                      {w.sky_condition && w.sky_condition.length > 0 && (
+                      {(w.clouds || (w.sky_condition && w.sky_condition.length > 0)) && (
                         <div style={s.wStat}>
                           <span style={s.wStatLabel}>Sky</span>
                           <span style={s.wStatVal}>
-                            {w.sky_condition.map(sc =>
+                            {w.clouds || w.sky_condition!.map(sc =>
                               `${sc.sky_cover}${sc.cloud_base_ft_agl ? ` @${sc.cloud_base_ft_agl}ft` : ''}`
-                            ).join(' · ')}
+                            ).join(' ')}
                           </span>
                         </div>
                       )}
                     </div>
-                    {w.raw_text && (
+                    {(w.raw_text || w.rawOb) && (
                       <div style={s.rawMetar}>
                         <span style={s.rawLabel}>METAR</span>
-                        <code style={s.rawCode}>{w.raw_text}</code>
+                        <code style={s.rawCode}>{w.raw_text || w.rawOb}</code>
                       </div>
                     )}
                   </div>

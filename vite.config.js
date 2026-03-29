@@ -75,6 +75,18 @@ export default defineConfig({
           const separator = path.includes('?') ? '&' : '?';
           return path.replace(/^\/api\/simbrief/, '') + separator + 'json=v2';
         }
+      },
+      '/api/aria-proxy': {
+        target: 'https://api.anthropic.com',
+        changeOrigin: true,
+        rewrite: () => '/v1/messages',
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('x-api-key', process.env.ANTHROPIC_API_KEY || '');
+            proxyReq.setHeader('anthropic-version', '2023-06-01');
+            proxyReq.removeHeader('anthropic-dangerous-direct-browser-access');
+          });
+        }
       }
     }
   }
