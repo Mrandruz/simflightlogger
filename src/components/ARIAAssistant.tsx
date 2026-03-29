@@ -271,15 +271,35 @@ function flightCategory(w: WeatherData): { label: string; color: string } {
 
 // ─── SimBrief ─────────────────────────────────────────────────────────────────
 
-function buildSimbriefUrl(dep: string, arr: string, aircraft: string): string {
-  const acMap: Record<string, string> = {
-    'Airbus A319': 'A319', 'Airbus A320': 'A320', 'Airbus A320-200': 'A320',
-    'Airbus A321': 'A321', 'Airbus A330': 'A332', 'Airbus A350': 'A359',
-    'Airbus A350-900': 'A359', 'Airbus A380': 'A388',
-    'Boeing 777': 'B77W', 'Boeing 787': 'B789',
-  };
-  const acType = acMap[aircraft] || 'A320';
-  return `https://dispatch.simbrief.com/options/custom?type=${acType}&orig=${dep}&dest=${arr}`;
+// Altitudini di crociera ottimali per tipo aeromobile
+const CRUISE_ALTITUDE: Record<string, string> = {
+  'Airbus A319': '350', 'Airbus A320': '370', 'Airbus A320-200': '370',
+  'Airbus A321': '370', 'Airbus A330': '350', 'Airbus A350': '390',
+  'Airbus A350-900': '390', 'Airbus A380': '350',
+  'Boeing 777': '350', 'Boeing 787': '390',
+};
+
+const AC_TYPE_MAP: Record<string, string> = {
+  'Airbus A319': 'A319', 'Airbus A320': 'A320', 'Airbus A320-200': 'A320',
+  'Airbus A321': 'A321', 'Airbus A330': 'A332', 'Airbus A350': 'A359',
+  'Airbus A350-900': 'A359', 'Airbus A380': 'A388',
+  'Boeing 777': 'B77W', 'Boeing 787': 'B789',
+};
+
+function buildSimbriefUrl(flight: ScheduledFlight): string {
+  const acType = AC_TYPE_MAP[flight.aircraft] || 'A320';
+  const cruise = CRUISE_ALTITUDE[flight.aircraft] || '370';
+  // Estrai numero volo numerico da es. "VLR101" → "101"
+  const fltnum = flight.flightNumber.replace(/[^0-9]/g, '');
+  const params = new URLSearchParams({
+    airline: 'VLR',
+    fltnum,
+    orig: flight.departure,
+    dest: flight.arrival,
+    type: acType,
+    cruise,
+  });
+  return `https://dispatch.simbrief.com/options/custom?${params.toString()}`;
 }
 
 // ─── Componente principale ────────────────────────────────────────────────────
@@ -662,7 +682,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                           <p style={s.flightReason}>💬 {f.reason}</p>
                           <div style={s.flightActions}>
                             <a
-                              href={buildSimbriefUrl(f.departure, f.arrival, f.aircraft)}
+                              href={buildSimbriefUrl(f)}
                               target="_blank" rel="noopener noreferrer"
                               style={s.simbriefBtn}
                               onClick={e => e.stopPropagation()}
