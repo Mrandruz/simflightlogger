@@ -208,7 +208,8 @@ function computePilotProfile(flights: Flight[]): PilotProfile {
 async function fetchMetar(icaoCodes: string[]): Promise<WeatherData[]> {
   const ids = icaoCodes.join(',');
   try {
-    const res = await fetch(`https://aviationweather.gov/api/data/metar?ids=${ids}&format=json`);
+    // Usa il proxy server-side per evitare CORS in produzione
+    const res = await fetch(`/api/metar-proxy?ids=${encodeURIComponent(ids)}`);
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -410,13 +411,15 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
       const data = await res.json();
       const raw = data.content?.[0]?.text || '[]';
-      const clean = raw.replace(/```json|```/g, '').trim();
+      // Estrai JSON anche se il modello aggiunge testo prima/dopo
+      const jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      const clean = jsonMatch ? jsonMatch[0] : raw.replace(/```json|```/g, '').trim();
       const parsed: ScheduledFlight[] = JSON.parse(clean);
       setSchedule(parsed);
     } catch (e) {
