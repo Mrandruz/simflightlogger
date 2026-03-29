@@ -119,6 +119,57 @@ PROTOCOLLO ARIA — Tono e Comportamento:
 - Esempio di tono: "Comandante [nome], il check della cabina per il volo VLR101 è completo. Ho rilevato [info]. Suggerisco [azione]."
 `;
 
+
+// ─── Piano Operativo Velar v2.0 ──────────────────────────────────────────────
+
+const VELAR_FLEET_V2 = [
+  { type: 'Airbus A319', count: 5, role: 'Executive Shuttle', mission: 'Rotte regionali ad alto rendimento' },
+  { type: 'Airbus A320', count: 10, role: 'Core Fleet', mission: 'Europeo e asiatico ad alta frequenza' },
+  { type: 'Airbus A321LR', count: 5, role: 'Long Range NB', mission: 'Transcontinentale a densità media' },
+  { type: 'Airbus A330neo', count: 2, role: 'High Cap Long Haul', mission: 'Transatlantico e oceanico' },
+  { type: 'Airbus A350-900', count: 3, role: 'Flagship', mission: 'Ultra-long-haul Hub-to-Hub' },
+];
+
+const VELAR_HUBS = [
+  {
+    icao: 'LIRF', city: 'Roma Fiumicino', role: 'Global Hub',
+    description: 'Baricentro operativo Velar, collegando l'Europa al mondo.',
+    routes: [
+      { dest: 'KBOS', city: 'Boston', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 101/102', note: 'Hub-to-Hub' },
+      { dest: 'WIII', city: 'Giacarta', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 201/202', note: 'Hub-to-Hub' },
+      { dest: 'KJFK', city: 'New York JFK', aircraft: 'A330neo', freq: 'Daily', flight: 'VLR 111/112', note: 'Premium Business' },
+      { dest: 'OMDB', city: 'Dubai', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 211/212', note: 'ME Gateway' },
+      { dest: 'EGLL', city: 'Londra', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 411-416', note: 'Feeders' },
+      { dest: 'LFPG', city: 'Parigi CDG', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 511-516', note: 'Luxury' },
+      { dest: 'LIML', city: 'Milano Linate', aircraft: 'A320', freq: '4x Daily', flight: 'VLR 311-318', note: 'Domestic Executive' },
+      { dest: 'LSZH', city: 'Zurigo', aircraft: 'A319', freq: '2x Daily', flight: 'VLR 611-614', note: 'Finance Shuttle' },
+      { dest: 'EDDB', city: 'Berlino', aircraft: 'A320', freq: 'Daily', flight: 'VLR 711/712', note: 'Tech Feeder' },
+    ],
+  },
+  {
+    icao: 'WIII', city: 'Giacarta Soekarno-Hatta', role: 'Asian Gateway',
+    description: 'Cuore dell'ospitalità Nusantara e porta per l'Oceania.',
+    routes: [
+      { dest: 'LIRF', city: 'Roma', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 201/202', note: 'Hub-to-Hub' },
+      { dest: 'YSSY', city: 'Sydney', aircraft: 'A330neo', freq: '4x Weekly', flight: 'VLR 811/812', note: 'Oceania' },
+      { dest: 'WSSS', city: 'Singapore', aircraft: 'A320', freq: '3x Daily', flight: 'VLR 821-826', note: 'Asian Business' },
+      { dest: 'RJTT', city: 'Tokyo Haneda', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 831/832', note: 'Tech Capital' },
+      { dest: 'WADD', city: 'Bali', aircraft: 'A320', freq: '2x Daily', flight: 'VLR 841-844', note: 'Premium Leisure' },
+    ],
+  },
+  {
+    icao: 'KBOS', city: 'Boston Logan', role: 'Tech Corridor',
+    description: 'Porto d'ingresso per l'innovazione e il mercato Nord Americano.',
+    routes: [
+      { dest: 'LIRF', city: 'Roma', aircraft: 'A350-900', freq: 'Daily', flight: 'VLR 101/102', note: 'Hub-to-Hub' },
+      { dest: 'KSFO', city: 'San Francisco', aircraft: 'A321LR', freq: 'Daily', flight: 'VLR 911/912', note: 'Tech Bridge' },
+      { dest: 'KAUS', city: 'Austin', aircraft: 'A321LR', freq: '4x Weekly', flight: 'VLR 921/922', note: 'Silicon Hills' },
+      { dest: 'CYYZ', city: 'Toronto', aircraft: 'A319', freq: 'Daily', flight: 'VLR 931/932', note: 'NE Connection' },
+      { dest: 'EGLL', city: 'Londra', aircraft: 'A330neo', freq: 'Daily', flight: 'VLR 941/942', note: 'Academic/Finance' },
+    ],
+  },
+];
+
 // ─── Calcolo profilo pilota ───────────────────────────────────────────────────
 
 function computePilotProfile(flights: Flight[]): PilotProfile {
@@ -307,7 +358,7 @@ interface ARIAProps {
   pilotName?: string;
 }
 
-type ViewState = 'chat' | 'schedule' | 'weather';
+type ViewState = 'chat' | 'schedule' | 'weather' | 'fleet';
 
 export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -327,6 +378,8 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherAirports, setWeatherAirports] = useState('');
+  const [fleetBriefing, setFleetBriefing] = useState('');
+  const [fleetBriefingLoading, setFleetBriefingLoading] = useState(false);
 
 
   // ── Carica voli da Firestore ──────────────────────────────────────────────
@@ -488,6 +541,47 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
       setScheduleLoading(false);
     }
   }, [profile, pilotName]);
+
+
+  // ── Genera briefing flotta ────────────────────────────────────────────────
+  const generateFleetBriefing = useCallback(async () => {
+    if (!profile || fleetBriefingLoading || fleetBriefing) return;
+    setFleetBriefingLoading(true);
+
+    const systemPrompt = buildSystemPrompt(profile);
+    const prompt = `Genera un messaggio di stato operativo della flotta Velar per il Comandante ${pilotName || 'Comandante'}.
+Flotta: 25 aeromobili (5xA319, 10xA320, 5xA321LR, 2xA330neo, 3xA350-900).
+Hub attivi: Roma Fiumicino (Global Hub), Giacarta (Asian Gateway), Boston (Tech Corridor).
+Tutte le rotte sono operative.
+Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo ARIA 2.0. Max 3 frasi. Inizia con "Buongiorno Comandante".`;
+
+    try {
+      const res = await fetch('/api/aria-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      setFleetBriefing(text);
+    } catch {
+      setFleetBriefing('Sistemi ARIA operativi. Flotta Velar al 100%. Motion, simplified.');
+    } finally {
+      setFleetBriefingLoading(false);
+    }
+  }, [profile, pilotName, buildSystemPrompt, fleetBriefingLoading, fleetBriefing]);
+
+  // Auto-genera briefing quando si apre la tab fleet
+  useEffect(() => {
+    if (view === 'fleet' && profile && !fleetBriefing && !fleetBriefingLoading) {
+      generateFleetBriefing();
+    }
+  }, [view, profile, fleetBriefing, fleetBriefingLoading, generateFleetBriefing]);
 
   // ── Fetch meteo ───────────────────────────────────────────────────────────
   const fetchWeather = useCallback(async () => {
@@ -783,6 +877,79 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
               <p style={s.emptySubText}>Dati in tempo reale · aviationweather.gov</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── FLEET STATUS ── */}
+      {view === 'fleet' && (
+        <div style={s.fleetContainer}>
+
+          {/* Briefing ARIA */}
+          <div style={s.fleetBriefingCard}>
+            <div style={s.fleetBriefingHeader}>
+              <div style={s.ariaAvatar}>A</div>
+              <div>
+                <p style={s.fleetBriefingLabel}>ARIA · Fleet Status Briefing</p>
+                <p style={s.fleetBriefingTime}>
+                  {new Date().toLocaleString('it-IT', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+            <div style={s.fleetBriefingBody}>
+              {fleetBriefingLoading ? (
+                <div style={s.typingDots}>
+                  <span style={{ ...s.dot, animationDelay: '0s' }} />
+                  <span style={{ ...s.dot, animationDelay: '0.2s' }} />
+                  <span style={{ ...s.dot, animationDelay: '0.4s' }} />
+                </div>
+              ) : (
+                <p style={s.fleetBriefingText}>{fleetBriefing}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Composizione Flotta */}
+          <div style={s.fleetSection}>
+            <span style={s.fleetSectionTitle}>Composizione Flotta · 25 Aeromobili</span>
+            <div style={s.fleetGrid}>
+              {VELAR_FLEET_V2.map((ac, i) => (
+                <div key={i} style={s.fleetAcCard}>
+                  <div style={s.fleetAcTop}>
+                    <span style={s.fleetAcCount}>{ac.count}×</span>
+                    <span style={s.fleetAcType}>{ac.type}</span>
+                  </div>
+                  <span style={s.fleetAcRole}>{ac.role}</span>
+                  <span style={s.fleetAcMission}>{ac.mission}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hub operativi */}
+          {VELAR_HUBS.map((hub, hi) => (
+            <div key={hi} style={s.fleetSection}>
+              <div style={s.hubHeader}>
+                <div>
+                  <span style={s.fleetSectionTitle}>{hub.icao} · {hub.city}</span>
+                  <span style={s.hubRole}>{hub.role}</span>
+                </div>
+                <span style={s.hubStatus}>● Operativo</span>
+              </div>
+              <p style={s.hubDesc}>{hub.description}</p>
+              <div style={s.routeTable}>
+                {hub.routes.map((r, ri) => (
+                  <div key={ri} style={{ ...s.routeRow, ...(ri % 2 === 0 ? {} : s.routeRowAlt) }}>
+                    <span style={s.routeIcao}>{r.dest}</span>
+                    <span style={s.routeCity}>{r.city}</span>
+                    <span style={s.routeAc}>{r.aircraft}</span>
+                    <span style={s.routeFreq}>{r.freq}</span>
+                    <span style={s.routeFlight}>{r.flight}</span>
+                    <span style={s.routeNote}>{r.note}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1175,5 +1342,137 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '10px', color: 'var(--color-text-secondary)',
     fontFamily: 'var(--font-family-mono)',
     wordBreak: 'break-all', lineHeight: '1.6',
+  },
+  // Fleet Status
+  fleetContainer: {
+    flex: 1, overflowY: 'auto', padding: '16px',
+    display: 'flex', flexDirection: 'column', gap: '16px',
+    background: 'var(--color-background)',
+  },
+  fleetBriefingCard: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '16px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  fleetBriefingHeader: {
+    display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px',
+  },
+  fleetBriefingLabel: {
+    margin: 0, fontSize: '12px', fontWeight: 600,
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  fleetBriefingTime: {
+    margin: 0, fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-mono)',
+    textTransform: 'capitalize',
+  },
+  fleetBriefingBody: { minHeight: '32px' },
+  fleetBriefingText: {
+    margin: 0, fontSize: '13.5px', lineHeight: '1.65',
+    color: 'var(--color-text-primary)',
+    fontFamily: 'var(--font-family-sans)',
+    fontStyle: 'italic',
+  },
+  fleetSection: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '14px 16px',
+    display: 'flex', flexDirection: 'column', gap: '10px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  fleetSectionTitle: {
+    fontSize: '11px', fontWeight: 500,
+    color: 'var(--color-text-hint)',
+    textTransform: 'uppercase', letterSpacing: 'var(--type-label-spacing)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  fleetGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px',
+  },
+  fleetAcCard: {
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', padding: '10px 12px',
+    display: 'flex', flexDirection: 'column', gap: '3px',
+  },
+  fleetAcTop: { display: 'flex', alignItems: 'baseline', gap: '6px' },
+  fleetAcCount: {
+    fontSize: '18px', fontWeight: 700,
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-mono)',
+  },
+  fleetAcType: {
+    fontSize: '12px', fontWeight: 500,
+    color: 'var(--color-text-primary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  fleetAcRole: {
+    fontSize: '10px', fontWeight: 600,
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase', letterSpacing: '0.04em',
+  },
+  fleetAcMission: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)', lineHeight: '1.4',
+  },
+  hubHeader: {
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+  },
+  hubRole: {
+    display: 'block', fontSize: '10px', fontWeight: 500,
+    color: 'var(--color-primary)', marginTop: '2px',
+    fontFamily: 'var(--font-family-sans)',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
+  },
+  hubStatus: {
+    fontSize: '11px', fontWeight: 500, color: 'var(--color-success)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  hubDesc: {
+    margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-family-sans)', lineHeight: '1.5',
+  },
+  routeTable: {
+    display: 'flex', flexDirection: 'column',
+    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden',
+  },
+  routeRow: {
+    display: 'grid',
+    gridTemplateColumns: '60px 1fr 90px 70px 90px 90px',
+    gap: '8px', padding: '8px 12px',
+    alignItems: 'center',
+    background: 'var(--color-surface)',
+  },
+  routeRowAlt: { background: 'var(--color-background)' },
+  routeIcao: {
+    fontSize: '12px', fontWeight: 700,
+    fontFamily: 'var(--font-family-mono)',
+    color: 'var(--color-text-primary)',
+  },
+  routeCity: {
+    fontSize: '12px', color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  routeAc: {
+    fontSize: '11px', color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  routeFreq: {
+    fontSize: '11px', fontWeight: 500,
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-sans)',
+  },
+  routeFlight: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-mono)',
+  },
+  routeNote: {
+    fontSize: '10px', color: 'var(--color-text-hint)',
+    fontFamily: 'var(--font-family-sans)',
   },
 };
