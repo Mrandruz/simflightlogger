@@ -198,15 +198,33 @@ function computePilotProfile(flights: Flight[]): PilotProfile {
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
 
+// Normalizza un record METAR raw nel formato semplice usato internamente
+function normalizeMETAR(m: Record<string, any>): WeatherData {
+  return {
+    icaoId: m.icaoId || m.icao || '',
+    name: m.name || '',
+    pres: m.altim != null ? Math.round(m.altim) : null,
+    wind: m.wdir != null && m.wspd != null ? `${m.wdir}°/${m.wspd}kt` : null,
+    temp: m.temp != null ? Math.round(m.temp) : null,
+    dew: m.dewp != null ? Math.round(m.dewp) : null,
+    fltCat: m.fltCat || null,
+    cover: m.cover || null,
+    rawOb: m.rawOb || m.raw_text || null,
+  };
+}
+
 async function fetchMetar(icaoCodes: string[]): Promise<WeatherData[]> {
+  // Usa lo stesso endpoint di Schedule.jsx — /api/metar è già configurato
+  // nel vite.config.js come proxy verso aviationweather.gov
   const ids = icaoCodes.join(',');
   try {
-    // Usa il proxy server-side per evitare CORS in produzione
-    const res = await fetch(`/api/metar-proxy?ids=${encodeURIComponent(ids)}`);
-    if (!res.ok) return [];
+    const res = await fetch(`/api/metar?ids=${ids}&format=json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch {
+    if (!Array.isArray(data) || data.length === 0) return [];
+    return data.map(normalizeMETAR);
+  } catch (e) {
+    console.warn('[ARIA] METAR fetch failed:', e);
     return [];
   }
 }
@@ -715,54 +733,42 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
                 return (
                   <div key={i} style={s.weatherCard}>
                     <div style={s.weatherCardHeader}>
-                      <span style={s.weatherIcao}>{w.icaoId ?? w.icao ?? '—'}</span>
+                      <span style={s.weatherIcao}>{w.icaoId || '—'}</span>
                       <span style={{ ...s.weatherCat, color: cat.color, borderColor: cat.color }}>
                         {cat.label}
                       </span>
                     </div>
                     {w.name && <p style={s.weatherName}>{w.name}</p>}
                     <div style={s.weatherStats}>
-                      {(w.wspd != null || w.wind_speed_kt != null) && (
+                      {w.pres != null && (
                         <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Vento</span>
-                          <span style={s.wStatVal}>
-                            {w.wdir ?? w.wind_dir_degrees ?? 0}° / {w.wspd ?? w.wind_speed_kt} kt
-                          </span>
+                          <span style={s.wStatLabel}>Pres</span>
+                          <span style={s.wStatVal}>{w.pres}</span>
                         </div>
                       )}
-                      {(w.visib != null || w.visibility_statute_mi != null) && (
+                      {w.wind != null && (
                         <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Visibilità</span>
-                          <span style={s.wStatVal}>
-                            {String(w.visib ?? w.visibility_statute_mi)} SM
-                          </span>
+                          <span style={s.wStatLabel}>Wind</span>
+                          <span style={s.wStatVal}>{w.wind}</span>
                         </div>
                       )}
-                      {(w.temp != null || w.temp_c != null) && (
+                      {w.temp != null && (
                         <div style={s.wStat}>
-                          <span style={s.wStatLabel}>Temp / Dew</span>
-                          <span style={s.wStatVal}>
-                            {w.temp ?? w.temp_c}°C / {w.dewp ?? '—'}°C
-                          </span>
+                          <span style={s.wStatLabel}>Temp</span>
+                          <span style={s.wStatVal}>{w.temp}°</span>
                         </div>
                       )}
-                      {w.altim != null && (
+                      {w.dew != null && (
                         <div style={s.wStat}>
-                          <span style={s.wStatLabel}>QNH</span>
-                          <span style={s.wStatVal}>{w.altim} hPa</span>
-                        </div>
-                      )}
-                      {w.cover != null && (
-                        <div style={{ ...s.wStat, gridColumn: '1 / -1' }}>
-                          <span style={s.wStatLabel}>Sky</span>
-                          <span style={s.wStatVal}>{String(w.cover)}</span>
+                          <span style={s.wStatLabel}>Dew</span>
+                          <span style={s.wStatVal}>{w.dew}°</span>
                         </div>
                       )}
                     </div>
-                    {(w.rawOb || w.raw_text) && (
+                    {w.rawOb && (
                       <div style={s.rawMetar}>
                         <span style={s.rawLabel}>METAR</span>
-                        <code style={s.rawCode}>{w.rawOb ?? w.raw_text}</code>
+                        <code style={s.rawCode}>{w.rawOb}</code>
                       </div>
                     )}
                   </div>
