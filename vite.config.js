@@ -1,9 +1,21 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  const discordUrl = env.VITE_DISCORD_WEBHOOK_URL || env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/dummy';
+  let discordOrigin = 'https://discord.com';
+  let discordPath = '';
+  try {
+    const urlObj = new URL(discordUrl);
+    discordOrigin = urlObj.origin;
+    discordPath = urlObj.pathname + urlObj.search;
+  } catch (e) {}
+
+  return {
   plugins: [
     react(),
     VitePWA({
@@ -76,6 +88,11 @@ export default defineConfig({
           return path.replace(/^\/api\/simbrief/, '') + separator + 'json=v2';
         }
       },
+      '/api/discord-proxy': {
+        target: discordOrigin,
+        changeOrigin: true,
+        rewrite: () => discordPath
+      },
       '/api/aria-proxy': {
         target: 'https://api.anthropic.com',
         changeOrigin: true,
@@ -90,4 +107,6 @@ export default defineConfig({
       }
     }
   }
+};
 })
+
