@@ -17,7 +17,7 @@ export interface NetworkFlight {
   pilot: NpcPilot;
   departureTime: number; // minuti da mezzanotte UTC
   arrivalTime: number; // minuti da mezzanotte UTC
-  status: 'Scheduled' | 'Boarding' | 'Pushback' | 'En Route' | 'Approach' | 'Arrived' | 'Turnaround';
+  status: 'Scheduled' | 'Boarding' | 'Pushback' | 'Taxi Out' | 'En Route' | 'Approach' | 'Taxi In' | 'Arrived' | 'Turnaround';
   progressPercent: number;
 }
 
@@ -113,17 +113,22 @@ export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentU
         let progressPercent = 0;
         
         // Calcolo dello stato
-        if (currentMins >= t - 60 && currentMins < t - 30) {
+        if (currentMins >= t - 60 && currentMins < t - 25) {
           status = 'Boarding';
-        } else if (currentMins >= t - 30 && currentMins < t) {
+        } else if (currentMins >= t - 25 && currentMins < t - 15) {
           status = 'Pushback';
+        } else if (currentMins >= t - 15 && currentMins < t) {
+          status = 'Taxi Out';
         } else if (currentMins >= t && currentMins < t + duration - 30) {
           status = 'En Route';
           progressPercent = ((currentMins - t) / duration) * 100;
         } else if (currentMins >= t + duration - 30 && currentMins < t + duration) {
           status = 'Approach';
           progressPercent = ((currentMins - t) / duration) * 100;
-        } else if (currentMins >= t + duration && currentMins < t + duration + 45) {
+        } else if (currentMins >= t + duration && currentMins < t + duration + 15) {
+          status = 'Taxi In';
+          progressPercent = 100;
+        } else if (currentMins >= t + duration + 15 && currentMins < t + duration + 45) {
           status = 'Arrived';
           progressPercent = 100;
         } else if (currentMins >= t + duration + 45 && currentMins < t + duration + 120) {

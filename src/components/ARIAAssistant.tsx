@@ -1182,9 +1182,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   </div>
                   <span style={{ 
                     fontSize: '11px', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold',
-                    background: nf.status === 'Arrived' || nf.status === 'Turnaround' ? '#2e7d32' : 
+                    background: (nf.status === 'Arrived' || nf.status === 'Turnaround') ? '#2e7d32' : 
                                 nf.status === 'En Route' ? '#0277bd' :
-                                nf.status === 'Approach' ? '#e65100' : '#424242',
+                                (nf.status === 'Approach' || nf.status === 'Taxi In') ? '#e65100' : 
+                                (nf.status === 'Taxi Out' || nf.status === 'Pushback') ? '#f57c00' :
+                                '#424242',
                     color: '#fff'
                   }}>{nf.status}</span>
                 </div>
@@ -1194,7 +1196,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   <span>{nf.aircraft}</span>
                 </div>
                 
-                {['Boarding', 'Pushback', 'En Route', 'Approach'].includes(nf.status) && (
+                {['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(nf.status) && (
                   <div style={{ width: '100%', height: '4px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden', marginTop: '4px' }}>
                     <div style={{ width: `${nf.progressPercent}%`, height: '100%', background: 'var(--color-primary)' }} />
                   </div>
