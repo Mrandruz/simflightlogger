@@ -119,10 +119,10 @@ export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentU
           status = 'Pushback';
         } else if (currentMins >= t && currentMins < t + duration - 30) {
           status = 'En Route';
-          progressPercent = ((currentMins - t) / (duration - 30)) * 100;
+          progressPercent = ((currentMins - t) / duration) * 100;
         } else if (currentMins >= t + duration - 30 && currentMins < t + duration) {
           status = 'Approach';
-          progressPercent = 95;
+          progressPercent = ((currentMins - t) / duration) * 100;
         } else if (currentMins >= t + duration && currentMins < t + duration + 45) {
           status = 'Arrived';
           progressPercent = 100;
