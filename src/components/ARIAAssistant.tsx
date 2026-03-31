@@ -11,7 +11,16 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { 
+  collection, 
+  getDocs, 
+  onSnapshot, 
+  doc, 
+  updateDoc, 
+  setDoc,
+  query,
+  limit
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import { sendOperationalAlert } from '../utils/discord';
 import { fetchNpcRoster, calculateNetworkState, NetworkFlight, NpcPilot } from '../utils/networkSimulator';
@@ -321,74 +330,116 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       
     fetchNpcRoster().then(setNpcRoster);
 
-    fetch('/api/fleet')
-      .then(r => r.json())
-      .then(db => setFleetState(Array.isArray(db) ? db : []))
-      .catch(() => console.warn('[ARIA Ops] Fleet DB non trovato'));
+    // 📡 Listener Flotta (Firestore)
+    const fleetCollection = collection(db, 'fleet');
+    const unsubscribeFleet = onSnapshot(fleetCollection, (snapshot) => {
+      if (snapshot.empty) {
+        console.warn('[ARIA Ops] Firestore Fleet vuoto. Inizializzazione...');
+        // Tentiamo di caricare dal file statico locale per popolare Firestore la prima volta
+        fetch('/api/fleet')
+          .then(r => r.json())
+          .then(async (localFleet) => {
+             if (Array.isArray(localFleet) && localFleet.length > 0) {
+                for (const ac of localFleet) {
+                   await setDoc(doc(db, 'fleet', ac.id), ac);
+                }
+             }
+          }).catch(err => {
+             console.error('[ARIA Ops] Errore caricamento flotta locale per init:', err);
+          });
+      } else {
+        const fleetData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setFleetState(fleetData);
+        networkFlightsRef.current = []; // Reset ref per trigger ricalcolo
+      }
+    });
+
+    return () => {
+      unsubscribeFleet();
+    };
   }, []);
 
   // ── Heartbeat Engine ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!opsPlan || npcRoster.length === 0 || fleetState.length === 0) return;
     
-    // Funzione di aggiornamento frame
-    const tick = () => {
+    const tick = async () => {
       const active = calculateNetworkState(opsPlan, npcRoster, Date.now(), fleetState);
       const prev = networkFlightsRef.current;
       
-      active.forEach(flight => {
+      const sendDiscord = async (channel: string, payload: any) => {
+        try {
+          await fetch('/api/discord', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel, payload })
+          });
+        } catch (e) {
+          console.error('[ARIA Ops] Discord Notification failed:', e);
+        }
+      };
+
+      for (const flight of active) {
           const oldFlight = prev.find(f => f.id === flight.id);
-          // Odometer trigger: volo appena atterrato E non ancora processato in questa sessione
+          
           if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
               if (flight.tailNumber && flight.tailNumber !== 'Generic' && !processedArrivedFlights.current.has(flight.id)) {
                    processedArrivedFlights.current.add(flight.id);
-                   const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
-                   fetch('/api/fleet/log-hours', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ id: flight.tailNumber, flightHours: blockHours })
-                   }).then(r => r.json()).then(res => {
-                       if (res.wentAOG) {
-                          // INVIA DISCORD ALERT!
-                          fetch('/api/discord', {
-                             method: 'POST',
-                             headers: { 'Content-Type': 'application/json' },
-                             body: JSON.stringify({
-                                channel: 'ops',
-                                payload: {
-                                   content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${res.updated.id}** (${res.updated.type}) ha superato la soglia critica delle 500 ore. Sospeso forzatamente per 24h.\n\n⚠️ **URGENZA OPS**: Volo ${flight.flightNumber} scoperto.\n[ *Accetta l'incarico Standby in Skydeck* ]`
-                                }
-                             })
-                          });
-                          setStandbyAlerts(p => [...p, { id: Date.now().toString(), tailNumber: res.updated.id, aircraft: res.updated.type, flightNum: flight.flightNumber, time: new Date() }]);
-                       } else {
-                          // Milestone 100FH
-                          const currentFH = res.updated.totalFlightHours;
-                          const prevFH = currentFH - blockHours;
-                          if (Math.floor(currentFH / 100) > Math.floor(prevFH / 100)) {
-                             fetch('/api/discord', {
-                               method: 'POST',
-                               headers: { 'Content-Type': 'application/json' },
-                               body: JSON.stringify({
-                                 channel: 'fleet',
-                                 payload: { content: `✈️ **FLEET UPDATE**: **${res.updated.id}** ha raggiunto **${Math.floor(currentFH / 100) * 100}** ore di volo.` }
-                               })
-                             });
-                          }
-                       }
-                       fetch('/api/fleet').then(r => r.json()).then(db => setFleetState(Array.isArray(db) ? db : []));
-                   }).catch(e => console.error(e));
+                   
+                   // Calcolo ore basato su flight plan (in ore)
+                   const blockHours = (flight.arrivalTime - flight.departureTime) / 60; 
+                   const ac = fleetState.find(a => a.id === flight.tailNumber);
+                   
+                   if (ac) {
+                      const newTotalHours = (ac.totalFlightHours || 0) + blockHours;
+                      const prevMaint = ac.lastMaintenanceHour || 0;
+                      let newStatus = 'Idle';
+                      let isAOG = false;
+                      let aogTime = 0;
+                      let wentAOG = false;
+
+                      if (newTotalHours - prevMaint >= 500) {
+                         newStatus = 'AOG';
+                         isAOG = true;
+                         aogTime = Date.now() + (24 * 60 * 60 * 1000);
+                         wentAOG = true;
+                      }
+
+                      try {
+                         await updateDoc(doc(db, 'fleet', ac.id), {
+                            totalFlightHours: newTotalHours,
+                            status: newStatus,
+                            isAOG,
+                            aogUntilTimeMs: aogTime
+                         });
+
+                         if (wentAOG) {
+                           sendDiscord('ops', {
+                              content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${ac.id}** (${ac.type}) ha superato la soglia critica delle 500 ore. Sospeso per 24h.\n\n⚠️ **URGENZA OPS**: Volo ${flight.flightNumber} completato. Rotazione successiva scoperta.`
+                           });
+                           setStandbyAlerts(p => [...p, { 
+                             id: Date.now().toString(), 
+                             tailNumber: ac.id, 
+                             aircraft: ac.type, 
+                             flightNum: flight.flightNumber, 
+                             time: new Date() 
+                           }]);
+                         }
+                      } catch (err) {
+                         console.error('[ARIA Ops] Fallito update Firestore fleet:', err);
+                      }
+                   }
               }
           }
-      });
+      }
 
       networkFlightsRef.current = active;
       setNetworkFlights(active);
       setLastHeartbeat(new Date());
     };
     
-    if (networkFlights.length === 0) tick(); // primo avvio sincronizzato
-    const interval = setInterval(tick, 60000); // Ogni 60 sec (Heartbeat)
+    tick();
+    const interval = setInterval(tick, 30000); 
     return () => clearInterval(interval);
   }, [opsPlan, npcRoster, fleetState]);
 
