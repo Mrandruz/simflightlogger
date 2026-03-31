@@ -25,7 +25,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "KBOS",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -115,7 +115,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -125,7 +125,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -135,7 +135,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -145,7 +145,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -165,7 +165,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "KBOS",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -175,7 +175,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "KBOS",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -215,7 +215,7 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
@@ -225,14 +225,14 @@
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
-    "currentHub": "LIRF",
+    "currentHub": "WIII",
     "isAOG": false,
     "aogUntilTimeMs": 0
   },
   {
     "id": "I-V35A",
     "type": "Airbus A350-900",
-    "totalFlightHours": 19,
+    "totalFlightHours": 9.5,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -251,6 +251,16 @@
   },
   {
     "id": "I-V35C",
+    "type": "Airbus A350-900",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V35D",
     "type": "Airbus A350-900",
     "totalFlightHours": 0,
     "lastMaintenanceHour": 0,

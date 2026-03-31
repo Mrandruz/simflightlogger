@@ -273,6 +273,10 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [lastHeartbeat, setLastHeartbeat] = useState<Date>(new Date());
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
+  
+  // Refs per prevenire double-counting
+  const networkFlightsRef = useRef<NetworkFlight[]>([]);
+  const processedArrivedFlights = useRef<Set<string>>(new Set());
 
   const sendDailyReport = useCallback(() => {
     const activeVols = networkFlights.length;
@@ -330,63 +334,56 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     // Funzione di aggiornamento frame
     const tick = () => {
       const active = calculateNetworkState(opsPlan, npcRoster, Date.now(), fleetState);
+      const prev = networkFlightsRef.current;
       
-      setNetworkFlights(prev => {
-         active.forEach(flight => {
-             const oldFlight = prev.find(f => f.id === flight.id);
-             // Odometer trigger: volo appena atterrato
-             if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
-                 if (flight.tailNumber && flight.tailNumber !== 'Generic') {
-                      const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
-                      fetch('/api/fleet/log-hours', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ id: flight.tailNumber, flightHours: blockHours })
-                      }).then(r => r.json()).then(res => {
-                          if (res.wentAOG) {
-                             // INVIA DISCORD ALERT!
+      active.forEach(flight => {
+          const oldFlight = prev.find(f => f.id === flight.id);
+          // Odometer trigger: volo appena atterrato E non ancora processato in questa sessione
+          if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
+              if (flight.tailNumber && flight.tailNumber !== 'Generic' && !processedArrivedFlights.current.has(flight.id)) {
+                   processedArrivedFlights.current.add(flight.id);
+                   const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
+                   fetch('/api/fleet/log-hours', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ id: flight.tailNumber, flightHours: blockHours })
+                   }).then(r => r.json()).then(res => {
+                       if (res.wentAOG) {
+                          // INVIA DISCORD ALERT!
+                          fetch('/api/discord', {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({
+                                channel: 'ops',
+                                payload: {
+                                   content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${res.updated.id}** (${res.updated.type}) ha superato la soglia critica delle 500 ore. Sospeso forzatamente per 24h.\n\n⚠️ **URGENZA OPS**: Volo ${flight.flightNumber} scoperto.\n[ *Accetta l'incarico Standby in Skydeck* ]`
+                                }
+                             })
+                          });
+                          setStandbyAlerts(p => [...p, { id: Date.now().toString(), tailNumber: res.updated.id, aircraft: res.updated.type, flightNum: flight.flightNumber, time: new Date() }]);
+                       } else {
+                          // Milestone 100FH
+                          const currentFH = res.updated.totalFlightHours;
+                          const prevFH = currentFH - blockHours;
+                          if (Math.floor(currentFH / 100) > Math.floor(prevFH / 100)) {
                              fetch('/api/discord', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                   channel: 'ops',
-                                   payload: {
-                                      content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${res.updated.id}** (${res.updated.type}) ha superato la soglia critica delle 500 ore (Odometer H-limit). Sospeso forzatamente dalle operazioni per le prossime 24h.\n\n⚠️ **URGENZA OPS**: Il prossimo volo programmato per questo aeromobile è scoperto.\n<@&everyone> Modulo Standby attivato. Richiesto l'inserimento di un pilota umano per operare l'aereo di riserva sulla tratta.\n\n[ *Accetta l'incarico dal pannello Network in Skydeck Ops* ]`
-                                   }
-                                })
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({
+                                 channel: 'fleet',
+                                 payload: { content: `✈️ **FLEET UPDATE**: **${res.updated.id}** ha raggiunto **${Math.floor(currentFH / 100) * 100}** ore di volo.` }
+                               })
                              });
-                             // Aggiungiamo l'alert localmente per la UI
-                             setStandbyAlerts(prev => [...prev, {
-                                id: Date.now().toString(),
-                                tailNumber: res.updated.id,
-                                aircraft: res.updated.type,
-                                flightNum: flight.flightNumber,
-                                time: new Date()
-                             }]);
-                          } else {
-                             // Fleet update alert if they hit a 100FH milestone
-                             const currentFH = res.updated.totalFlightHours;
-                             const prevFH = currentFH - blockHours;
-                             if (Math.floor(currentFH / 100) > Math.floor(prevFH / 100)) {
-                                fetch('/api/discord', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    channel: 'fleet',
-                                    payload: {
-                                      content: `✈️ **FLEET UPDATE**: L'aeromobile **${res.updated.id}** (${res.updated.type}) ha raggiunto il traguardo di **${Math.floor(currentFH / 100) * 100}** ore di volo. Stato: ${res.updated.status}.`
-                                    }
-                                  })
-                                });
-                             }
                           }
-                          fetch('/api/fleet').then(r => r.json()).then(db => setFleetState(Array.isArray(db) ? db : []));
-                      }).catch(e => console.error(e));
-                 }
-             }
-         });
-         return active;
+                       }
+                       fetch('/api/fleet').then(r => r.json()).then(db => setFleetState(Array.isArray(db) ? db : []));
+                   }).catch(e => console.error(e));
+              }
+          }
       });
+
+      networkFlightsRef.current = active;
+      setNetworkFlights(active);
       setLastHeartbeat(new Date());
     };
     
