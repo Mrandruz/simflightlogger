@@ -271,6 +271,36 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [fleetState, setFleetState] = useState<any[]>([]);
   const [networkFlights, setNetworkFlights] = useState<NetworkFlight[]>([]);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date>(new Date());
+  const [isStandbyActive, setIsStandbyActive] = useState(false);
+  const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
+
+  const sendDailyReport = useCallback(() => {
+    const activeVols = networkFlights.length;
+    const totalFH = fleetState.reduce((acc, ac) => acc + ac.totalFlightHours, 0);
+    const aogCount = fleetState.filter(ac => ac.status === 'AOG').length;
+
+    fetch('/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: 'daily',
+        payload: {
+          embeds: [{
+            title: "📊 Velar Ops Center — Daily Network Report",
+            description: "Chiusura operazioni e riassunto statistico della giornata.",
+            color: 0x0d151e,
+            fields: [
+              { name: "Voli Operati", value: `${activeVols + 12} (Simulati)`, inline: true },
+              { name: "Flotta AOG", value: `${aogCount} aeromobili`, inline: true },
+              { name: "Accumulo Totale", value: `${Math.floor(totalFH)} FH`, inline: true },
+              { name: "Stato Network", value: "✅ REGOLARE", inline: false }
+            ],
+            footer: { text: `Velar Hub Ops • ${new Date().toLocaleDateString()}` }
+          }]
+        }
+      })
+    }).then(() => alert("Daily Report inviato correttamente su Discord (#daily-reports)!"));
+  }, [networkFlights, fleetState]);
 
   // ── Base attuale del pilota (dall'ultimo arrivo nel logbook) ───────────────
   const currentBase = profile?.latestFlight?.arrival?.toUpperCase() ?? 'LIRF';
@@ -312,7 +342,44 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ id: flight.tailNumber, flightHours: blockHours })
-                      }).then(() => {
+                      }).then(r => r.json()).then(res => {
+                          if (res.wentAOG) {
+                             // INVIA DISCORD ALERT!
+                             fetch('/api/discord', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                   channel: 'ops',
+                                   payload: {
+                                      content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${res.updated.id}** (${res.updated.type}) ha superato la soglia critica delle 500 ore (Odometer H-limit). Sospeso forzatamente dalle operazioni per le prossime 24h.\n\n⚠️ **URGENZA OPS**: Il prossimo volo programmato per questo aeromobile è scoperto.\n<@&everyone> Modulo Standby attivato. Richiesto l'inserimento di un pilota umano per operare l'aereo di riserva sulla tratta.\n\n[ *Accetta l'incarico dal pannello Network in Skydeck Ops* ]`
+                                   }
+                                })
+                             });
+                             // Aggiungiamo l'alert localmente per la UI
+                             setStandbyAlerts(prev => [...prev, {
+                                id: Date.now().toString(),
+                                tailNumber: res.updated.id,
+                                aircraft: res.updated.type,
+                                flightNum: flight.flightNumber,
+                                time: new Date()
+                             }]);
+                          } else {
+                             // Fleet update alert if they hit a 100FH milestone
+                             const currentFH = res.updated.totalFlightHours;
+                             const prevFH = currentFH - blockHours;
+                             if (Math.floor(currentFH / 100) > Math.floor(prevFH / 100)) {
+                                fetch('/api/discord', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    channel: 'fleet',
+                                    payload: {
+                                      content: `✈️ **FLEET UPDATE**: L'aeromobile **${res.updated.id}** (${res.updated.type}) ha raggiunto il traguardo di **${Math.floor(currentFH / 100) * 100}** ore di volo. Stato: ${res.updated.status}.`
+                                    }
+                                  })
+                                });
+                             }
+                          }
                           fetch('/api/fleet').then(r => r.json()).then(db => setFleetState(Array.isArray(db) ? db : []));
                       }).catch(e => console.error(e));
                  }
@@ -1102,7 +1169,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                       </div>
                       <div style={s.crewFlightMeta}>
                         <span style={s.crewFlightNum}>{nf.flightNumber}</span>
-                        <span style={s.crewFlightAc}>{nf.aircraft}</span>
+                        <span style={s.crewFlightAc}>[{nf.tailNumber || '...'}]{nf.aircraft ? ` ${nf.aircraft}` : ''}</span>
                         <span style={s.crewFlightTime}>
                           {Math.floor(nf.departureTime / 60).toString().padStart(2, '0')}:{Math.floor(nf.departureTime % 60).toString().padStart(2, '0')} UTC
                         </span>
@@ -1165,6 +1232,47 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
             </div>
           </div>
 
+          {/* ── Fleet Live Odometer ── */}
+          <div style={s.fleetSection}>
+             <span style={s.fleetSectionTitle}>Fleet Live Odometer · Asset Tracking</span>
+             <p style={{ fontSize: '12px', color: 'var(--color-text-hint)', margin: '0 0 8px 0' }}>Tracciamento in tempo reale delle ore di volo e manutenzione (Check-A ogni 500 ore).</p>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                {fleetState.map((ac) => (
+                   <div key={ac.id} style={{
+                      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px'
+                   }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-mono)', fontWeight: 700, color: 'var(--color-primary)' }}>{ac.id}</span>
+                         <span style={{ 
+                            fontSize: '9px', fontWeight: 600, padding: '3px 6px', borderRadius: 'var(--radius-sm)',
+                            background: ac.status === 'AOG' ? 'var(--color-warning)' : ac.status === 'In Flight' ? 'var(--color-primary-light)' : 'var(--color-background)',
+                            color: ac.status === 'AOG' ? '#000' : ac.status === 'In Flight' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                            textTransform: 'uppercase'
+                          }}>{ac.status}</span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{ac.type}</span>
+                      
+                      {/* Barra Usura */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-hint)' }}>
+                            <span>FH {Math.floor(ac.totalFlightHours)}</span>
+                            <span>A-Check {(ac.lastMaintenanceHour || 0) + 500}</span>
+                         </div>
+                         <div style={{ height: '6px', background: 'var(--color-background)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ 
+                               height: '100%', 
+                               width: `${Math.min(100, ((ac.totalFlightHours - (ac.lastMaintenanceHour || 0)) / 500) * 100)}%`, 
+                               background: ac.status === 'AOG' ? 'var(--color-warning)' : 'var(--color-primary)',
+                               transition: 'width 1s ease'
+                            }} />
+                         </div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+
           {/* Hub operativi */}
           {(opsPlan?.hubs || []).map((hub: VelarHub, hi: number) => (
             <div key={hi} style={s.fleetSection}>
@@ -1201,8 +1309,47 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               <h3 style={s.hubTitle}>Live Network Heartbeat</h3>
               <p style={s.hubRole}>Sistema Autonomo Operativo • {networkFlights.length} Voli Attivi</p>
             </div>
-            <div style={s.hubStatus}>Aggiornato: {lastHeartbeat.toLocaleTimeString()}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isStandbyActive ? 'var(--color-primary-light)' : 'var(--color-background)', padding: '4px 10px', borderRadius: 'var(--radius-full)', border: `1px solid ${isStandbyActive ? 'var(--color-primary)' : 'var(--color-border)'}`, cursor: 'pointer' }} onClick={() => setIsStandbyActive(!isStandbyActive)}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isStandbyActive ? 'var(--color-primary)' : 'var(--color-text-hint)' }} />
+                <span style={{ fontSize: '11px', fontWeight: 600, color: isStandbyActive ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>STANDBY: {isStandbyActive ? 'ACTIVE' : 'OFF'}</span>
+              </div>
+              <div style={s.hubStatus}>Aggiornato: {lastHeartbeat.toLocaleTimeString()}</div>
+            </div>
           </div>
+
+          {/* ── Sezione Alert Standby ── */}
+          {standbyAlerts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px', padding: '14px', background: 'rgba(230, 81, 0, 0.1)', border: '1px solid #e65100', borderRadius: 'var(--radius-lg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>🚨</span>
+                <h4 style={{ margin: 0, fontSize: '14px', color: '#e65100', fontWeight: 700 }}>Dispatch Emergency: Voli Scoperti</h4>
+              </div>
+              {standbyAlerts.map(alert => (
+                <div key={alert.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700 }}>{alert.flightNum} — {alert.tailNumber} AOG</span>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>L'aeromobile richiede manutenzione immediata. Richiesta sostituzione.</span>
+                  </div>
+                  <button 
+                    disabled={!isStandbyActive}
+                    onClick={() => {
+                      // Qui andrebbe la logica per "prendere" il volo. Per ora puliamo l'alert.
+                      setStandbyAlerts(prev => prev.filter(a => a.id !== alert.id));
+                      alert(`Incarico accettato! Ti stai posizionando per operare il volo ${alert.flightNum} con l'aeromobile di riserva.`);
+                    }}
+                    style={{ 
+                      padding: '6px 12px', borderRadius: '4px', border: 'none', 
+                      background: isStandbyActive ? '#e65100' : 'var(--color-border)', 
+                      color: '#fff', fontSize: '11px', fontWeight: 700, cursor: isStandbyActive ? 'pointer' : 'not-allowed' 
+                    }}
+                  >
+                    {isStandbyActive ? 'ACCETTA DISPATCH' : 'ATTIVA STANDBY'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
             {networkFlights.length === 0 && (
@@ -1233,7 +1380,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
                   <span>Cmdt. {nf.pilot.name} ({nf.pilot.rank})</span>
-                  <span>{nf.aircraft}</span>
+                  <span>[{nf.tailNumber || '...'}] {nf.aircraft}</span>
                 </div>
                 
                 {['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(nf.status) && (

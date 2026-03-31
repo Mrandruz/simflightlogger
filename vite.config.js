@@ -4,13 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs';
 import path from 'path';
 
-function fleetDbPlugin() {
+function fleetDbPlugin(env) {
   const dbPath = path.resolve(process.cwd(), 'data/fleet-state.json');
   return {
     name: 'fleet-db-plugin',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith('/api/fleet/') && req.method === 'POST') {
+        if ((req.url?.startsWith('/api/fleet/') || req.url?.startsWith('/api/discord')) && req.method === 'POST') {
           let body = '';
           req.on('data', chunk => { body += chunk.toString(); });
           req.on('end', () => {
@@ -44,24 +44,58 @@ function fleetDbPlugin() {
                  const ac = db.find(a => a.id === logData.id);
                  if (ac) {
                     ac.totalFlightHours += logData.flightHours;
-                    if (ac.totalFlightHours - ac.lastMaintenanceHour >= 500) {
+                    const prevStatus = ac.status;
+                    let wentAOG = false;
+                    if (ac.totalFlightHours - (ac.lastMaintenanceHour || 0) >= 500) {
                         ac.status = 'AOG';
                         ac.isAOG = true;
-                        // Simulating 24h AOG time
                         ac.aogUntilTimeMs = Date.now() + (24 * 60 * 60 * 1000); 
+                        wentAOG = true;
                     }
                     fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ success: true, updated: ac }));
+                    res.end(JSON.stringify({ success: true, updated: ac, wentAOG }));
                     return;
                  }
               }
            }
            res.statusCode = 400;
-           res.end(JSON.stringify({ error: 'Invalid payload' }));
+           res.end(JSON.stringify({ error: 'Bad request' }));
            return;
         }
-        next();
+        
+        // --- 🤖 DISCORD ROUTER ---
+        if (req.url === '/api/discord' && req.method === 'POST') {
+           const body = req.body || {};
+           const channel = body.channel || 'generic';
+           const payload = body.payload;
+           
+           let webhookUrl = env.VITE_DISCORD_WEBHOOK_URL; // fallback
+           if (channel === 'ops') webhookUrl = env.VITE_DISCORD_WEBHOOK_OPS || webhookUrl;
+           if (channel === 'fleet') webhookUrl = env.VITE_DISCORD_WEBHOOK_FLEET || webhookUrl;
+           if (channel === 'daily') webhookUrl = env.VITE_DISCORD_WEBHOOK_DAILY || webhookUrl;
+           
+           if (!webhookUrl || !payload) {
+             res.statusCode = 400;
+             res.end(JSON.stringify({ error: 'Webhook URL non definito o payload mancante' }));
+             return;
+           }
+           
+           // Eseguiamo la vera fetch a Discord usando Node
+           fetch(webhookUrl, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(payload)
+           }).then(r => r.text()).then(t => {
+             res.setHeader('Content-Type', 'application/json');
+             res.end(JSON.stringify({ success: true, discordResponse: t }));
+           }).catch(err => {
+             res.statusCode = 500;
+             res.end(JSON.stringify({ error: err.message }));
+           });
+           return;
+        }
+
       });
     }
   };
@@ -81,7 +115,7 @@ export default defineConfig(({ mode }) => {
 
   return {
   plugins: [
-    fleetDbPlugin(),
+    fleetDbPlugin(env),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

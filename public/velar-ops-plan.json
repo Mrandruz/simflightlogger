@@ -86,8 +86,8 @@
           "aircraft": "A350-900", "freq": "Daily",
           "flight": "VLR 101/102", "note": "Hub-to-Hub Flagship",
           "legs": [
-            { "flight": "VLR101", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KBOS", "dep_utc": "10:00", "arr_utc": "13:30", "block": "9h30m" },
-            { "flight": "VLR102", "direction": "inbound",  "dep_icao": "KBOS", "arr_icao": "LIRF", "dep_utc": "16:00", "arr_utc": "05:30+1", "block": "7h30m", "turnaround_min": 150 }
+            { "flight": "VLR101", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KBOS", "dep_utc": "10:00", "arr_utc": "19:30", "block": "9h30m" },
+            { "flight": "VLR102", "direction": "inbound",  "dep_icao": "KBOS", "arr_icao": "LIRF", "dep_utc": "22:00", "arr_utc": "05:30+1", "block": "7h30m", "turnaround_min": 150 }
           ]
         },
         {
@@ -95,8 +95,8 @@
           "aircraft": "A330neo", "freq": "Daily",
           "flight": "VLR 111/112", "note": "Intercontinental Daily",
           "legs": [
-            { "flight": "VLR111", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KJFK", "dep_utc": "10:30", "arr_utc": "14:00", "block": "9h30m" },
-            { "flight": "VLR112", "direction": "inbound",  "dep_icao": "KJFK", "arr_icao": "LIRF", "dep_utc": "17:30", "arr_utc": "07:00+1", "block": "7h30m", "turnaround_min": 210 }
+            { "flight": "VLR111", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KJFK", "dep_utc": "10:30", "arr_utc": "20:00", "block": "9h30m" },
+            { "flight": "VLR112", "direction": "inbound",  "dep_icao": "KJFK", "arr_icao": "LIRF", "dep_utc": "23:30", "arr_utc": "07:00+1", "block": "7h30m", "turnaround_min": 210 }
           ]
         },
         {
@@ -113,8 +113,8 @@
           "aircraft": "A350-900", "freq": "Daily",
           "flight": "VLR 201/202", "note": "Hub-to-Hub Flagship",
           "legs": [
-            { "flight": "VLR201", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "WIII", "dep_utc": "21:00", "arr_utc": "14:30+1", "block": "13h30m" },
-            { "flight": "VLR202", "direction": "inbound",  "dep_icao": "WIII", "arr_icao": "LIRF", "dep_utc": "17:30+1", "arr_utc": "23:00+1", "block": "13h30m", "turnaround_min": 180 }
+            { "flight": "VLR201", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "WIII", "dep_utc": "21:00", "arr_utc": "10:30+1", "block": "13h30m", "ac_slot": 1 },
+            { "flight": "VLR202", "direction": "inbound",  "dep_icao": "WIII", "arr_icao": "LIRF", "dep_utc": "17:30+1", "arr_utc": "07:00+2", "block": "13h30m", "turnaround_min": 420, "ac_slot": 2 }
           ]
         },
         {
@@ -254,8 +254,8 @@
           "flight": "VLR 941/942", "note": "Academic Link",
           "_fix": "Dep corretta: 22:00 UTC (18:00 EDT). Orig. 08:00 UTC (04:00 EDT) impraticabile.",
           "legs": [
-            { "flight": "VLR941", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "EGLL", "dep_utc": "22:00", "arr_utc": "09:30+1", "block": "7h30m" },
-            { "flight": "VLR942", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "KBOS", "dep_utc": "12:30+1", "arr_utc": "15:00+1", "block": "8h30m", "turnaround_min": 180 }
+            { "flight": "VLR941", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "EGLL", "dep_utc": "23:00", "arr_utc": "06:30+1", "block": "7h30m" },
+            { "flight": "VLR942", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "KBOS", "dep_utc": "12:30+1", "arr_utc": "21:00+1", "block": "8h30m", "turnaround_min": 180 }
           ]
         },
         {

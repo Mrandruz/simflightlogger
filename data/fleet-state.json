@@ -62,7 +62,7 @@
   {
     "id": "I-V20B",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -232,7 +232,7 @@
   {
     "id": "I-V35A",
     "type": "Airbus A350-900",
-    "totalFlightHours": 0,
+    "totalFlightHours": 19,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
