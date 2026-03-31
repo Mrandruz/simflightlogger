@@ -5,212 +5,212 @@
 
 ## 🏛️ HUB ROMA FIUMICINO (LIRF) — 100 PIC
 
-| ID | Nome | Rating | Area |
-| :--- | :--- | :--- | :--- |
-| VLR-PIC-001 | Alessandro Rossi | Senior Captain | Italiano |
-| VLR-PIC-002 | Giulia Ferrari | Captain | Italiano |
-| VLR-PIC-003 | Francesco Conti | Senior Captain | Italiano |
-| VLR-PIC-004 | Sofia Moretti | Captain | Italiano |
-| VLR-PIC-005 | Luca Ricci | Senior Captain | Italiano |
-| VLR-PIC-006 | Matteo Bruno | Captain | Italiano |
-| VLR-PIC-007 | Marco Esposito | Senior Captain | Italiano |
-| VLR-PIC-008 | Roberto Greco | Captain | Italiano |
-| VLR-PIC-009 | Elena Bianchi | Senior Captain | Italiano |
-| VLR-PIC-010 | Davide Romano | Captain | Italiano |
-| VLR-PIC-011 | Antonio Colombo | Senior Captain | Italiano |
-| VLR-PIC-012 | Paola Marino | Captain | Italiano |
-| VLR-PIC-013 | Giorgio Gallo | Senior Captain | Italiano |
-| VLR-PIC-014 | Claudio Riva | Captain | Italiano |
-| VLR-PIC-015 | Simona De Luca | Senior Captain | Italiano |
-| VLR-PIC-016 | Valerio Costa | Captain | Italiano |
-| VLR-PIC-017 | Stefano Giordano | Senior Captain | Italiano |
-| VLR-PIC-018 | Fabrizio Mancini | Captain | Italiano |
-| VLR-PIC-019 | Monica Rizzo | Senior Captain | Italiano |
-| VLR-PIC-020 | Gianluca Lombardi | Captain | Italiano |
-| VLR-PIC-021 | Beatrice Moretti | Senior Captain | Italiano |
-| VLR-PIC-022 | Lorenzo Fontana | Captain | Italiano |
-| VLR-PIC-023 | Enrico Ferrara | Senior Captain | Italiano |
-| VLR-PIC-024 | Vittoria Leone | Captain | Italiano |
-| VLR-PIC-025 | Andrea Santoro | Senior Captain | Italiano |
-| VLR-PIC-026 | Filippo Mariani | Captain | Italiano |
-| VLR-PIC-027 | Sara Barbieri | Senior Captain | Italiano |
-| VLR-PIC-028 | Tommaso Serra | Captain | Italiano |
-| VLR-PIC-029 | James Miller | Senior Captain | Anglofono |
-| VLR-PIC-030 | Sarah O'Connor | Captain | Anglofono |
-| VLR-PIC-031 | Robert Smith | Senior Captain | Anglofono |
-| VLR-PIC-032 | Emily Johnson | Captain | Anglofono |
-| VLR-PIC-033 | Michael Brown | Senior Captain | Anglofono |
-| VLR-PIC-034 | Linda Taylor | Captain | Anglofono |
-| VLR-PIC-035 | Christopher Jones | Senior Captain | Anglofono |
-| VLR-PIC-036 | Barbara Wilson | Captain | Anglofono |
-| VLR-PIC-037 | David Williams | Senior Captain | Anglofono |
-| VLR-PIC-038 | Elizabeth Moore | Captain | Anglofono |
-| VLR-PIC-039 | Richard Anderson | Senior Captain | Anglofono |
-| VLR-PIC-040 | Susan Thomas | Captain | Anglofono |
-| VLR-PIC-041 | Joseph Jackson | Senior Captain | Anglofono |
-| VLR-PIC-042 | Margaret White | Captain | Anglofono |
-| VLR-PIC-043 | Thomas Harris | Senior Captain | Anglofono |
-| VLR-PIC-044 | Patricia Martin | Captain | Anglofono |
-| VLR-PIC-045 | Charles Thompson | Senior Captain | Anglofono |
-| VLR-PIC-046 | Jennifer Garcia | Captain | Anglofono |
-| VLR-PIC-047 | Christopher Martinez | Senior Captain | Anglofono |
-| VLR-PIC-048 | Dorothy Robinson | Captain | Anglofono |
-| VLR-PIC-049 | Matthew Clark | Senior Captain | Anglofono |
-| VLR-PIC-050 | Mary Rodriguez | Captain | Anglofono |
-| VLR-PIC-051 | Anthony Lewis | Senior Captain | Anglofono |
-| VLR-PIC-052 | Lisa Lee | Captain | Anglofono |
-| VLR-PIC-053 | Mark Walker | Senior Captain | Anglofono |
-| VLR-PIC-054 | Nancy Hall | Captain | Anglofono |
-| VLR-PIC-055 | Steven Allen | Senior Captain | Anglofono |
-| VLR-PIC-056 | Karen Young | Captain | Anglofono |
-| VLR-PIC-057 | Andrew Hernandez | Senior Captain | Anglofono |
-| VLR-PIC-058 | Betty King | Captain | Anglofono |
-| VLR-PIC-059 | Joshua Wright | Senior Captain | Anglofono |
-| VLR-PIC-060 | Helen Lopez | Captain | Anglofono |
-| VLR-PIC-061 | Kevin Hill | Senior Captain | Anglofono |
-| VLR-PIC-062 | Sandra Scott | Captain | Anglofono |
-| VLR-PIC-063 | Brian Green | Senior Captain | Anglofono |
-| VLR-PIC-064 | Donna Adams | Captain | Anglofono |
-| VLR-PIC-065 | Hiroshi Tanaka | Senior Captain | Asiatico |
-| VLR-PIC-066 | Mei Lin | Captain | Asiatico |
-| VLR-PIC-067 | Chen Wei | Senior Captain | Asiatico |
-| VLR-PIC-068 | Kenji Sato | Captain | Asiatico |
-| VLR-PIC-069 | Nguyen Van | Senior Captain | Asiatico |
-| VLR-PIC-070 | Akiko Nakamura | Captain | Asiatico |
-| VLR-PIC-071 | Tran Thi | Senior Captain | Asiatico |
-| VLR-PIC-072 | Li Jun | Captain | Asiatico |
-| VLR-PIC-073 | Yuki Yamamoto | Senior Captain | Asiatico |
-| VLR-PIC-074 | Wong Kar | Captain | Asiatico |
-| VLR-PIC-075 | Kim Min-su | Senior Captain | Asiatico |
-| VLR-PIC-076 | Lee Soyoung | Captain | Asiatico |
-| VLR-PIC-077 | Park Ji-hoon | Senior Captain | Asiatico |
-| VLR-PIC-078 | Haruka Ito | Captain | Asiatico |
-| VLR-PIC-079 | Zhang Lei | Senior Captain | Asiatico |
-| VLR-PIC-080 | Liu Yang | Captain | Asiatico |
-| VLR-PIC-081 | Sato Ryota | Senior Captain | Asiatico |
-| VLR-PIC-082 | Chen Bo | Captain | Asiatico |
-| VLR-PIC-083 | Pham Hung | Senior Captain | Asiatico |
-| VLR-PIC-084 | Le Mai | Captain | Asiatico |
-| VLR-PIC-085 | Kazuo Mori | Senior Captain | Asiatico |
-| VLR-PIC-086 | Cho Hyunjin | Captain | Asiatico |
-| VLR-PIC-087 | Shin Jae-in | Senior Captain | Asiatico |
-| VLR-PIC-088 | Wang Hao | Captain | Asiatico |
-| VLR-PIC-089 | Zhao Jing | Senior Captain | Asiatico |
-| VLR-PIC-090 | Fujimoto Daiki | Captain | Asiatico |
-| VLR-PIC-091 | Tanaka Emi | Senior Captain | Asiatico |
-| VLR-PIC-092 | Nguyen Hoang | Captain | Asiatico |
-| VLR-PIC-093 | Wu Qiang | Senior Captain | Asiatico |
-| VLR-PIC-094 | Lin Xiao | Captain | Asiatico |
-| VLR-PIC-095 | Saito Ken | Senior Captain | Asiatico |
-| VLR-PIC-096 | Park Eun-ji | Captain | Asiatico |
-| VLR-PIC-097 | Kato Misaki | Senior Captain | Asiatico |
-| VLR-PIC-098 | Vu Minh | Captain | Asiatico |
-| VLR-PIC-099 | Zhou Feng | Senior Captain | Asiatico |
-| VLR-PIC-100 | In-Ho Moon | Captain | Asiatico |
+| ID | Nome | Rating |
+| :--- | :--- | :--- |
+| VLR-001 | Alessandro Rossi | Captain |
+| VLR-002 | Giulia Ferrari | Junior First Officer |
+| VLR-003 | Francesco Conti | Junior First Officer |
+| VLR-004 | Sofia Moretti | Captain |
+| VLR-005 | Luca Ricci | Captain |
+| VLR-006 | Matteo Bruno | Senior Captain |
+| VLR-007 | Marco Esposito | First Officer |
+| VLR-008 | Roberto Greco | First Officer |
+| VLR-009 | Elena Bianchi | Captain |
+| VLR-010 | Davide Romano | Captain |
+| VLR-011 | Antonio Colombo | Senior Captain |
+| VLR-012 | Paola Marino | Captain |
+| VLR-013 | Giorgio Gallo | Captain |
+| VLR-014 | Claudio Riva | Senior Captain |
+| VLR-015 | Simona De Luca | Captain |
+| VLR-016 | Valerio Costa | Senior Captain |
+| VLR-017 | Stefano Giordano | Junior First Officer |
+| VLR-018 | Fabrizio Mancini | Captain |
+| VLR-019 | Monica Rizzo | Captain |
+| VLR-020 | Gianluca Lombardi | Junior First Officer |
+| VLR-021 | Beatrice Moretti | Captain |
+| VLR-022 | Lorenzo Fontana | Junior First Officer |
+| VLR-023 | Enrico Ferrara | First Officer |
+| VLR-024 | Vittoria Leone | First Officer |
+| VLR-025 | Andrea Santoro | First Officer |
+| VLR-026 | Filippo Mariani | Captain |
+| VLR-027 | Sara Barbieri | First Officer |
+| VLR-028 | Tommaso Serra | Captain |
+| VLR-029 | James Miller | First Officer |
+| VLR-030 | Sarah O'Connor | Captain |
+| VLR-031 | Robert Smith | Captain |
+| VLR-032 | Emily Johnson | Captain |
+| VLR-033 | Michael Brown | Captain |
+| VLR-034 | Linda Taylor | Captain |
+| VLR-035 | Christopher Jones | First Officer |
+| VLR-036 | Barbara Wilson | Captain |
+| VLR-037 | David Williams | Captain |
+| VLR-038 | Elizabeth Moore | First Officer |
+| VLR-039 | Richard Anderson | First Officer |
+| VLR-040 | Susan Thomas | Junior First Officer |
+| VLR-041 | Joseph Jackson | Senior Captain |
+| VLR-042 | Margaret White | Junior First Officer |
+| VLR-043 | Thomas Harris | First Officer |
+| VLR-044 | Patricia Martin | Senior Captain |
+| VLR-045 | Charles Thompson | Junior First Officer |
+| VLR-046 | Jennifer Garcia | Captain |
+| VLR-047 | Christopher Martinez | First Officer |
+| VLR-048 | Dorothy Robinson | Junior First Officer |
+| VLR-049 | Matthew Clark | Junior First Officer |
+| VLR-050 | Mary Rodriguez | Captain |
+| VLR-051 | Anthony Lewis | First Officer |
+| VLR-052 | Lisa Lee | Captain |
+| VLR-053 | Mark Walker | First Officer |
+| VLR-054 | Nancy Hall | First Officer |
+| VLR-055 | Steven Allen | First Officer |
+| VLR-056 | Karen Young | First Officer |
+| VLR-057 | Andrew Hernandez | Junior First Officer |
+| VLR-058 | Betty King | Captain |
+| VLR-059 | Joshua Wright | Senior Captain |
+| VLR-060 | Helen Lopez | Junior First Officer |
+| VLR-061 | Kevin Hill | Junior First Officer |
+| VLR-062 | Sandra Scott | First Officer |
+| VLR-063 | Brian Green | First Officer |
+| VLR-064 | Donna Adams | First Officer |
+| VLR-065 | Hiroshi Tanaka | Junior First Officer |
+| VLR-066 | Mei Lin | Junior First Officer |
+| VLR-067 | Chen Wei | Senior Captain |
+| VLR-068 | Kenji Sato | First Officer |
+| VLR-069 | Nguyen Van | Captain |
+| VLR-070 | Akiko Nakamura | Captain |
+| VLR-071 | Tran Thi | Junior First Officer |
+| VLR-072 | Li Jun | Junior First Officer |
+| VLR-073 | Yuki Yamamoto | First Officer |
+| VLR-074 | Wong Kar | Captain |
+| VLR-075 | Kim Min-su | First Officer |
+| VLR-076 | Lee Soyoung | First Officer |
+| VLR-077 | Park Ji-hoon | Captain |
+| VLR-078 | Haruka Ito | First Officer |
+| VLR-079 | Zhang Lei | First Officer |
+| VLR-080 | Liu Yang | Senior Captain |
+| VLR-081 | Sato Ryota | Captain |
+| VLR-082 | Chen Bo | Captain |
+| VLR-083 | Pham Hung | Captain |
+| VLR-084 | Le Mai | Senior Captain |
+| VLR-085 | Kazuo Mori | First Officer |
+| VLR-086 | Cho Hyunjin | Captain |
+| VLR-087 | Shin Jae-in | Senior Captain |
+| VLR-088 | Wang Hao | Captain |
+| VLR-089 | Zhao Jing | Senior Captain |
+| VLR-090 | Fujimoto Daiki | Senior Captain |
+| VLR-091 | Tanaka Emi | First Officer |
+| VLR-092 | Nguyen Hoang | Captain |
+| VLR-093 | Wu Qiang | Captain |
+| VLR-094 | Lin Xiao | Junior First Officer |
+| VLR-095 | Saito Ken | Junior First Officer |
+| VLR-096 | Park Eun-ji | Senior Captain |
+| VLR-097 | Kato Misaki | Captain |
+| VLR-098 | Vu Minh | Captain |
+| VLR-099 | Zhou Feng | First Officer |
+| VLR-100 | In-Ho Moon | Senior Captain |
 
 ---
 
 ## 🇺🇸 HUB BOSTON LOGAN (KBOS) — 45 PIC
 
-| ID | Nome | Rating | Area |
-| :--- | :--- | :--- | :--- |
-| VLR-PIC-101 | William Davis | Senior Captain | Anglofono |
-| VLR-PIC-102 | Susan Clark | Captain | Anglofono |
-| VLR-PIC-103 | Thomas Wright | Senior Captain | Anglofono |
-| VLR-PIC-104 | Richard White | Captain | Anglofono |
-| VLR-PIC-105 | Karen Hill | Senior Captain | Anglofono |
-| VLR-PIC-106 | Mark Anderson | Captain | Anglofono |
-| VLR-PIC-107 | Joseph Thompson | Senior Captain | Anglofono |
-| VLR-PIC-108 | Patricia Moore | Captain | Anglofono |
-| VLR-PIC-109 | Edward King | Senior Captain | Anglofono |
-| VLR-PIC-110 | Sarah Baker | Captain | Anglofono |
-| VLR-PIC-111 | Ronald Nelson | Senior Captain | Anglofono |
-| VLR-PIC-112 | Kimberly Carter | Captain | Anglofono |
-| VLR-PIC-113 | George Mitchell | Senior Captain | Anglofono |
-| VLR-PIC-114 | Deborah Perez | Captain | Anglofono |
-| VLR-PIC-115 | Kenneth Roberts | Senior Captain | Anglofono |
-| VLR-PIC-116 | Ruth Turner | Captain | Anglofono |
-| VLR-PIC-117 | Steven Phillips | Senior Captain | Anglofono |
-| VLR-PIC-118 | Michelle Campbell | Captain | Anglofono |
-| VLR-PIC-119 | Edward Parker | Senior Captain | Anglofono |
-| VLR-PIC-120 | Laura Evans | Captain | Anglofono |
-| VLR-PIC-121 | Paul Edwards | Senior Captain | Anglofono |
-| VLR-PIC-122 | Cynthia Collins | Captain | Anglofono |
-| VLR-PIC-123 | Kevin Stewart | Senior Captain | Anglofono |
-| VLR-PIC-124 | Amy Sanchez | Captain | Anglofono |
-| VLR-PIC-125 | Brian Morris | Senior Captain | Anglofono |
-| VLR-PIC-126 | Angela Rogers | Captain | Anglofono |
-| VLR-PIC-127 | Edward Reed | Senior Captain | Anglofono |
-| VLR-PIC-128 | Melissa Cook | Captain | Anglofono |
-| VLR-PIC-129 | Jason Morgan | Senior Captain | Anglofono |
-| VLR-PIC-130 | Brenda Bell | Captain | Anglofono |
-| VLR-PIC-131 | Jeffrey Murphy | Senior Captain | Anglofono |
-| VLR-PIC-132 | Pamela Bailey | Captain | Anglofono |
-| VLR-PIC-133 | Timothy Rivera | Senior Captain | Anglofono |
-| VLR-PIC-134 | Nicole Cooper | Captain | Anglofono |
-| VLR-PIC-135 | Gary Richardson | Senior Captain | Anglofono |
-| VLR-PIC-136 | Christine Cox | Captain | Anglofono |
-| VLR-PIC-137 | Frank Howard | Senior Captain | Anglofono |
-| VLR-PIC-138 | Janet Ward | Captain | Anglofono |
-| VLR-PIC-139 | Eric Torres | Senior Captain | Anglofono |
-| VLR-PIC-140 | Carol Peterson | Captain | Anglofono |
-| VLR-PIC-141 | Yoshiro Abe | Senior Captain | Asiatico |
-| VLR-PIC-142 | Sakura Sato | Captain | Asiatico |
-| VLR-PIC-143 | Han Ling | Senior Captain | Asiatico |
-| VLR-PIC-144 | Ryu Jun-yeol | Captain | Asiatico |
-| VLR-PIC-145 | Kim Tae-hee | Senior Captain | Asiatico |
+| ID | Nome | Rating |
+| :--- | :--- | :--- |
+| VLR-101 | William Davis | First Officer |
+| VLR-102 | Susan Clark | Captain |
+| VLR-103 | Thomas Wright | Senior Captain |
+| VLR-104 | Richard White | Captain |
+| VLR-105 | Karen Hill | First Officer |
+| VLR-106 | Mark Anderson | Captain |
+| VLR-107 | Joseph Thompson | First Officer |
+| VLR-108 | Patricia Moore | Junior First Officer |
+| VLR-109 | Edward King | Senior Captain |
+| VLR-110 | Sarah Baker | First Officer |
+| VLR-111 | Ronald Nelson | Junior First Officer |
+| VLR-112 | Kimberly Carter | Captain |
+| VLR-113 | George Mitchell | First Officer |
+| VLR-114 | Deborah Perez | Captain |
+| VLR-115 | Kenneth Roberts | First Officer |
+| VLR-116 | Ruth Turner | First Officer |
+| VLR-117 | Steven Phillips | Captain |
+| VLR-118 | Michelle Campbell | Captain |
+| VLR-119 | Edward Parker | Junior First Officer |
+| VLR-120 | Laura Evans | Senior Captain |
+| VLR-121 | Paul Edwards | First Officer |
+| VLR-122 | Cynthia Collins | Captain |
+| VLR-123 | Kevin Stewart | Senior Captain |
+| VLR-124 | Amy Sanchez | First Officer |
+| VLR-125 | Brian Morris | Captain |
+| VLR-126 | Angela Rogers | First Officer |
+| VLR-127 | Edward Reed | Senior Captain |
+| VLR-128 | Melissa Cook | Senior Captain |
+| VLR-129 | Jason Morgan | Junior First Officer |
+| VLR-130 | Brenda Bell | First Officer |
+| VLR-131 | Jeffrey Murphy | Senior Captain |
+| VLR-132 | Pamela Bailey | First Officer |
+| VLR-133 | Timothy Rivera | Senior Captain |
+| VLR-134 | Nicole Cooper | First Officer |
+| VLR-135 | Gary Richardson | First Officer |
+| VLR-136 | Christine Cox | First Officer |
+| VLR-137 | Frank Howard | Junior First Officer |
+| VLR-138 | Janet Ward | Captain |
+| VLR-139 | Eric Torres | Captain |
+| VLR-140 | Carol Peterson | Senior Captain |
+| VLR-141 | Yoshiro Abe | Junior First Officer |
+| VLR-142 | Sakura Sato | Senior Captain |
+| VLR-143 | Han Ling | First Officer |
+| VLR-144 | Ryu Jun-yeol | Junior First Officer |
+| VLR-145 | Kim Tae-hee | First Officer |
 
 ---
 
 ## 🇮🇩 HUB GIACARTA (WIII) — 45 PIC
 
-| ID | Nome | Rating | Area |
-| :--- | :--- | :--- | :--- |
-| VLR-PIC-146 | Bambang Susanto | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-147 | Siti Putri | Captain | Asiatico (IDN) |
-| VLR-PIC-148 | Chandra Widjaja | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-149 | Arif Budiman | Captain | Asiatico (IDN) |
-| VLR-PIC-150 | Widya Sari | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-151 | Eko Prasetyo | Captain | Asiatico (IDN) |
-| VLR-PIC-152 | Dwi Utami | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-153 | Agus Setiawan | Captain | Asiatico (IDN) |
-| VLR-PIC-154 | Indah Lestari | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-155 | Budi Santoso | Captain | Asiatico (IDN) |
-| VLR-PIC-156 | Ratna Dewi | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-157 | Surya Wijaya | Captain | Asiatico (IDN) |
-| VLR-PIC-158 | Maya Kartika | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-159 | Rizky Ramadhan | Captain | Asiatico (IDN) |
-| VLR-PIC-160 | Ani Suryani | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-161 | Hendra Kurniawan | Captain | Asiatico (IDN) |
-| VLR-PIC-162 | Sri Wahyuni | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-163 | Aditya Putra | Captain | Asiatico (IDN) |
-| VLR-PIC-164 | Larasati Putri | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-165 | Bagus Nugroho | Captain | Asiatico (IDN) |
-| VLR-PIC-166 | Dewi Anggraini | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-167 | Joko Widodo | Captain | Asiatico (IDN) |
-| VLR-PIC-168 | Megawati Sukarno | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-169 | Yanuar Abdi | Captain | Asiatico (IDN) |
-| VLR-PIC-170 | Putu Gede | Senior Captain | Asiatico (IDN) |
-| VLR-PIC-171 | Made Wirawan | Captain | Asiatico (IDN) |
-| VLR-PIC-172 | John O'Sullivan | Senior Captain | Anglofono |
-| VLR-PIC-173 | George Parker | Captain | Anglofono |
-| VLR-PIC-174 | Sandra Bennett | Senior Captain | Anglofono |
-| VLR-PIC-175 | Ryan Gallagher | Captain | Anglofono |
-| VLR-PIC-176 | Fiona MacLeod | Senior Captain | Anglofono |
-| VLR-PIC-177 | Oliver Burke | Captain | Anglofono |
-| VLR-PIC-178 | Alice Fletcher | Senior Captain | Anglofono |
-| VLR-PIC-179 | Henry Watson | Captain | Anglofono |
-| VLR-PIC-180 | Grace Hopper | Senior Captain | Anglofono |
-| VLR-PIC-181 | William Gates | Captain | Anglofono |
-| VLR-PIC-182 | Steve Jobs | Senior Captain | Anglofono |
-| VLR-PIC-183 | Ada Lovelace | Captain | Anglofono |
-| VLR-PIC-184 | Alan Turing | Senior Captain | Anglofono |
-| VLR-PIC-185 | Margaret Hamilton | Captain | Anglofono |
-| VLR-PIC-186 | Linus Torvalds | Senior Captain | Anglofono |
-| VLR-PIC-187 | Tim Berners-Lee | Captain | Anglofono |
-| VLR-PIC-188 | Katherine Johnson | Senior Captain | Anglofono |
-| VLR-PIC-189 | Dorothy Vaughan | Captain | Anglofono |
-| VLR-PIC-190 | Mary Jackson | Senior Captain | Anglofono |
+| ID | Nome | Rating |
+| :--- | :--- | :--- |
+| VLR-146 | Bambang Susanto | First Officer |
+| VLR-147 | Siti Putri | Junior First Officer |
+| VLR-148 | Chandra Widjaja | First Officer |
+| VLR-149 | Arif Budiman | First Officer |
+| VLR-150 | Widya Sari | Captain |
+| VLR-151 | Eko Prasetyo | Junior First Officer |
+| VLR-152 | Dwi Utami | Junior First Officer |
+| VLR-153 | Agus Setiawan | Junior First Officer |
+| VLR-154 | Indah Lestari | Captain |
+| VLR-155 | Budi Santoso | Captain |
+| VLR-156 | Ratna Dewi | First Officer |
+| VLR-157 | Surya Wijaya | First Officer |
+| VLR-158 | Maya Kartika | First Officer |
+| VLR-159 | Rizky Ramadhan | First Officer |
+| VLR-160 | Ani Suryani | First Officer |
+| VLR-161 | Hendra Kurniawan | Captain |
+| VLR-162 | Sri Wahyuni | Junior First Officer |
+| VLR-163 | Aditya Putra | Senior Captain |
+| VLR-164 | Larasati Putri | Junior First Officer |
+| VLR-165 | Bagus Nugroho | Captain |
+| VLR-166 | Dewi Anggraini | First Officer |
+| VLR-167 | Joko Widodo | Senior Captain |
+| VLR-168 | Megawati Sukarno | Junior First Officer |
+| VLR-169 | Yanuar Abdi | Senior Captain |
+| VLR-170 | Putu Gede | Captain |
+| VLR-171 | Made Wirawan | Captain |
+| VLR-172 | John O'Sullivan | Captain |
+| VLR-173 | George Parker | Senior Captain |
+| VLR-174 | Sandra Bennett | Senior Captain |
+| VLR-175 | Ryan Gallagher | Senior Captain |
+| VLR-176 | Fiona MacLeod | First Officer |
+| VLR-177 | Oliver Burke | First Officer |
+| VLR-178 | Alice Fletcher | Captain |
+| VLR-179 | Henry Watson | Captain |
+| VLR-180 | Grace Hopper | Captain |
+| VLR-181 | William Gates | First Officer |
+| VLR-182 | Steve Jobs | Captain |
+| VLR-183 | Ada Lovelace | Captain |
+| VLR-184 | Alan Turing | Captain |
+| VLR-185 | Margaret Hamilton | Junior First Officer |
+| VLR-186 | Linus Torvalds | Junior First Officer |
+| VLR-187 | Tim Berners-Lee | Captain |
+| VLR-188 | Katherine Johnson | Senior Captain |
+| VLR-189 | Dorothy Vaughan | Junior First Officer |
+| VLR-190 | Mary Jackson | Senior Captain |
 
 ---
 **Statistiche Finali Roster:**

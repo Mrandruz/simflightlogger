@@ -1,0 +1,262 @@
+[
+  {
+    "id": "I-V19A",
+    "type": "Airbus A319",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V19B",
+    "type": "Airbus A319",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V19C",
+    "type": "Airbus A319",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V19D",
+    "type": "Airbus A319",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V19E",
+    "type": "Airbus A319",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20A",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20B",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20C",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20D",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20E",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20F",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20G",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20H",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20I",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V20J",
+    "type": "Airbus A320",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V21A",
+    "type": "Airbus A321LR",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V21B",
+    "type": "Airbus A321LR",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V21C",
+    "type": "Airbus A321LR",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V21D",
+    "type": "Airbus A321LR",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V21E",
+    "type": "Airbus A321LR",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V33A",
+    "type": "Airbus A330neo",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V33B",
+    "type": "Airbus A330neo",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V33C",
+    "type": "Airbus A330neo",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V35A",
+    "type": "Airbus A350-900",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V35B",
+    "type": "Airbus A350-900",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  },
+  {
+    "id": "I-V35C",
+    "type": "Airbus A350-900",
+    "totalFlightHours": 0,
+    "lastMaintenanceHour": 0,
+    "status": "Idle",
+    "currentHub": "LIRF",
+    "isAOG": false,
+    "aogUntilTimeMs": 0
+  }
+]

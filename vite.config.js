@@ -1,7 +1,71 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs';
+import path from 'path';
 
+function fleetDbPlugin() {
+  const dbPath = path.resolve(process.cwd(), 'data/fleet-state.json');
+  return {
+    name: 'fleet-db-plugin',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/api/fleet/') && req.method === 'POST') {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          req.on('end', () => {
+            if (body) {
+              try { req.body = JSON.parse(body); } catch (e) {}
+            }
+            next();
+          });
+        } else {
+          next();
+        }
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if (req.url === '/api/fleet' && req.method === 'GET') {
+          if (fs.existsSync(dbPath)) {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(fs.readFileSync(dbPath, 'utf8'));
+          } else {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: 'DB not found' }));
+          }
+          return;
+        }
+        
+        if (req.url === '/api/fleet/log-hours' && req.method === 'POST') {
+           const logData = req.body;
+           if (logData && logData.id && typeof logData.flightHours === 'number') {
+              if (fs.existsSync(dbPath)) {
+                 const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+                 const ac = db.find(a => a.id === logData.id);
+                 if (ac) {
+                    ac.totalFlightHours += logData.flightHours;
+                    if (ac.totalFlightHours - ac.lastMaintenanceHour >= 500) {
+                        ac.status = 'AOG';
+                        ac.isAOG = true;
+                        // Simulating 24h AOG time
+                        ac.aogUntilTimeMs = Date.now() + (24 * 60 * 60 * 1000); 
+                    }
+                    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ success: true, updated: ac }));
+                    return;
+                 }
+              }
+           }
+           res.statusCode = 400;
+           res.end(JSON.stringify({ error: 'Invalid payload' }));
+           return;
+        }
+        next();
+      });
+    }
+  };
+}
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -17,6 +81,7 @@ export default defineConfig(({ mode }) => {
 
   return {
   plugins: [
+    fleetDbPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

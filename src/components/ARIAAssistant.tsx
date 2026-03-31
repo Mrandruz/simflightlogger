@@ -268,6 +268,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [opsPlan, setOpsPlan] = useState<VelarPlan | null>(null);
   const [npcRoster, setNpcRoster] = useState<NpcPilot[]>([]);
+  const [fleetState, setFleetState] = useState<any[]>([]);
   const [networkFlights, setNetworkFlights] = useState<NetworkFlight[]>([]);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date>(new Date());
 
@@ -285,23 +286,47 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       .catch(() => console.warn('[ARIA Ops] Piano operativo non trovato'));
       
     fetchNpcRoster().then(setNpcRoster);
+
+    fetch('/api/fleet')
+      .then(r => r.json())
+      .then(db => setFleetState(Array.isArray(db) ? db : []))
+      .catch(() => console.warn('[ARIA Ops] Fleet DB non trovato'));
   }, []);
 
   // ── Heartbeat Engine ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!opsPlan || npcRoster.length === 0) return;
+    if (!opsPlan || npcRoster.length === 0 || fleetState.length === 0) return;
     
     // Funzione di aggiornamento frame
     const tick = () => {
-      const active = calculateNetworkState(opsPlan, npcRoster, Date.now());
-      setNetworkFlights(active);
+      const active = calculateNetworkState(opsPlan, npcRoster, Date.now(), fleetState);
+      
+      setNetworkFlights(prev => {
+         active.forEach(flight => {
+             const oldFlight = prev.find(f => f.id === flight.id);
+             // Odometer trigger: volo appena atterrato
+             if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
+                 if (flight.tailNumber && flight.tailNumber !== 'Generic') {
+                      const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
+                      fetch('/api/fleet/log-hours', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: flight.tailNumber, flightHours: blockHours })
+                      }).then(() => {
+                          fetch('/api/fleet').then(r => r.json()).then(db => setFleetState(Array.isArray(db) ? db : []));
+                      }).catch(e => console.error(e));
+                 }
+             }
+         });
+         return active;
+      });
       setLastHeartbeat(new Date());
     };
     
-    tick(); // primo avvio
+    if (networkFlights.length === 0) tick(); // primo avvio sincronizzato
     const interval = setInterval(tick, 60000); // Ogni 60 sec (Heartbeat)
     return () => clearInterval(interval);
-  }, [opsPlan, npcRoster]);
+  }, [opsPlan, npcRoster, fleetState]);
 
   // ── Carica voli da Firestore ──────────────────────────────────────────────
   useEffect(() => {

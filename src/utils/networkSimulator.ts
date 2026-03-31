@@ -14,10 +14,11 @@ export interface NetworkFlight {
   departure: string;
   arrival: string;
   aircraft: string;
+  tailNumber?: string;
   pilot: NpcPilot;
   departureTime: number; // minuti da mezzanotte UTC
   arrivalTime: number; // minuti da mezzanotte UTC
-  status: 'Scheduled' | 'Boarding' | 'Pushback' | 'Taxi Out' | 'En Route' | 'Approach' | 'Taxi In' | 'Arrived' | 'Turnaround';
+  status: 'Scheduled' | 'Boarding' | 'Pushback' | 'Taxi Out' | 'En Route' | 'Approach' | 'Taxi In' | 'Arrived' | 'Turnaround' | 'AOG/Cancel';
   progressPercent: number;
 }
 
@@ -27,42 +28,13 @@ export function parseTime(timeStr: string): number {
   return h * 60 + m;
 }
 
-// Genera orari deterministici in base alla frequenza
-function generateFlightTimes(freq: string, flightBaseId: string, baseSeed: number): number[] {
-  if (!freq) freq = 'Daily';
-  if (!flightBaseId) flightBaseId = 'VLR000';
-  let count = 1;
-  
-  if (freq.includes('Weekly')) {
-    // 4x Weekly etc -> significa voli in giorni diversi, quindi simuliamo 1 solo volo per oggi
-    count = 1;
-  } else {
-    if (freq.includes('2x')) count = 2;
-    else if (freq.includes('3x')) count = 3;
-    else if (freq.includes('4x')) count = 4;
-    else if (freq.includes('5x')) count = 5;
-    else if (freq.includes('6x')) count = 6;
-  }
-  
-  // Semplice seed basato sull'ID del volo per dare orari "fissi" ma distribuiti
-  const seed = flightBaseId.split('').reduce((acc, char) => acc + char.charCodeAt(0), baseSeed) || 0;
-  const startHour = 6 + (Math.abs(seed) % 4); // i voli iniziano tra le 06:00 e le 09:00 UTC
-  
-  const times = [];
-  for (let i = 0; i < count; i++) {
-    // Spaziatura equa durante la giornata. Es: se count=2, start=7 -> 07:00, 19:00
-    times.push((startHour + i * (16 / count)) * 60);
-  }
-  return times;
-}
-
-// Durata media stimata in base al tipo di aereo (molto approssimativa, proof of concept)
-function estimateFlightDurationMins(aircraft: string): number {
-  if (!aircraft) return 120;
-  if (aircraft.includes('A319') || aircraft.includes('A320')) return 120; // 2 ore
-  if (aircraft.includes('A321LR')) return 360; // 6 ore
-  if (aircraft.includes('A330') || aircraft.includes('A350')) return 600; // 10 ore
-  return 120;
+export function parseBlock(blockStr: string): number {
+  if (!blockStr) return 120;
+  const hMatch = blockStr.match(/(\d+)h/);
+  const mMatch = blockStr.match(/(\d+)m/);
+  const h = hMatch ? parseInt(hMatch[1]) : 0;
+  const m = mMatch ? parseInt(mMatch[1]) : 0;
+  return h * 60 + m;
 }
 
 // Assegna proceduralmente un pilota limitando al rank corretto
@@ -87,63 +59,84 @@ function assignPilot(flightNumber: string, aircraft: string, time: number, roste
  * Funzione principale Heartbeat
  * Calcola lo stato di tutto il network istantaneamente per un dato orario UTC.
  */
-export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentUtcTimeMs: number): NetworkFlight[] {
+export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentUtcTimeMs: number, fleetState: any[] = []): NetworkFlight[] {
   const d = new Date(currentUtcTimeMs);
   const currentMins = d.getUTCHours() * 60 + d.getUTCMinutes();
   
   const activeFlights: NetworkFlight[] = [];
   
-  // Iteriamo tutti gli hub e le rotte del JSON
   if (!opsPlan || !opsPlan.hubs) return [];
 
   opsPlan.hubs.forEach((hub: any) => {
     if (!hub.routes) return;
     hub.routes.forEach((route: any) => {
-      // Estrai volo base es: "VLR 101/102" -> ["VLR101", "VLR102"]
-      const routeFlight = route.flight || `VLR${Math.floor(Math.random() * 1000)}`;
-      const baseNum = routeFlight.replace(/ /g, '').split('/')[0]; 
-      const times = generateFlightTimes(route.freq, baseNum, 0);
-      const duration = estimateFlightDurationMins(route.aircraft);
-      
-      times.forEach((t, index) => {
-        const id = `${baseNum}-${index}`;
+      if (!route.legs) return;
+
+      const suitableAircraft = fleetState.filter(ac => ac.type === route.aircraft || ac.type.includes(route.aircraft));
+
+      route.legs.forEach((leg: any, index: number) => {
+        const t = parseTime(leg.dep_utc);
+        const duration = parseBlock(leg.block);
+        const id = `${leg.flight}-${index}`;
+        const baseNum = leg.flight;
+
+        let assignedTail = 'Generic';
+        let isAOG = false;
+        const slot = leg.ac_slot || 1;
+        
+        if (suitableAircraft.length >= slot) {
+            const ac = suitableAircraft[slot - 1];
+            assignedTail = ac.id;
+            isAOG = ac.status === 'AOG' || ac.isAOG;
+        } else if (suitableAircraft.length > 0) {
+            assignedTail = suitableAircraft[0].id;
+            isAOG = suitableAircraft[0].status === 'AOG';
+        }
+
         const pilot = assignPilot(id, route.aircraft, t, roster);
         
         let status: NetworkFlight['status'] = 'Scheduled';
         let progressPercent = 0;
         
-        // Calcolo dello stato
-        if (currentMins >= t - 60 && currentMins < t - 25) {
-          status = 'Boarding';
-        } else if (currentMins >= t - 25 && currentMins < t - 15) {
-          status = 'Pushback';
-        } else if (currentMins >= t - 15 && currentMins < t) {
-          status = 'Taxi Out';
-        } else if (currentMins >= t && currentMins < t + duration - 30) {
-          status = 'En Route';
-          progressPercent = ((currentMins - t) / duration) * 100;
-        } else if (currentMins >= t + duration - 30 && currentMins < t + duration) {
-          status = 'Approach';
-          progressPercent = ((currentMins - t) / duration) * 100;
-        } else if (currentMins >= t + duration && currentMins < t + duration + 15) {
-          status = 'Taxi In';
-          progressPercent = 100;
-        } else if (currentMins >= t + duration + 15 && currentMins < t + duration + 45) {
-          status = 'Arrived';
-          progressPercent = 100;
-        } else if (currentMins >= t + duration + 45 && currentMins < t + duration + 120) {
-          status = 'Turnaround';
-          progressPercent = 100;
+        if (isAOG) {
+           status = 'AOG/Cancel';
+           progressPercent = 0;
+        } else {
+            // Calcolo dello stato
+            if (currentMins >= t - 60 && currentMins < t - 25) {
+              status = 'Boarding';
+            } else if (currentMins >= t - 25 && currentMins < t - 15) {
+              status = 'Pushback';
+            } else if (currentMins >= t - 15 && currentMins < t) {
+              status = 'Taxi Out';
+            } else if (currentMins >= t && currentMins < t + duration - 30) {
+              status = 'En Route';
+              progressPercent = ((currentMins - t) / duration) * 100;
+            } else if (currentMins >= t + duration - 30 && currentMins < t + duration) {
+              status = 'Approach';
+              progressPercent = ((currentMins - t) / duration) * 100;
+            } else if (currentMins >= t + duration && currentMins < t + duration + 15) {
+              status = 'Taxi In';
+              progressPercent = 100;
+            } else if (currentMins >= t + duration + 15 && currentMins < t + duration + 45) {
+              status = 'Arrived';
+              progressPercent = 100;
+            } else if (currentMins >= t + duration + 45 && currentMins < t + duration + 120) {
+              status = 'Turnaround';
+              progressPercent = 100;
+            }
         }
 
-        // Filtriamo e mostriamo solo voli non totalmente passati/futuri (finestra di -2h a + duration + 2h)
+        // Finestra di visibilità (dalle -2h alle +duration+2h)
+        // Se è AOG lo mostriamo comunque se sarebbe dovuto partire oggi
         if (currentMins >= t - 120 && currentMins <= t + duration + 120) {
           activeFlights.push({
             id,
             flightNumber: baseNum,
-            departure: hub.icao,
-            arrival: route.dest,
+            departure: leg.dep_icao || hub.icao,
+            arrival: leg.arr_icao || route.dest,
             aircraft: route.aircraft,
+            tailNumber: assignedTail,
             pilot,
             departureTime: t,
             arrivalTime: t + duration,
