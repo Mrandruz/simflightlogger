@@ -199,14 +199,37 @@ export const parseSimBriefData = (data) => {
       'VRI': 'Volotea',
       'EJU': 'EasyJet Europe',
       'EIN': 'Aer Lingus',
-      'LHR': 'Lufthansa CityLine'
+      'LHR': 'Lufthansa CityLine',
+      // Virtual airlines
+      'VLR': 'Velar Airlines',
     };
     return airlines[icao.toUpperCase()] || '';
   };
 
   const callsign = data.atc?.callsign || 'N/A';
-  const airlineIcao = data.general?.icao_airline || '';
-  const airlineName = getAirlineName(airlineIcao);
+
+  // SimBrief a volte restituisce in icao_airline la compagnia dell'ULTIMO piano salvato
+  // invece di quella corrente. Il prefisso del callsign (es. "VLR" da "VLR101") riflette
+  // sempre la compagnia specificata al momento della pianificazione — e' piu' affidabile.
+  const airlineIcaoFromGeneral = (data.general?.icao_airline || '').toUpperCase();
+  const callsignPrefix = callsign !== 'N/A' ? callsign.replace(/\d.*$/, '').toUpperCase() : '';
+  const airlineIcao = (callsignPrefix && callsignPrefix !== airlineIcaoFromGeneral)
+    ? callsignPrefix
+    : airlineIcaoFromGeneral;
+
+  // Prova prima dal dizionario locale
+  let airlineName = getAirlineName(airlineIcao);
+
+  // Fallback: localStorage salvato da Schedule al momento del dispatch
+  if (!airlineName) {
+    try {
+      const saved = localStorage.getItem('scheduleDispatchAirline');
+      if (saved) {
+        const { icao, name } = JSON.parse(saved);
+        if (icao && name && airlineIcao === icao.toUpperCase()) airlineName = name;
+      }
+    } catch (_) { }
+  }
 
   return {
     origin: {
