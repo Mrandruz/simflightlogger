@@ -23,6 +23,7 @@ const MAJOR_DESTINATIONS = [...majorDestinations]
 const COPILOT_FUNCTION_URL = 'https://europe-west1-simflightlogger.cloudfunctions.net/askCopilot';
 
 const ALLIANCE_MAP = {
+    'Velar Airlines': 'Nexa Network',
     'United Airlines': 'Star Alliance', 'Lufthansa': 'Star Alliance', 'Air Canada': 'Star Alliance',
     'Singapore Airlines': 'Star Alliance', 'ANA': 'Star Alliance', 'Thai Airways': 'Star Alliance',
     'Turkish Airlines': 'Star Alliance', 'Swiss': 'Star Alliance', 'Austrian Airlines': 'Star Alliance',
@@ -61,6 +62,7 @@ const ALLIANCES = [
     { name: 'Star Alliance', color: 'var(--color-alliance-star)' },
     { name: 'SkyTeam', color: 'var(--color-alliance-skyteam)' },
     { name: 'Oneworld', color: 'var(--color-alliance-oneworld)' },
+    { name: 'Nexa Network', color: '#06b6d4' },
 ];
 
 
@@ -164,6 +166,9 @@ const ALLIANCE_AIRLINES = {
         { iata: 'AS', icao: 'ASA', name: 'Alaska Airlines', domestic: ['US', 'CA'], international: [] },
         { iata: 'QF', icao: 'QFA', name: 'Qantas', domestic: ['OC'], international: ['AS', 'EU', 'US'] },
         { iata: 'SN', icao: 'BEL', name: 'Brussels Airlines', domestic: ['EU', 'EU-BNL'], international: ['AF'] },
+    ],
+    'Nexa Network': [
+        { iata: 'VR', icao: 'VLR', name: 'Velar Airlines', domestic: ['EU', 'US', 'CA', 'AS', 'ME', 'AF', 'SA', 'OC', 'LA', 'EU-IT', 'EU-FR', 'EU-DE', 'EU-ES', 'EU-UK', 'EU-N', 'EU-C', 'EU-BNL', 'ME-GULF', 'AS-JP', 'AS-KR', 'AS-CN', 'AS-IN', 'AS-SEA'], international: ['EU', 'US', 'AS', 'ME', 'AF', 'SA', 'OC'] },
     ],
 };
 
@@ -678,7 +683,7 @@ export default function Schedule({ flights = [], user }) {
             if (!al) al = f.airline === 'ITA Airways'
                 ? (new Date(f.date) >= new Date('2024-11-01') ? 'Star Alliance' : 'SkyTeam')
                 : ALLIANCE_MAP[f.airline];
-            if (al && ['Star Alliance', 'SkyTeam', 'Oneworld'].includes(al)) return al;
+            if (al && ['Star Alliance', 'SkyTeam', 'Oneworld', 'Nexa Network'].includes(al)) return al;
         }
         return 'Star Alliance';
     }, [flights]);
@@ -698,8 +703,8 @@ export default function Schedule({ flights = [], user }) {
     const analysis = useMemo(() => {
         const res = {
             visitedAirports: new Set(), visitedCountries: new Set(), longHaulCount: 0,
-            allianceLastFlights: { 'Star Alliance': null, 'SkyTeam': null, 'Oneworld': null },
-            allianceFlightCounts: { 'Star Alliance': 0, 'SkyTeam': 0, 'Oneworld': 0 },
+            allianceLastFlights: { 'Star Alliance': null, 'SkyTeam': null, 'Oneworld': null, 'Nexa Network': null },
+            allianceFlightCounts: { 'Star Alliance': 0, 'SkyTeam': 0, 'Oneworld': 0, 'Nexa Network': 0 },
         };
         if (!Array.isArray(flights)) return res;
         if (process.env.NODE_ENV === 'development' && flights.length > 0)
@@ -1262,7 +1267,18 @@ export default function Schedule({ flights = [], user }) {
                                                             e.stopPropagation();
                                                             // Segna questo haul come dispatched e salva nel localStorage
                                                             setDispatchedHaul(haul.key);
-                                                            try { localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label })); } catch { }
+                                                            try {
+                                                                localStorage.setItem('lastPlannedFlight', JSON.stringify({ origin: s.origin.icao, dest: s.dest.icao, haulType: haul.key, airline: suggestedAirline?.name, aircraft: suggestedAircraft?.label }));
+                                                                // Salva airline name come fallback per SimBriefBriefing
+                                                                // (SimBrief non conosce le VA non registrate, es. Velar Airlines)
+                                                                if (suggestedAirline?.name) {
+                                                                    localStorage.setItem('scheduleDispatchAirline', JSON.stringify({
+                                                                        icao: suggestedAirline.icao,
+                                                                        iata: suggestedAirline.iata,
+                                                                        name: suggestedAirline.name,
+                                                                    }));
+                                                                }
+                                                            } catch { }
                                                         }}
                                                     >
                                                         <ExternalLink size={13} />

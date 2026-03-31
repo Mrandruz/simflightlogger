@@ -332,6 +332,8 @@ const AIRLINE_ALLIANCE_MAP = {
     'Qatar Airways':'Oneworld','Cathay Pacific':'Oneworld','Japan Airlines':'Oneworld',
     'Finnair':'Oneworld','Malaysia Airlines':'Oneworld','Royal Jordanian':'Oneworld',
     'Alaska Airlines':'Oneworld','Qantas':'Oneworld','Brussels Airlines':'Oneworld',
+    // Nexa Network (virtual alliance)
+    'Velar Airlines':'Nexa Network',
 };
 
 function mapSimbriefAircraft(simbriefCode) {
@@ -593,6 +595,19 @@ const SimBriefBriefing = ({ onAddFlight, flights = [] }) => {
                 : { username: trimmedValue };
             const rawData = await fetchSimBriefData(fetchOptions);
             const parsed = parseSimBriefData(rawData);
+
+            // Fallback: se SimBrief non restituisce airlineName (es. VA non registrate
+            // come Velar Airlines / Nexa Network), usa quello salvato da Schedule al dispatch
+            if (!parsed.airlineName) {
+                try {
+                    const saved = localStorage.getItem('scheduleDispatchAirline');
+                    if (saved) {
+                        const { name } = JSON.parse(saved);
+                        if (name) parsed.airlineName = name;
+                    }
+                } catch (_) { }
+            }
+
             setData(parsed);
         } catch (err) {
             setError(err.message);

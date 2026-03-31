@@ -49,6 +49,19 @@ export function useSimBrief() {
                 console.log('[useSimBrief] fetching with opts:', opts);
                 const raw = await fetchSimBriefData(opts);
                 const parsed = parseSimBriefData(raw);
+
+                // Fallback: se SimBrief non restituisce airlineName (es. Velar Airlines / Nexa Network),
+                // usa quello salvato da Schedule al momento del dispatch
+                if (!parsed.airlineName) {
+                    try {
+                        const saved = localStorage.getItem('scheduleDispatchAirline');
+                        if (saved) {
+                            const { name } = JSON.parse(saved);
+                            if (name) parsed.airlineName = name;
+                        }
+                    } catch (_) { }
+                }
+
                 console.log('[useSimBrief] parsed:', parsed);
 
                 try {
