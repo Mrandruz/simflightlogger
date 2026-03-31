@@ -330,27 +330,43 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       
     fetchNpcRoster().then(setNpcRoster);
 
-    // 📡 Listener Flotta (Firestore)
+    // ── Caricamento Flotta (Offline-First / Init Firestore) ──
+    const initFleet = async () => {
+      try {
+        const r = await fetch('/api/fleet');
+        const localFleet = await r.json();
+        if (Array.isArray(localFleet)) {
+          setFleetState(localFleet); // Dati immediati in UI
+          console.log('[ARIA Ops] Flotta locale caricata:', localFleet.length);
+
+          // Sincronizziamo Firestore se necessario
+          const snap = await getDocs(query(collection(db, 'fleet'), limit(1)));
+          if (snap.empty) {
+            console.log('[ARIA Ops] Inizializzazione Cloud in corso...');
+            for (const ac of localFleet) {
+               await setDoc(doc(db, 'fleet', ac.id), ac);
+            }
+            console.log('[ARIA Ops] Cloud sincronizzato con successo.');
+          }
+        }
+      } catch (err) {
+        console.warn('[ARIA Ops] Errore caricamento flotta locale:', err);
+      }
+    };
+
+    initFleet();
+
+    // 📡 Listener Flotta (Cloud Firestore)
     const fleetCollection = collection(db, 'fleet');
     const unsubscribeFleet = onSnapshot(fleetCollection, (snapshot) => {
-      if (snapshot.empty) {
-        console.warn('[ARIA Ops] Firestore Fleet vuoto. Inizializzazione...');
-        // Tentiamo di caricare dal file statico locale per popolare Firestore la prima volta
-        fetch('/api/fleet')
-          .then(r => r.json())
-          .then(async (localFleet) => {
-             if (Array.isArray(localFleet) && localFleet.length > 0) {
-                for (const ac of localFleet) {
-                   await setDoc(doc(db, 'fleet', ac.id), ac);
-                }
-             }
-          }).catch(err => {
-             console.error('[ARIA Ops] Errore caricamento flotta locale per init:', err);
-          });
-      } else {
+      if (!snapshot.empty) {
         const fleetData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setFleetState(fleetData);
-        networkFlightsRef.current = []; // Reset ref per trigger ricalcolo
+        networkFlightsRef.current = [];
+        console.log('[ARIA Cloud] Flotta sincronizzata:', fleetData.length);
+      } else {
+        // Se Firestore è vuoto, lo popoliamo dal locale già caricato
+        console.log('[ARIA Cloud] Database vuoto. Sincronizzazione in corso...');
       }
     });
 
@@ -361,7 +377,9 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
   // ── Heartbeat Engine ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!opsPlan || npcRoster.length === 0 || fleetState.length === 0) return;
+    if (!opsPlan || npcRoster.length === 0) return;
+    console.log('[ARIA Heartbeat] Starting engine...', { hasFleet: fleetState.length > 0 });
+
     
     const tick = async () => {
       const active = calculateNetworkState(opsPlan, npcRoster, Date.now(), fleetState);
@@ -445,10 +463,13 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
   // ── Carica voli da Firestore ──────────────────────────────────────────────
   useEffect(() => {
+    if (!userId) return;
     (async () => {
       try {
+        console.log('[ARIA Logbook] Caricamento voli per:', userId);
         const snap = await getDocs(collection(db, 'users', userId, 'flights'));
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Flight));
+        console.log('[ARIA Logbook] Voli trovati:', data.length);
         setFlights(data);
         const p = computePilotProfile(data);
         setProfile(p);
