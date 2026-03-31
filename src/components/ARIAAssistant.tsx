@@ -285,7 +285,9 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   
   // Refs per prevenire double-counting
   const networkFlightsRef = useRef<NetworkFlight[]>([]);
-  const processedArrivedFlights = useRef<Set<string>>(new Set());
+  const processedArrivedFlights = useRef<Set<string>>(new Set(
+    JSON.parse(localStorage.getItem('velar_processed_flights') || '[]')
+  ));
 
   const sendDailyReport = useCallback(() => {
     const activeVols = networkFlights.length;
@@ -362,7 +364,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       if (!snapshot.empty) {
         const fleetData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setFleetState(fleetData);
-        networkFlightsRef.current = [];
+        // networkFlightsRef.current = []; // RIMOSSO: Evita glitch visivi e loop durante update flotta
         console.log('[ARIA Cloud] Flotta sincronizzata:', fleetData.length);
       } else {
         // Se Firestore è vuoto, lo popoliamo dal locale già caricato
@@ -403,6 +405,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
           if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
               if (flight.tailNumber && flight.tailNumber !== 'Generic' && !processedArrivedFlights.current.has(flight.id)) {
                    processedArrivedFlights.current.add(flight.id);
+                   localStorage.setItem('velar_processed_flights', JSON.stringify(Array.from(processedArrivedFlights.current)));
                    
                    // Calcolo ore basato su flight plan (in ore)
                    const blockHours = (flight.arrivalTime - flight.departureTime) / 60; 
@@ -486,6 +489,20 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       }
     })();
   }, [userId, pilotName]);
+
+  // ── Cleanup settimanale del registro voli processati ──
+  useEffect(() => {
+    const lastCleanup = localStorage.getItem('velar_last_cleanup');
+    const now = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+    if (!lastCleanup || now - parseInt(lastCleanup) > SEVEN_DAYS) {
+      console.log('[ARIA Ops] Cleanup settimanale registro arrivi eseguito.');
+      localStorage.setItem('velar_processed_flights', '[]');
+      localStorage.setItem('velar_last_cleanup', now.toString());
+      processedArrivedFlights.current = new Set();
+    }
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1220,46 +1237,48 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 <span style={s.crewCount}>{networkFlights.length} piloti in servizio</span>
               </div>
               <div style={s.crewGrid}>
-                {networkFlights.length === 0 && (
-                  <p style={{ color: 'var(--color-text-secondary)', padding: '20px' }}>Nessun membro dell'equipaggio attualmente in servizio.</p>
-                )}
-                {networkFlights.map((nf) => (
-                  <div key={nf.id} style={s.crewCard}>
-                    <div style={s.crewCardHeader}>
-                      <div style={s.crewAvatar}>
-                        {(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                {
+                  // Raggruppamento per pilota unico (solo in servizio)
+                  Array.from(new Map(
+                    networkFlights
+                      .filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status))
+                      .map(f => [f.pilot.id, f])
+                  ).values())
+                  .map((nf) => (
+                    <div key={nf.id} style={s.crewCard}>
+                      <div style={s.crewCardHeader}>
+                        <div style={s.crewAvatar}>
+                          {(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div style={s.crewInfo}>
+                          <span style={s.crewName}>{nf.pilot.name}</span>
+                          <span style={s.crewRank}>{nf.pilot.rank}</span>
+                        </div>
+                        <div style={s.crewBase}>
+                          <span style={s.crewBaseIcao}>{nf.pilot.base}</span>
+                          <span style={s.crewBaseRole}>{opsPlan?.hubs.find(h => h.icao === nf.pilot.base)?.role || nf.pilot.base}</span>
+                        </div>
                       </div>
-                      <div style={s.crewInfo}>
-                        <span style={s.crewName}>{nf.pilot.name}</span>
-                        <span style={s.crewRank}>{nf.pilot.rank}</span>
-                      </div>
-                      <div style={s.crewBase}>
-                        <span style={s.crewBaseIcao}>{nf.pilot.base}</span>
-                        <span style={s.crewBaseRole}>{opsPlan?.hubs.find(h => h.icao === nf.pilot.base)?.role || nf.pilot.base}</span>
+                      <div style={s.crewFlight}>
+                        <div style={s.crewFlightRoute}>
+                          <span style={s.crewIcao}>{nf.departure}</span>
+                          <svg width="24" height="10" viewBox="0 0 24 10" style={{ margin: '0 6px' }}>
+                            <line x1="0" y1="5" x2="18" y2="5" stroke="var(--color-border)" strokeWidth="1.2"/>
+                            <path d="M18 2l6 3-6 3" fill="none" stroke="var(--color-border)" strokeWidth="1.2"/>
+                          </svg>
+                          <span style={s.crewIcao}>{nf.arrival}</span>
+                        </div>
+                        <div style={s.crewFlightMeta}>
+                          <span style={s.crewFlightNum}>{nf.flightNumber}</span>
+                          <span style={s.crewFlightAc}>[{nf.tailNumber || '...'}]{nf.aircraft ? ` ${nf.aircraft}` : ''}</span>
+                        </div>
+                        <p style={{...s.crewFlightCities, color: 'var(--color-primary)'}}>
+                          {nf.status.toUpperCase()}
+                        </p>
                       </div>
                     </div>
-                    <div style={s.crewFlight}>
-                      <div style={s.crewFlightRoute}>
-                        <span style={s.crewIcao}>{nf.departure}</span>
-                        <svg width="24" height="10" viewBox="0 0 24 10" style={{ margin: '0 6px' }}>
-                          <line x1="0" y1="5" x2="18" y2="5" stroke="var(--color-border)" strokeWidth="1.2"/>
-                          <path d="M18 2l6 3-6 3" fill="none" stroke="var(--color-border)" strokeWidth="1.2"/>
-                        </svg>
-                        <span style={s.crewIcao}>{nf.arrival}</span>
-                      </div>
-                      <div style={s.crewFlightMeta}>
-                        <span style={s.crewFlightNum}>{nf.flightNumber}</span>
-                        <span style={s.crewFlightAc}>[{nf.tailNumber || '...'}]{nf.aircraft ? ` ${nf.aircraft}` : ''}</span>
-                        <span style={s.crewFlightTime}>
-                          {Math.floor(nf.departureTime / 60).toString().padStart(2, '0')}:{Math.floor(nf.departureTime % 60).toString().padStart(2, '0')} UTC
-                        </span>
-                      </div>
-                      <p style={{...s.crewFlightCities, color: 'var(--color-primary)'}}>
-                        {nf.status.toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                }
               </div>
             </>
           )}
@@ -1326,10 +1345,12 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                          <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-mono)', fontWeight: 700, color: 'var(--color-primary)' }}>{ac.id}</span>
                          <span style={{ 
                             fontSize: '9px', fontWeight: 600, padding: '3px 6px', borderRadius: 'var(--radius-sm)',
-                            background: ac.status === 'AOG' ? 'var(--color-warning)' : ac.status === 'In Flight' ? 'var(--color-primary-light)' : 'var(--color-background)',
-                            color: ac.status === 'AOG' ? '#000' : ac.status === 'In Flight' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                            background: (networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status) === 'AOG' ? 'var(--color-warning)' : 
+                                        ['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(networkFlights.find(nf => nf.tailNumber === ac.id)?.status || '') ? 'var(--color-primary-light)' : 'var(--color-background)',
+                            color: (networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status) === 'AOG' ? '#000' : 
+                                   ['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(networkFlights.find(nf => nf.tailNumber === ac.id)?.status || '') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                             textTransform: 'uppercase'
-                          }}>{ac.status}</span>
+                          }}>{networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status}</span>
                       </div>
                       <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{ac.type}</span>
                       

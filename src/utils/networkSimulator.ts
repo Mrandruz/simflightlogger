@@ -41,8 +41,9 @@ export function parseBlock(blockStr: string): number {
 function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[], base: string): NpcPilot {
   if (!roster || roster.length === 0) return { id: 'N/A', name: 'Unknown', rank: 'Captain', base: 'N/A' };
   
-  // Semplice hash deterministico 
-  const seed = (flightNumber || '').length + (time || 0);
+  // Seed deterministico più granulare: numero volo + orario + prima lettera targa 
+  const acSeed = (aircraft || '').charCodeAt(0) || 0;
+  const seed = (flightNumber || '').length + (time || 0) + acSeed;
   
   // 1. Filtriamo prioritariamente per BASE (Hub)
   let eligible = roster.filter(p => p.base === base);
