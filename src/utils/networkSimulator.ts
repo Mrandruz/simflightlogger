@@ -173,9 +173,9 @@ export async function fetchNpcRoster(): Promise<NpcPilot[]> {
       else if (line.includes('HUB BOSTON')) currentBase = 'KBOS';
       else if (line.includes('HUB GIACARTA')) currentBase = 'WIII';
       
-      if (line.startsWith('| VLR-PIC-')) {
+      if (line.startsWith('| VLR-')) {
         const parts = line.split('|').map(s => s.trim());
-        if (parts.length >= 5) {
+        if (parts.length >= 4) {
           roster.push({
             id: parts[1],
             name: parts[2],
