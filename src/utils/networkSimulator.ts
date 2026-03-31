@@ -37,17 +37,22 @@ export function parseBlock(blockStr: string): number {
   return h * 60 + m;
 }
 
-// Assegna proceduralmente un pilota limitando al rank corretto
-function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[]): NpcPilot {
+// Assegna proceduralmente un pilota limitando al rank corretto e alla BASE di appartenenza
+function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[], base: string): NpcPilot {
   if (!roster || roster.length === 0) return { id: 'N/A', name: 'Unknown', rank: 'Captain', base: 'N/A' };
   
   // Semplice hash deterministico 
   const seed = (flightNumber || '').length + (time || 0);
-  // Per i widebody, usiamo Senior Captains
+  
+  // 1. Filtriamo prioritariamente per BASE (Hub)
+  let eligible = roster.filter(p => p.base === base);
+  if (eligible.length === 0) eligible = roster; // Fallback globale se l'hub è vuoto
+
+  // 2. Per i widebody, usiamo Senior/Chief Captains
   const requiresSenior = aircraft && (aircraft.includes('A350') || aircraft.includes('A330'));
-  let eligible = roster;
   if (requiresSenior) {
-    eligible = roster.filter(p => p.rank === 'Senior Captain' || p.rank === 'Chief Captain');
+    const seniorGroup = eligible.filter(p => p.rank === 'Senior Captain' || p.rank === 'Chief Captain');
+    if (seniorGroup.length > 0) eligible = seniorGroup;
   }
   if (!eligible || eligible.length === 0) eligible = roster;
   
@@ -93,7 +98,7 @@ export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentU
             isAOG = suitableAircraft[0].status === 'AOG';
         }
 
-        const pilot = assignPilot(id, route.aircraft, t, roster);
+        const pilot = assignPilot(id, route.aircraft, t, roster, hub.icao);
         
         let status: NetworkFlight['status'] = 'Scheduled';
         let progressPercent = 0;
