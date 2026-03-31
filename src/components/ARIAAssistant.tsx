@@ -660,6 +660,13 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
     if (!profile || overviewLoading || overviewData) return;
     setOverviewLoading(true);
 
+    const aogCount = fleetState.filter(ac => ac.status === 'AOG' || ac.isAOG).length;
+    const activeVols = networkFlights.length;
+    const hubStats = opsPlan?.hubs?.map((hub: VelarHub) => {
+       const activeAtHub = networkFlights.filter(f => f.departure === hub.icao).length;
+       return `${hub.icao} (${hub.city}): ${activeAtHub} voli attivi ora.`;
+    }).join('\n') || '';
+
     const activeRoutesList = opsPlan?.hubs?.map((hub: VelarHub) =>
       hub.routes.map((route: VelarRoute) => {
         const flights = route.flight.split(/[\\/-]/).map((f: string) => f.trim()).filter((f: string) => f.startsWith('VLR') || !isNaN(Number(f)));
@@ -690,7 +697,10 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
     const prompt = `Sei ARIA, il sistema operativo di Velar Airlines.
 Genera un report operativo JSON per il Chief Officer ${pilotName || 'Comandante'} con dati realistici per OGGI.
 
-La flotta Velar ha ${totalFleetCount} aeromobili su ${totalHubsCount} hub.
+La flotta Velar ha ${totalFleetCount} aeromobili (${totalFleetCount - aogCount} operativi, ${aogCount} in manutenzione AOG).
+Hub attivi e stato network:
+${hubStats}
+Voli totali attivi nel network ora: ${activeVols}
 
 Rotte attive oggi (con relative capacità aeromobile):
 ${activeRoutesList}
@@ -962,34 +972,35 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 <p style={s.fleetBriefingText}>{overviewData.briefing}</p>
               </div>
 
-              {/* KPI bar */}
-              {overviewData.operationalStatus && (
-                <div style={s.ovKpiBar}>
-                  <div style={s.ovKpi}>
-                    <span style={s.ovKpiValue}>{overviewData.operationalStatus.fleetOperational}/{overviewData.operationalStatus.fleetTotal}</span>
-                    <span style={s.ovKpiLabel}>Aeromobili operativi</span>
-                  </div>
-                  <div style={s.ovKpiDivider} />
-                  <div style={s.ovKpi}>
-                    <span style={s.ovKpiValue}>{overviewData.operationalStatus.flightsToday}</span>
-                    <span style={s.ovKpiLabel}>Voli oggi</span>
-                  </div>
-                  <div style={s.ovKpiDivider} />
-                  <div style={s.ovKpi}>
-                    <span style={{ ...s.ovKpiValue, color: overviewData.operationalStatus.onTimePercentage >= 90 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                      {overviewData.operationalStatus.onTimePercentage}%
-                    </span>
-                    <span style={s.ovKpiLabel}>On-time performance</span>
-                  </div>
-                  <div style={s.ovKpiDivider} />
-                  {overviewData.passengerSummary && (
-                    <div style={s.ovKpi}>
-                      <span style={s.ovKpiValue}>{overviewData.passengerSummary.totalPaxToday?.toLocaleString('it-IT')}</span>
-                      <span style={s.ovKpiLabel}>Passeggeri oggi</span>
-                    </div>
-                  )}
+              {/* KPI bar (REAL TIME) */}
+              <div style={s.ovKpiBar}>
+                <div style={s.ovKpi}>
+                  <span style={s.ovKpiValue}>
+                    {fleetState.filter(ac => ac.status !== 'AOG' && !ac.isAOG).length}/{fleetState.length || 27}
+                  </span>
+                  <span style={s.ovKpiLabel}>Aeromobili operativi</span>
                 </div>
-              )}
+                <div style={s.ovKpiDivider} />
+                <div style={s.ovKpi}>
+                  <span style={s.ovKpiValue}>{networkFlights.length}</span>
+                  <span style={s.ovKpiLabel}>Voli attivi ora</span>
+                </div>
+                <div style={s.ovKpiDivider} />
+                <div style={s.ovKpi}>
+                  <span style={{ 
+                    ...s.ovKpiValue, 
+                    color: networkFlights.filter(f => f.status !== 'AOG/Cancel').length / (networkFlights.length || 1) >= 0.9 ? 'var(--color-success)' : 'var(--color-warning)' 
+                  }}>
+                    {Math.round((networkFlights.filter(f => f.status !== 'AOG/Cancel').length / (networkFlights.length || 1)) * 100)}%
+                  </span>
+                  <span style={s.ovKpiLabel}>On-time performance</span>
+                </div>
+                <div style={s.ovKpiDivider} />
+                <div style={s.ovKpi}>
+                  <span style={s.ovKpiValue}>{ (networkFlights.reduce((acc, f) => acc + (f.status === 'En Route' || f.status === 'Arrived' ? 120 : 0), 0)).toLocaleString() }</span>
+                  <span style={s.ovKpiLabel}>Pax stimati</span>
+                </div>
+              </div>
 
               {/* Hub status */}
               {overviewData.hubs && (
@@ -1424,13 +1435,21 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
             {networkFlights.length === 0 && (
               <p style={{ color: 'var(--color-text-hint)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>Nessun volo attivo in questo momento.</p>
             )}
-            {networkFlights.map(nf => (
-              <div key={nf.id} style={{
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px', padding: '12px',
-                display: 'flex', flexDirection: 'column', gap: '8px'
-              }}>
+            {
+                [...networkFlights].sort((a, b) => {
+                  const STATUS_WEIGHTS: Record<string, number> = {
+                    'Boarding': 10, 'Pushback': 9, 'Taxi Out': 8, 'En Route': 7, 
+                    'Approach': 6, 'Taxi In': 5, 'Arrived': 4, 'Turnaround': 3, 
+                    'Scheduled': 2, 'AOG/Cancel': 1
+                  };
+                  return (STATUS_WEIGHTS[b.status] || 0) - (STATUS_WEIGHTS[a.status] || 0);
+                }).map(nf => (
+                  <div key={nf.id} style={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px', padding: '12px',
+                    display: 'flex', flexDirection: 'column', gap: '8px'
+                  }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</span>
