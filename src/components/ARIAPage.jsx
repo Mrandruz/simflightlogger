@@ -126,9 +126,9 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
-        padding: '32px',
-        maxWidth: '1100px',
+        padding: '0', // Full-page, no padding
         width: '100%',
+        height: 'calc(100vh - 64px)', // Adjust for potential header
     },
     centered: {
         display: 'flex',

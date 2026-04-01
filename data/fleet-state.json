@@ -2,7 +2,7 @@
   {
     "id": "I-V19A",
     "type": "Airbus A319",
-    "totalFlightHours": 0,
+    "totalFlightHours": 120.5,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -12,7 +12,7 @@
   {
     "id": "I-V19B",
     "type": "Airbus A319",
-    "totalFlightHours": 0,
+    "totalFlightHours": 492.2,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -22,7 +22,7 @@
   {
     "id": "I-V19C",
     "type": "Airbus A319",
-    "totalFlightHours": 0,
+    "totalFlightHours": 15.0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "KBOS",
@@ -32,7 +32,7 @@
   {
     "id": "I-V19D",
     "type": "Airbus A319",
-    "totalFlightHours": 0,
+    "totalFlightHours": 230.1,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -42,17 +42,17 @@
   {
     "id": "I-V19E",
     "type": "Airbus A319",
-    "totalFlightHours": 0,
+    "totalFlightHours": 501.5,
     "lastMaintenanceHour": 0,
-    "status": "Idle",
+    "status": "AOG",
     "currentHub": "LIRF",
-    "isAOG": false,
-    "aogUntilTimeMs": 0
+    "isAOG": true,
+    "aogUntilTimeMs": 1711929600000
   },
   {
     "id": "I-V20A",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 85.4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -62,7 +62,7 @@
   {
     "id": "I-V20B",
     "type": "Airbus A320",
-    "totalFlightHours": 4,
+    "totalFlightHours": 340.8,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -72,7 +72,7 @@
   {
     "id": "I-V20C",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 12.2,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -82,7 +82,7 @@
   {
     "id": "I-V20D",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 450.0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -92,7 +92,7 @@
   {
     "id": "I-V20E",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 110.2,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -102,7 +102,7 @@
   {
     "id": "I-V20F",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 280.9,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -112,7 +112,7 @@
   {
     "id": "I-V20G",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 55.6,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -122,7 +122,7 @@
   {
     "id": "I-V20H",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 412.3,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -132,7 +132,7 @@
   {
     "id": "I-V20I",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 180.4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -142,7 +142,7 @@
   {
     "id": "I-V20J",
     "type": "Airbus A320",
-    "totalFlightHours": 0,
+    "totalFlightHours": 320.1,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -152,7 +152,7 @@
   {
     "id": "I-V21A",
     "type": "Airbus A321LR",
-    "totalFlightHours": 0,
+    "totalFlightHours": 210.5,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -162,7 +162,7 @@
   {
     "id": "I-V21B",
     "type": "Airbus A321LR",
-    "totalFlightHours": 0,
+    "totalFlightHours": 48.0,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "KBOS",
@@ -172,7 +172,7 @@
   {
     "id": "I-V21C",
     "type": "Airbus A321LR",
-    "totalFlightHours": 0,
+    "totalFlightHours": 390.2,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "KBOS",
@@ -182,7 +182,7 @@
   {
     "id": "I-V21D",
     "type": "Airbus A321LR",
-    "totalFlightHours": 0,
+    "totalFlightHours": 145.6,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -192,7 +192,7 @@
   {
     "id": "I-V21E",
     "type": "Airbus A321LR",
-    "totalFlightHours": 0,
+    "totalFlightHours": 275.4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -202,8 +202,8 @@
   {
     "id": "I-V33A",
     "type": "Airbus A330neo",
-    "totalFlightHours": 0,
-    "lastMaintenanceHour": 0,
+    "totalFlightHours": 850.2,
+    "lastMaintenanceHour": 500,
     "status": "Idle",
     "currentHub": "LIRF",
     "isAOG": false,
@@ -212,7 +212,7 @@
   {
     "id": "I-V33B",
     "type": "Airbus A330neo",
-    "totalFlightHours": 0,
+    "totalFlightHours": 410.8,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -222,7 +222,7 @@
   {
     "id": "I-V33C",
     "type": "Airbus A330neo",
-    "totalFlightHours": 0,
+    "totalFlightHours": 115.4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "WIII",
@@ -232,7 +232,7 @@
   {
     "id": "I-V35A",
     "type": "Airbus A350-900",
-    "totalFlightHours": 9.5,
+    "totalFlightHours": 240.2,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -242,8 +242,8 @@
   {
     "id": "I-V35B",
     "type": "Airbus A350-900",
-    "totalFlightHours": 0,
-    "lastMaintenanceHour": 0,
+    "totalFlightHours": 1120.5,
+    "lastMaintenanceHour": 1000,
     "status": "Idle",
     "currentHub": "LIRF",
     "isAOG": false,
@@ -252,7 +252,7 @@
   {
     "id": "I-V35C",
     "type": "Airbus A350-900",
-    "totalFlightHours": 0,
+    "totalFlightHours": 498.4,
     "lastMaintenanceHour": 0,
     "status": "Idle",
     "currentHub": "LIRF",
@@ -262,11 +262,11 @@
   {
     "id": "I-V35D",
     "type": "Airbus A350-900",
-    "totalFlightHours": 0,
+    "totalFlightHours": 510.1,
     "lastMaintenanceHour": 0,
-    "status": "Idle",
+    "status": "AOG",
     "currentHub": "LIRF",
-    "isAOG": false,
-    "aogUntilTimeMs": 0
+    "isAOG": true,
+    "aogUntilTimeMs": 1711929600000
   }
 ]

@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTheme } from '../hooks/useTheme';
 import { 
   collection, 
   getDocs, 
@@ -24,6 +25,26 @@ import {
 import { db } from '../firebase';
 import { sendOperationalAlert } from '../utils/discord';
 import { fetchNpcRoster, calculateNetworkState, NetworkFlight, NpcPilot } from '../utils/networkSimulator';
+import { findAirport } from '../utils/airportUtils';
+import { 
+  MessageSquare, 
+  LayoutDashboard, 
+  Calendar, 
+  Users,
+  Plane, 
+  Activity, 
+  ChevronRight, 
+  Map as MapIcon, 
+  Navigation,
+  Clock,
+  Maximize2,
+  RefreshCw,
+  Search,
+  AlertCircle,
+  ExternalLink
+} from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // ─── Tipi ─────────────────────────────────────────────────────────────────────
 
@@ -255,7 +276,228 @@ interface ARIAProps {
 
 type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network';
 
+// ─── Componente Mappa ─────────────────────────────────────────────────────────
+
+interface ARIAMapProps {
+    flights: NetworkFlight[];
+    selectedFlight: any | null;
+    isDarkMode: boolean;
+    onCloseFlight?: () => void;
+}
+
+const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMapProps) => {
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstance = useRef<any>(null);
+
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        // Cleanup
+        if (mapInstance.current) {
+            mapInstance.current.remove();
+            mapInstance.current = null;
+        }
+
+        const tileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        const map = L.map(mapRef.current, { 
+            attributionControl: false,
+            zoomControl: false,
+            minZoom: 2,
+            maxZoom: 12
+        }).setView([30, 10], 2);
+        
+        mapInstance.current = map;
+        L.tileLayer(tileUrl).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        const bounds = L.latLngBounds([]);
+
+        // Icone personalizzate - Migliorate per visibilità e forma
+        const planeIcon = L.divIcon({
+            className: 'custom-plane-icon',
+            html: `
+                <div style="transform: rotate(0deg); color: var(--color-primary); filter: drop-shadow(0 0 2px white);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="white" stroke-width="0.5">
+                        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                    </svg>
+                </div>
+            `,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        const hubIcon = L.divIcon({
+            className: 'custom-hub-icon',
+            html: `<div style="width: 10px; height: 10px; background: var(--color-primary); border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px var(--color-primary);"></div>`,
+            iconSize: [10, 10],
+            iconAnchor: [5, 5]
+        });
+
+        // Helper per ottenere posizione interpolata
+        const getFlightPos = (f: any): [number, number] | null => {
+            const dep = findAirport(f.departure);
+            const arr = findAirport(f.arrival);
+            if (!dep || !arr) return null;
+            
+            const pct = (f.progressPercent || 0) / 100;
+            const lat = dep.latitude + (arr.latitude - dep.latitude) * pct;
+            const lon = dep.longitude + (arr.longitude - dep.longitude) * pct;
+            return [lat, lon];
+        };
+
+        // Stile comune per tooltips
+        const tooltipOptions = {
+            permanent: true,
+            direction: 'top' as any,
+            className: 'aria-map-tooltip',
+            offset: [0, -10] as any
+        };
+
+        // Se c'è un volo selezionato, disegna la rotta
+        if (selectedFlight) {
+            const dep = findAirport(selectedFlight.departure);
+            const arr = findAirport(selectedFlight.arrival);
+            
+            if (dep && arr) {
+                const depPos: [number, number] = [dep.latitude, dep.longitude];
+                const arrPos: [number, number] = [arr.latitude, arr.longitude];
+                
+                L.polyline([depPos, arrPos], {
+                    color: 'var(--color-primary)',
+                    weight: 3,
+                    opacity: 0.8,
+                    dashArray: '10, 10'
+                }).addTo(map);
+
+                L.circleMarker(depPos, { radius: 6, color: 'var(--color-success)', fillOpacity: 1 }).addTo(map)
+                    .bindTooltip(selectedFlight.departure, { ...tooltipOptions, direction: 'bottom' });
+                L.circleMarker(arrPos, { radius: 6, color: 'var(--color-danger)', fillOpacity: 1 }).addTo(map)
+                    .bindTooltip(selectedFlight.arrival, { ...tooltipOptions, direction: 'bottom' });
+                
+                bounds.extend(depPos);
+                bounds.extend(arrPos);
+                
+                const planePos = getFlightPos(selectedFlight);
+                if (planePos) {
+                    L.marker(planePos, { icon: planeIcon }).addTo(map)
+                        .bindTooltip(selectedFlight.flightNumber, tooltipOptions);
+                    bounds.extend(planePos);
+                }
+                
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
+            }
+        } else {
+            // Network view
+            flights.forEach(f => {
+                const pos = getFlightPos(f);
+                if (pos) {
+                    L.marker(pos, { icon: planeIcon })
+                        .addTo(map)
+                        .bindTooltip(f.flightNumber, tooltipOptions)
+                        .bindPopup(`<b>${f.flightNumber}</b><br>${f.departure} → ${f.arrival}<br>${f.status}`);
+                    bounds.extend(pos);
+                }
+            });
+
+            // Aggiungi Hubs principali
+            ['LIRF', 'KBOS', 'VHHH', 'EGLL'].forEach(icao => {
+                const apt = findAirport(icao);
+                if (apt) {
+                    const pos: [number, number] = [apt.latitude, apt.longitude];
+                    L.marker(pos, { icon: hubIcon }).addTo(map)
+                        .bindTooltip(icao, { ...tooltipOptions, offset: [0, 5], direction: 'bottom' });
+                    bounds.extend(pos);
+                }
+            });
+
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [100, 100], maxZoom: 3 });
+            }
+        }
+
+        return () => {
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
+            }
+        };
+    }, [flights, selectedFlight, isDarkMode]);
+
+    return (
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            {/* CSS Iniezione per Leaflet Overrides */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                .leaflet-container {
+                    font-family: var(--font-family-sans) !important;
+                }
+                .aria-map-tooltip {
+                    background: rgba(var(--color-surface-rgb), 0.85) !important;
+                    backdrop-filter: blur(8px);
+                    border: 1px solid var(--color-border) !important;
+                    border-radius: 4px !important;
+                    padding: 2px 6px !important;
+                    font-size: 10px !important;
+                    font-weight: 700 !important;
+                    font-family: var(--font-family-mono) !important;
+                    color: var(--color-text-primary) !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+                }
+                .aria-map-tooltip::before {
+                    display: none !important;
+                }
+                .leaflet-popup-content-wrapper {
+                    background: var(--color-surface) !important;
+                    color: var(--color-text-primary) !important;
+                    border-radius: var(--radius-md) !important;
+                    font-family: var(--font-family-sans) !important;
+                }
+                .leaflet-popup-tip {
+                    background: var(--color-surface) !important;
+                }
+            `}} />
+            <div ref={mapRef} style={{ width: '100%', height: '100%', background: 'var(--color-background)' }} />
+            {selectedFlight && (
+                <div style={{ 
+                    position: 'absolute', top: '16px', left: '16px', zIndex: 1000,
+                    display: 'flex', flexDirection: 'column', gap: '8px'
+                }}>
+                    <div style={{ 
+                        background: 'rgba(var(--color-surface-rgb), 0.9)', backdropFilter: 'blur(10px)',
+                        padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)',
+                        boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', gap: '12px'
+                    }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 600, textTransform: 'uppercase' }}>Focus Flight</span>
+                            <span style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{selectedFlight.flightNumber}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--color-divider)', paddingLeft: '12px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '9px', color: 'var(--color-text-hint)' }}>Route</span>
+                                <span style={{ fontSize: '12px', fontWeight: 600 }}>{selectedFlight.departure} → {selectedFlight.arrival}</span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={onCloseFlight}
+                            style={{ 
+                                marginLeft: '8px', background: 'var(--color-background)', border: '1px solid var(--color-border)',
+                                borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'var(--color-text-secondary)'
+                            }}
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
+  const { isDarkMode } = useTheme();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [profile, setProfile] = useState<PilotProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -280,6 +522,11 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [fleetState, setFleetState] = useState<any[]>([]);
   const [networkFlights, setNetworkFlights] = useState<NetworkFlight[]>([]);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date>(new Date());
+  
+  // Mappa
+  const [selectedFlightForMap, setSelectedFlightForMap] = useState<any | null>(null);
+  const [isMapZoomed, setIsMapZoomed] = useState(false);
+  const [mapMode, setMapMode] = useState<'network' | 'flight'>('network');
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
   
@@ -341,14 +588,17 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
           setFleetState(localFleet); // Dati immediati in UI
           console.log('[ARIA Ops] Flotta locale caricata:', localFleet.length);
 
-          // Sincronizziamo Firestore se necessario
-          const snap = await getDocs(query(collection(db, 'fleet'), limit(1)));
-          if (snap.empty) {
-            console.log('[ARIA Ops] Inizializzazione Cloud in corso...');
+          // Sincronizziamo Firestore se vuoto o se sono tutti a zero (migrazione a dati reali)
+          const snap = await getDocs(collection(db, 'fleet'));
+          const cloudFleet = snap.docs.map(d => d.data());
+          const totalCloudHours = cloudFleet.reduce((acc: number, val: any) => acc + (val.totalFlightHours || 0), 0);
+
+          if (snap.empty || totalCloudHours < 1) {
+            console.log('[ARIA Ops] Inizializzazione Cloud con dati realistici in corso...');
             for (const ac of localFleet) {
-               await setDoc(doc(db, 'fleet', ac.id), ac);
+               await setDoc(doc(db, 'fleet', ac.id), ac, { merge: true });
             }
-            console.log('[ARIA Ops] Cloud sincronizzato con successo.');
+            console.log('[ARIA Ops] Cloud popolato con successo.');
           }
         }
       } catch (err) {
@@ -859,649 +1109,403 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
   return (
     <div style={s.container}>
-
-      {/* ── Header ── */}
-      <div style={s.header}>
-        <div style={s.headerLeft}>
-          <div style={s.ariaLogo}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+      
+      {/* ── SIDEBAR INTERNA (FISSA) ── */}
+      <aside style={s.sidebar}>
+        <div style={s.sidebarHeader}>
+          <div style={s.logoContainer}>
+            <div style={s.ariaIcon}>
+               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <h2 style={s.sidebarTitle}>ARIA</h2>
           </div>
-          <div>
-            <h2 style={s.title}>ARIA</h2>
-            <p style={s.subtitle}>Co-Pilot Virtuale · Velar Virtual Airline</p>
+          <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 600, letterSpacing: '0.05em' }}>
+            OPERATIONAL DASHBOARD
           </div>
         </div>
+
+        <nav style={s.sidebarNav}>
+          {(['chat', 'overview', 'schedule', 'fleet', 'network'] as ViewState[]).map(v => (
+            <button 
+              key={v} 
+              onClick={() => setView(v)}
+              style={{ ...s.sidebarBtn, ...(view === v ? s.sidebarBtnActive : {}) }}
+            >
+              {v === 'chat' && <MessageSquare style={s.sidebarBtnIcon} />}
+              {v === 'overview' && <LayoutDashboard style={s.sidebarBtnIcon} />}
+              {v === 'schedule' && <Calendar style={s.sidebarBtnIcon} />}
+              {v === 'fleet' && <Plane style={s.sidebarBtnIcon} />}
+              {v === 'network' && <Activity style={s.sidebarBtnIcon} />}
+              <span style={{ textTransform: 'capitalize' }}>{v}</span>
+              {view === v && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
+            </button>
+          ))}
+        </nav>
+
         {profile && (
-          <div style={s.pilotBadge}>
-            <span style={s.rankLabel}>{profile.currentRank.name}</span>
-            <span style={s.xpLabel}>{profile.totalXp.toLocaleString()} XP</span>
+          <div style={s.pilotInfo}>
+            <div style={s.pilotAvatar}>
+              {pilotName ? pilotName.charAt(0).toUpperCase() : 'P'}
+            </div>
+            <div style={s.pilotText}>
+              <span style={s.pilotName}>{pilotName || 'Comandante'}</span>
+              <span style={s.pilotRank}>{profile.currentRank.name}</span>
+            </div>
+            <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)' }}>{profile.totalXp.toLocaleString()}</span>
+               <div style={{ fontSize: '9px', color: 'var(--color-text-hint)', fontWeight: 600 }}>XP</div>
+            </div>
           </div>
         )}
-        <button onClick={view === 'network' ? () => setView('chat') : () => setView('network')} style={{...s.testBtn, background: view === 'network' ? 'var(--color-primary)' : 'var(--color-surface)', color: view === 'network' ? '#000' : 'var(--color-text-hint)'}}>📡 Network ({networkFlights.length})</button>
-        <button onClick={testDiscord} style={s.testBtn}>🔔 Test Discord</button>
-      </div>
+        
+        <div style={{ padding: '0 16px 16px' }}>
+             <button onClick={testDiscord} style={{ ...s.sidebarBtn, width: '100%', border: '1px solid var(--color-border)', fontSize: '11px', padding: '8px 12px', marginTop: '12px' }}>
+                <Activity size={14} /> Discord Test
+             </button>
+        </div>
+      </aside>
 
-      {/* ── Nav ── */}
-      <div style={s.nav}>
-        {(['chat', 'overview', 'schedule', 'fleet', 'network'] as ViewState[]).map(v => (
-          <button key={v} onClick={() => setView(v)}
-            style={{ ...s.navBtn, ...(view === v ? s.navBtnActive : {}) }}>
-            {v === 'chat' ? '💬 Chat' : v === 'overview' ? '📊 Overview' : v === 'schedule' ? '📅 Schedule' : v === 'fleet' ? '🛫 Fleet' : '📡 Network'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── CHAT ── */}
-      {view === 'chat' && (
-        <div style={s.chatContainer}>
-          <div style={s.messageList}>
-            {messages.map((msg, i) => (
-              <div key={i} style={{ ...s.msgRow, ...(msg.role === 'pilot' ? s.msgRowPilot : {}) }}>
-                {msg.role === 'aria' && <div style={s.ariaAvatar}>A</div>}
-                <div style={{ ...s.bubble, ...(msg.role === 'pilot' ? s.bubblePilot : s.bubbleAria) }}>
-                  {msg.content.split('\n').map((line, j) => {
-                    const parts = line.split(/\*\*(.*?)\*\*/g);
-                    return (
-                      <p key={j} style={s.msgLine}>
-                        {parts.map((p, k) => k % 2 === 1 ? <strong key={k}>{p}</strong> : p)}
-                      </p>
-                    );
-                  })}
-                  <span style={s.msgTime}>
-                    {msg.timestamp.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div style={s.msgRow}>
-                <div style={s.ariaAvatar}>A</div>
-                <div style={{ ...s.bubble, ...s.bubbleAria }}>
-                  <div style={s.typingDots}>
-                    <span style={{ ...s.dot, animationDelay: '0s' }} />
-                    <span style={{ ...s.dot, animationDelay: '0.2s' }} />
-                    <span style={{ ...s.dot, animationDelay: '0.4s' }} />
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          <div style={s.quickActions}>
-            {[
-              'Qual è la rotta più redditizia in XP?',
-              'Aggiornami sulle rotte Velar attive',
-              'Come salgo di rank più velocemente?',
-            ].map(q => (
-              <button key={q} style={s.quickBtn} onClick={() => setInput(q)}>{q}</button>
-            ))}
-          </div>
-
-          <div style={s.inputRow}>
-            <input
-              style={s.input}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              placeholder="Messaggio ad ARIA..."
-            />
-            <button style={s.sendBtn} onClick={sendMessage} disabled={isTyping || !input.trim()}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
+      {/* ── AREA PRINCIPALE ── */}
+      <main style={s.mainArea}>
+        
+        {/* MAPPA IN ALTO */}
+        <div style={s.mapWrapper}>
+          <ARIAMap 
+            flights={networkFlights} 
+            selectedFlight={selectedFlightForMap} 
+            isDarkMode={isDarkMode} 
+            onCloseFlight={() => { setSelectedFlightForMap(null); setMapMode('network'); }}
+          />
+          <div style={s.mapOverlay}>
+            <div style={s.mapBadge}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', animation: 'pulse 2s infinite' }} />
+                LIVE NETWORK: {networkFlights.length} VOLI
+            </div>
+            <div style={s.mapBadge}>
+                <Clock size={12} />
+                {new Date().getUTCHours().toString().padStart(2, '0')}:{new Date().getUTCMinutes().toString().padStart(2, '0')} ZULU
+            </div>
           </div>
         </div>
-      )}
 
+        {/* CONTENUTO SCROLLABILE */}
+        <div style={s.contentScroller}>
 
-      {/* ── OVERVIEW ── */}
-      {view === 'overview' && (
-        <div style={s.overviewContainer}>
-          {overviewLoading || !overviewData ? (
-            <div style={s.overviewLoading}>
-              <div style={s.loadingSpinner} />
-              <p style={s.loadingText}>ARIA sta compilando il report operativo...</p>
-            </div>
-          ) : (
-            <>
-              {/* Briefing ARIA */}
-              <div style={s.ovBriefingCard}>
-                <div style={s.fleetBriefingHeader}>
-                  <div style={s.ariaAvatar}>A</div>
-                  <div>
-                    <p style={s.fleetBriefingLabel}>ARIA · Daily Operations Report</p>
-                    <p style={s.fleetBriefingTime}>
-                      {new Date().toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <button
-                    style={s.ovRefreshBtn}
-                    onClick={() => { setOverviewData(null); }}
-                    title="Aggiorna report"
-                  >↻</button>
-                </div>
-                <p style={s.fleetBriefingText}>{overviewData.briefing}</p>
-              </div>
-
-              {/* KPI bar (REAL TIME) */}
-              <div style={s.ovKpiBar}>
-                <div style={s.ovKpi}>
-                  <span style={s.ovKpiValue}>
-                    {fleetState.filter(ac => ac.status !== 'AOG' && !ac.isAOG).length}/{fleetState.length || 27}
-                  </span>
-                  <span style={s.ovKpiLabel}>Aeromobili operativi</span>
-                </div>
-                <div style={s.ovKpiDivider} />
-                <div style={s.ovKpi}>
-                  <span style={s.ovKpiValue}>{networkFlights.length}</span>
-                  <span style={s.ovKpiLabel}>Voli attivi ora</span>
-                </div>
-                <div style={s.ovKpiDivider} />
-                <div style={s.ovKpi}>
-                  <span style={{ 
-                    ...s.ovKpiValue, 
-                    color: networkFlights.filter(f => f.status !== 'AOG/Cancel').length / (networkFlights.length || 1) >= 0.9 ? 'var(--color-success)' : 'var(--color-warning)' 
-                  }}>
-                    {Math.round((networkFlights.filter(f => f.status !== 'AOG/Cancel').length / (networkFlights.length || 1)) * 100)}%
-                  </span>
-                  <span style={s.ovKpiLabel}>On-time performance</span>
-                </div>
-                <div style={s.ovKpiDivider} />
-                <div style={s.ovKpi}>
-                  <span style={s.ovKpiValue}>{ (networkFlights.reduce((acc, f) => acc + (f.status === 'En Route' || f.status === 'Arrived' ? 120 : 0), 0)).toLocaleString() }</span>
-                  <span style={s.ovKpiLabel}>Pax stimati</span>
-                </div>
-              </div>
-
-              {/* Hub status */}
-              {overviewData.hubs && (
-                <div style={s.ovSection}>
-                  <span style={s.fleetSectionTitle}>Stato Hub</span>
-                  <div style={s.ovHubGrid}>
-                    {overviewData.hubs.map((hub: any, i: number) => (
-                      <div key={i} style={s.ovHubCard}>
-                        <div style={s.ovHubHeader}>
-                          <div>
-                            <span style={s.ovHubIcao}>{hub.icao}</span>
-                            <span style={s.ovHubRole}>{hub.role}</span>
-                          </div>
-                          <span style={{
-                            ...s.ovHubStatus,
-                            color: hub.status === 'Operational' ? 'var(--color-success)' : 'var(--color-warning)'
-                          }}>● {hub.status}</span>
-                        </div>
-                        <div style={s.ovHubStats}>
-                          <div style={s.ovHubStat}>
-                            <span style={s.ovHubStatVal}>{hub.activeFlights}</span>
-                            <span style={s.ovHubStatLbl}>Voli attivi</span>
-                          </div>
-                          <div style={s.ovHubStat}>
-                            <span style={s.ovHubStatVal}>{hub.paxToday?.toLocaleString('it-IT')}</span>
-                            <span style={s.ovHubStatLbl}>Pax oggi</span>
-                          </div>
-                        </div>
-                        {hub.alertMessage && (
-                          <p style={s.ovHubAlert}>⚠ {hub.alertMessage}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Flight board */}
-              {overviewData.flights && (
-                <div style={s.ovSection}>
-                  <span style={s.fleetSectionTitle}>Voli in corso · Passeggeri & Load Factor</span>
-                  <div style={s.ovFlightList}>
-                    {overviewData.flights.map((f: any, i: number) => {
-                      const lf = Number(f.loadFactor) || 0;
-                      const lfColor = lf >= 85 ? 'var(--color-success)' : lf >= 60 ? 'var(--color-primary)' : 'var(--color-warning)';
-                      const statusColor: Record<string, string> = {
-                        'On Time': 'var(--color-success)', 'Departed': 'var(--color-primary)',
-                        'Boarding': 'var(--color-warning)', 'Arrived': 'var(--color-text-hint)',
-                        'Delayed': 'var(--color-danger)',
-                      };
-                      return (
-                        <div key={i} style={s.ovFlightRow}>
-                          <span style={s.ovFlightNum}>{f.flightNumber}</span>
-                          <span style={s.ovFlightRoute}>{f.dep} → {f.arr}</span>
-                          <span style={s.ovFlightAc}>{f.aircraft}</span>
-                          <span style={s.ovFlightTime}>{f.depTime}</span>
-                          <div style={s.ovLoadBar}>
-                            <div style={{
-                              ...s.ovLoadFill,
-                              width: `${Math.min(lf, 100)}%`,
-                              background: lfColor,
-                            }} />
-                          </div>
-                          <span style={{ ...s.ovLoadPct, color: lfColor }}>{lf}%</span>
-                          <span style={s.ovFlightPax}>{f.paxBoarded}/{f.paxCapacity}</span>
-                          <span style={{ ...s.ovFlightStatus, color: statusColor[f.status] || 'var(--color-text-hint)' }}>
-                            {f.status}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Passenger summary */}
-              {overviewData.passengerSummary && (
-                <div style={s.ovSection}>
-                  <span style={s.fleetSectionTitle}>Riepilogo Passeggeri</span>
-                  <div style={s.ovPaxGrid}>
-                    <div style={s.ovPaxCard}>
-                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.avgLoadFactor}%</span>
-                      <span style={s.ovPaxLbl}>Load Factor medio</span>
+          {/* 💬 CHAT VIEW */}
+          {view === 'chat' && (
+            <div style={s.chatContent}>
+               <div style={s.messageList}>
+                {messages.map((msg, i) => (
+                  <div key={i} style={{ ...s.msgRow, ...(msg.role === 'pilot' ? s.msgRowPilot : {}) }}>
+                    {msg.role === 'aria' && <div style={s.ariaAvatar}>A</div>}
+                    <div style={{ ...s.bubble, ...(msg.role === 'pilot' ? s.bubblePilot : s.bubbleAria) }}>
+                      {msg.content.split('\n').map((line, j) => {
+                        const parts = line.split(/\*\*(.*?)\*\*/g);
+                        return (
+                          <p key={j} style={s.msgLine}>
+                            {parts.map((p, k) => k % 2 === 1 ? <strong key={k}>{p}</strong> : p)}
+                          </p>
+                        );
+                      })}
+                      <span style={s.msgTime}>
+                        {msg.timestamp.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <div style={s.ovPaxCard}>
-                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.vipPax}</span>
-                      <span style={s.ovPaxLbl}>Passeggeri VIP</span>
-                    </div>
-                    <div style={s.ovPaxCard}>
-                      <span style={s.ovPaxVal}>{overviewData.passengerSummary.connectionPax?.toLocaleString('it-IT')}</span>
-                      <span style={s.ovPaxLbl}>Pax in connessione</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── SCHEDULE ── */}
-      {view === 'schedule' && (
-        <div style={s.scheduleContainer}>
-
-          {/* Sub-tab switcher */}
-          <div style={s.schedSubNav}>
-            <button
-              style={{ ...s.schedSubBtn, ...(scheduleTab === 'mine' ? s.schedSubBtnActive : {}) }}
-              onClick={() => setScheduleTab('mine')}>
-              ✈️ I miei voli
-            </button>
-            <button
-              style={{ ...s.schedSubBtn, ...(scheduleTab === 'crew' ? s.schedSubBtnActive : {}) }}
-              onClick={() => setScheduleTab('crew')}>
-              👨‍✈️ Crew Board
-            </button>
-          </div>
-
-          {/* ── TAB: I MIEI VOLI ── */}
-          {scheduleTab === 'mine' && (
-            <>
-              {/* Badge base corrente */}
-              <div style={s.baseBadge}>
-                <span style={s.baseDot}>📍</span>
-                <span style={s.baseIcao}>{currentBase}</span>
-                <span style={s.baseSep}>·</span>
-                <span style={s.baseCity}>{currentBaseCity}</span>
-                {currentHubRole && <span style={s.baseRole}>{currentHubRole}</span>}
-              </div>
-
-              {schedule.length === 0 ? (
-                <div style={s.emptyState}>
-                  <p style={s.emptyText}>Nessuna schedule generata.</p>
-                  <p style={s.emptySubText}>
-                    ARIA pianificherà la tua settimana partendo da <strong>{currentBase}</strong>,
-                    rispettando le rotte ufficiali Velar v2.0.
-                  </p>
-                  <button style={s.generateBtn} onClick={generateSchedule} disabled={scheduleLoading}>
-                    {scheduleLoading ? 'Generazione in corso...' : '✦ Genera Schedule Settimanale'}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div style={s.scheduleHeader}>
-                    <span style={s.scheduleTitle}>Settimana · da {currentBase}</span>
-                    <button style={s.regenBtn} onClick={generateSchedule} disabled={scheduleLoading}>
-                      {scheduleLoading ? '...' : '↻ Rigenera'}
-                    </button>
-                  </div>
-                  <div style={s.flightList}>
-                    {schedule.map((f, i) => {
-                      const isLongHaul = f.aircraft.includes('A350') || f.aircraft.includes('A330') ||
-                        f.aircraft.includes('777') || f.aircraft.includes('787');
-                      const isSelected = selectedFlight === f;
-                      return (
-                        <div key={i}
-                          style={{ ...s.flightCard, ...(isSelected ? s.flightCardSelected : {}) }}
-                          onClick={() => setSelectedFlight(isSelected ? null : f)}>
-
-                          <div style={s.flightCardTop}>
-                            <span style={s.flightDay}>{f.day}</span>
-                            <span style={s.flightNumber}>{f.flightNumber}</span>
-                            {isLongHaul && <span style={s.longHaulBadge}>LONG HAUL</span>}
-                            <span style={s.flightAircraft}>{f.aircraft}</span>
-                          </div>
-
-                          <div style={s.flightRoute}>
-                            <div style={s.routePoint}>
-                              <span style={s.icao}>{f.departure}</span>
-                              <span style={s.routeCity}>{f.departureCity}</span>
-                              {f.departureTime && <span style={s.flightTime}>{f.departureTime}</span>}
-                            </div>
-                            <div style={s.routeArrow}>
-                              <svg width="40" height="12" viewBox="0 0 40 12">
-                                <line x1="0" y1="6" x2="34" y2="6" stroke="var(--color-border)" strokeWidth="1.5"/>
-                                <path d="M34 2l6 4-6 4" fill="none" stroke="var(--color-border)" strokeWidth="1.5"/>
-                              </svg>
-                              <span style={s.routeMeta}>{f.distance} · {f.estimatedDuration}</span>
-                            </div>
-                            <div style={{ ...s.routePoint, textAlign: 'right' as const }}>
-                              <span style={s.icao}>{f.arrival}</span>
-                              <span style={s.routeCity}>{f.arrivalCity}</span>
-                              {f.arrivalTime && <span style={s.flightTime}>{f.arrivalTime}</span>}
-                            </div>
-                          </div>
-
-                          {isSelected && (
-                            <div style={s.flightDetail}>
-                              <p style={s.flightReason}>💬 {f.reason}</p>
-                              <div style={s.flightActions}>
-                                <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer"
-                                  style={s.simbriefBtn} onClick={e => e.stopPropagation()}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
-                                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                  Apri in SimBrief
-                                </a>
-
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          {/* ── TAB: CREW BOARD ── */}
-          {scheduleTab === 'crew' && (
-            <>
-              <div style={s.scheduleHeader}>
-                <span style={s.scheduleTitle}>Live Crew Board · {DAYS_IT[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]}</span>
-                <span style={s.crewCount}>{networkFlights.length} piloti in servizio</span>
-              </div>
-              <div style={s.crewGrid}>
-                {
-                  // Raggruppamento per pilota unico (solo in servizio)
-                  Array.from(new Map(
-                    networkFlights
-                      .filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status))
-                      .map(f => [f.pilot.id, f])
-                  ).values())
-                  .map((nf) => (
-                    <div key={nf.id} style={s.crewCard}>
-                      <div style={s.crewCardHeader}>
-                        <div style={s.crewAvatar}>
-                          {(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={s.crewInfo}>
-                          <span style={s.crewName}>{nf.pilot.name}</span>
-                          <span style={s.crewRank}>{nf.pilot.rank}</span>
-                        </div>
-                        <div style={s.crewBase}>
-                          <span style={s.crewBaseIcao}>{nf.pilot.base}</span>
-                          <span style={s.crewBaseRole}>{opsPlan?.hubs.find(h => h.icao === nf.pilot.base)?.role || nf.pilot.base}</span>
-                        </div>
-                      </div>
-                      <div style={s.crewFlight}>
-                        <div style={s.crewFlightRoute}>
-                          <span style={s.crewIcao}>{nf.departure}</span>
-                          <svg width="24" height="10" viewBox="0 0 24 10" style={{ margin: '0 6px' }}>
-                            <line x1="0" y1="5" x2="18" y2="5" stroke="var(--color-border)" strokeWidth="1.2"/>
-                            <path d="M18 2l6 3-6 3" fill="none" stroke="var(--color-border)" strokeWidth="1.2"/>
-                          </svg>
-                          <span style={s.crewIcao}>{nf.arrival}</span>
-                        </div>
-                        <div style={s.crewFlightMeta}>
-                          <span style={s.crewFlightNum}>{nf.flightNumber}</span>
-                          <span style={s.crewFlightAc}>[{nf.tailNumber || '...'}]{nf.aircraft ? ` ${nf.aircraft}` : ''}</span>
-                        </div>
-                        <p style={{...s.crewFlightCities, color: 'var(--color-primary)'}}>
-                          {nf.status.toUpperCase()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-
-      {/* ── FLEET STATUS ── */}
-      {view === 'fleet' && (
-        <div style={s.fleetContainer}>
-
-          {/* Briefing ARIA */}
-          <div style={s.fleetBriefingCard}>
-            <div style={s.fleetBriefingHeader}>
-              <div style={s.ariaAvatar}>A</div>
-              <div>
-                <p style={s.fleetBriefingLabel}>ARIA · Fleet Status Briefing</p>
-                <p style={s.fleetBriefingTime}>
-                  {new Date().toLocaleString('it-IT', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-            <div style={s.fleetBriefingBody}>
-              {fleetBriefingLoading ? (
-                <div style={s.typingDots}>
-                  <span style={{ ...s.dot, animationDelay: '0s' }} />
-                  <span style={{ ...s.dot, animationDelay: '0.2s' }} />
-                  <span style={{ ...s.dot, animationDelay: '0.4s' }} />
-                </div>
-              ) : (
-                <p style={s.fleetBriefingText}>{fleetBriefing}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Composizione Flotta */}
-          <div style={s.fleetSection}>
-            <span style={s.fleetSectionTitle}>Composizione Flotta · 25 Aeromobili</span>
-            <div style={s.fleetGrid}>
-              {(opsPlan?.fleet || []).map((ac, i) => (
-                <div key={i} style={s.fleetAcCard}>
-                  <div style={s.fleetAcTop}>
-                    <span style={s.fleetAcCount}>{ac.count}×</span>
-                    <span style={s.fleetAcType}>{ac.type}</span>
-                  </div>
-                  <span style={s.fleetAcRole}>{ac.role}</span>
-                  <span style={s.fleetAcMission}>{ac.mission}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Fleet Live Odometer ── */}
-          <div style={s.fleetSection}>
-             <span style={s.fleetSectionTitle}>Fleet Live Odometer · Asset Tracking</span>
-             <p style={{ fontSize: '12px', color: 'var(--color-text-hint)', margin: '0 0 8px 0' }}>Tracciamento in tempo reale delle ore di volo e manutenzione (Check-A ogni 500 ore).</p>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                {fleetState.map((ac) => (
-                   <div key={ac.id} style={{
-                      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px'
-                   }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-mono)', fontWeight: 700, color: 'var(--color-primary)' }}>{ac.id}</span>
-                         <span style={{ 
-                            fontSize: '9px', fontWeight: 600, padding: '3px 6px', borderRadius: 'var(--radius-sm)',
-                            background: (networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status) === 'AOG' ? 'var(--color-warning)' : 
-                                        ['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(networkFlights.find(nf => nf.tailNumber === ac.id)?.status || '') ? 'var(--color-primary-light)' : 'var(--color-background)',
-                            color: (networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status) === 'AOG' ? '#000' : 
-                                   ['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(networkFlights.find(nf => nf.tailNumber === ac.id)?.status || '') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                            textTransform: 'uppercase'
-                          }}>{networkFlights.find(nf => nf.tailNumber === ac.id)?.status || ac.status}</span>
-                      </div>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{ac.type}</span>
-                      
-                      {/* Barra Usura */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-hint)' }}>
-                            <span>FH {Math.floor(ac.totalFlightHours)}</span>
-                            <span>A-Check {(ac.lastMaintenanceHour || 0) + 500}</span>
-                         </div>
-                         <div style={{ height: '6px', background: 'var(--color-background)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ 
-                               height: '100%', 
-                               width: `${Math.min(100, ((ac.totalFlightHours - (ac.lastMaintenanceHour || 0)) / 500) * 100)}%`, 
-                               background: ac.status === 'AOG' ? 'var(--color-warning)' : 'var(--color-primary)',
-                               transition: 'width 1s ease'
-                            }} />
-                         </div>
-                      </div>
-                   </div>
-                ))}
-             </div>
-          </div>
-
-          {/* Hub operativi */}
-          {(opsPlan?.hubs || []).map((hub: VelarHub, hi: number) => (
-            <div key={hi} style={s.fleetSection}>
-              <div style={s.hubHeader}>
-                <div>
-                  <span style={s.fleetSectionTitle}>{hub.icao} · {hub.city}</span>
-                  <span style={s.hubRole}>{hub.role}</span>
-                </div>
-                <span style={s.hubStatus}>● Operativo</span>
-              </div>
-              <p style={s.hubDesc}>{hub.description}</p>
-              <div style={s.routeTable}>
-                {hub.routes.map((r, ri) => (
-                  <div key={ri} style={{ ...s.routeRow, ...(ri % 2 === 0 ? {} : s.routeRowAlt) }}>
-                    <span style={s.routeIcao}>{r.dest}</span>
-                    <span style={s.routeCity}>{r.city}</span>
-                    <span style={s.routeAc}>{r.aircraft}</span>
-                    <span style={s.routeFreq}>{r.freq}</span>
-                    <span style={s.routeFlight}>{r.flight}</span>
-                    <span style={s.routeNote}>{r.note}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Vista Network Heartbeat ────────────────────────────────────────── */}
-      {view === 'network' && (
-        <div style={s.overviewContainer}>
-          <div style={s.fleetHeader}>
-            <div>
-              <h3 style={s.hubTitle}>Live Network Heartbeat</h3>
-              <p style={s.hubRole}>Sistema Autonomo Operativo • {networkFlights.length} Voli Attivi</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isStandbyActive ? 'var(--color-primary-light)' : 'var(--color-background)', padding: '4px 10px', borderRadius: 'var(--radius-full)', border: `1px solid ${isStandbyActive ? 'var(--color-primary)' : 'var(--color-border)'}`, cursor: 'pointer' }} onClick={() => setIsStandbyActive(!isStandbyActive)}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isStandbyActive ? 'var(--color-primary)' : 'var(--color-text-hint)' }} />
-                <span style={{ fontSize: '11px', fontWeight: 600, color: isStandbyActive ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>STANDBY: {isStandbyActive ? 'ACTIVE' : 'OFF'}</span>
-              </div>
-              <div style={s.hubStatus}>Aggiornato: {lastHeartbeat.toLocaleTimeString()}</div>
-            </div>
-          </div>
-
-          {/* ── Sezione Alert Standby ── */}
-          {standbyAlerts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px', padding: '14px', background: 'rgba(230, 81, 0, 0.1)', border: '1px solid #e65100', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>🚨</span>
-                <h4 style={{ margin: 0, fontSize: '14px', color: '#e65100', fontWeight: 700 }}>Dispatch Emergency: Voli Scoperti</h4>
-              </div>
-              {standbyAlerts.map(alert => (
-                <div key={alert.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700 }}>{alert.flightNum} — {alert.tailNumber} AOG</span>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>L'aeromobile richiede manutenzione immediata. Richiesta sostituzione.</span>
+                {isTyping && (
+                  <div style={s.msgRow}>
+                    <div style={s.ariaAvatar}>A</div>
+                    <div style={{ ...s.bubble, ...s.bubbleAria }}>
+                       <RefreshCw size={16} className="spin" style={{ color: 'var(--color-text-hint)' }} />
+                    </div>
                   </div>
-                  <button 
-                    disabled={!isStandbyActive}
-                    onClick={() => {
-                      // Qui andrebbe la logica per "prendere" il volo. Per ora puliamo l'alert.
-                      setStandbyAlerts(prev => prev.filter(a => a.id !== alert.id));
-                      alert(`Incarico accettato! Ti stai posizionando per operare il volo ${alert.flightNum} con l'aeromobile di riserva.`);
-                    }}
-                    style={{ 
-                      padding: '6px 12px', borderRadius: '4px', border: 'none', 
-                      background: isStandbyActive ? '#e65100' : 'var(--color-border)', 
-                      color: '#fff', fontSize: '11px', fontWeight: 700, cursor: isStandbyActive ? 'pointer' : 'not-allowed' 
-                    }}
-                  >
-                    {isStandbyActive ? 'ACCETTA DISPATCH' : 'ATTIVA STANDBY'}
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              <div style={s.chatFooter}>
+                <div style={s.quickActions}>
+                  {[
+                    'Analisi rotte XP',
+                    'Stato flotta attiva',
+                    'Prossimo rank',
+                  ].map(q => (
+                    <button key={q} style={s.quickBtn} onClick={() => setInput(q)}>{q}</button>
+                  ))}
+                </div>
+                <div style={s.inputRow}>
+                  <input
+                    style={s.input}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                    placeholder="Invia un comando tattico ad ARIA..."
+                  />
+                  <button style={s.sendBtn} onClick={sendMessage} disabled={isTyping || !input.trim()}>
+                    <ChevronRight size={20} />
                   </button>
                 </div>
-              ))}
+              </div>
             </div>
           )}
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-            {networkFlights.length === 0 && (
-              <p style={{ color: 'var(--color-text-hint)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>Nessun volo attivo in questo momento.</p>
-            )}
-            {
-                [...networkFlights].sort((a, b) => {
-                  const STATUS_WEIGHTS: Record<string, number> = {
-                    'Boarding': 10, 'Pushback': 9, 'Taxi Out': 8, 'En Route': 7, 
-                    'Approach': 6, 'Taxi In': 5, 'Arrived': 4, 'Turnaround': 3, 
-                    'Scheduled': 2, 'AOG/Cancel': 1
-                  };
-                  return (STATUS_WEIGHTS[b.status] || 0) - (STATUS_WEIGHTS[a.status] || 0);
-                }).map(nf => (
-                  <div key={nf.id} style={{
-                    background: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px', padding: '12px',
-                    display: 'flex', flexDirection: 'column', gap: '8px'
-                  }}>
+
+
+          {/* 📊 OVERVIEW VIEW */}
+          {view === 'overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              <div style={s.kpiGrid}>
+                 <div style={s.kpiCard}>
+                    <span style={s.sectionTitle}>Total XP</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>{profile?.totalXp.toLocaleString()}</span>
+                 </div>
+                 <div style={s.kpiCard}>
+                    <span style={s.sectionTitle}>Block Hours</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700 }}>{profile?.totalHours.toFixed(1)}h</span>
+                 </div>
+                 <div style={s.kpiCard}>
+                    <span style={s.sectionTitle}>Total Flights</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700 }}>{profile?.totalFlights}</span>
+                 </div>
+                 <div style={s.kpiCard}>
+                    <span style={s.sectionTitle}>Network Traffic</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-success)' }}>{networkFlights.length}</span>
+                 </div>
+              </div>
+
+              <div style={s.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</span>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-family-mono)' }}>{nf.departure} ✈️ {nf.arrival}</span>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>Hub Performance</h3>
+                  <button onClick={generateOverview} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '13px' }}>
+                    <RefreshCw size={14} style={{ marginRight: '6px' }} /> Update AI analysis
+                  </button>
+                </div>
+                
+                {overviewData ? (
+                  <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--color-text-secondary)' }}>
+                     {typeof overviewData === 'string' ? (
+                       overviewData.split('\n').map((line: string, i: number) => <p key={i} style={{ margin: '0 0 12px' }}>{line}</p>)
+                     ) : (
+                       <p>Dati non disponibili nel formato corretto.</p>
+                     )}
                   </div>
-                  <span style={{ 
-                    fontSize: '11px', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold',
-                    background: (nf.status === 'Arrived' || nf.status === 'Turnaround') ? '#2e7d32' : 
-                                nf.status === 'En Route' ? '#0277bd' :
-                                (nf.status === 'Approach' || nf.status === 'Taxi In') ? '#e65100' : 
-                                (nf.status === 'Taxi Out' || nf.status === 'Pushback') ? '#f57c00' :
-                                '#424242',
-                    color: '#fff'
-                  }}>{nf.status}</span>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
-                  <span>Cmdt. {nf.pilot.name} ({nf.pilot.rank})</span>
-                  <span>[{nf.tailNumber || '...'}] {nf.aircraft}</span>
-                </div>
-                
-                {['Boarding', 'Pushback', 'Taxi Out', 'En Route', 'Approach', 'Taxi In'].includes(nf.status) && (
-                  <div style={{ width: '100%', height: '4px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden', marginTop: '4px' }}>
-                    <div style={{ width: `${nf.progressPercent}%`, height: '100%', background: 'var(--color-primary)' }} />
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-hint)' }}>
+                     {overviewLoading ? <RefreshCw className="spin" size={24} /> : 'Nessuna analisi generata. Clicca su Aggiorna.'}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* 📅 SCHEDULE VIEW */}
+          {view === 'schedule' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  style={{ ...s.sidebarBtn, ...(scheduleTab === 'mine' ? s.sidebarBtnActive : {}), width: 'auto' }}
+                  onClick={() => setScheduleTab('mine')}
+                >
+                  <Calendar size={16} /> I miei voli
+                </button>
+                <button
+                  style={{ ...s.sidebarBtn, ...(scheduleTab === 'crew' ? s.sidebarBtnActive : {}), width: 'auto' }}
+                  onClick={() => setScheduleTab('crew')}
+                >
+                  <Users size={16} /> Crew Board
+                </button>
+              </div>
+
+              {scheduleTab === 'mine' && (
+                <div style={s.flightGrid}>
+                  {schedule.length > 0 ? (
+                    schedule.map((f, i) => (
+                      <div key={i} style={{ ...s.card, ...s.flightCard, ...(selectedFlight === f ? { borderColor: 'var(--color-primary)', boxShadow: '0 0 0 1px var(--color-primary)' } : {}) }} onClick={() => { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={s.sectionTitle}>{f.day} • {f.flightNumber}</span>
+                            <div style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0' }}>{f.departure} → {f.arrival}</div>
+                          </div>
+                          <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>{f.aircraft}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                           <span>{f.distance}</span>
+                           <span>{f.estimatedDuration}</span>
+                        </div>
+                        {selectedFlight === f && (
+                          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
+                            <p style={{ margin: '0 0 12px' }}>{f.reason}</p>
+                            <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer" style={{ ...s.sendBtn, width: '100%', height: '36px', fontSize: '13px', textDecoration: 'none', gap: '8px' }}>
+                              <ExternalLink size={14} /> Briefing in SimBrief
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--color-text-hint)' }}>
+                       <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
+                       <p>Nessun volo programmato. Genera una nuova schedule settimanale.</p>
+                       <button onClick={generateSchedule} style={{ ...s.sendBtn, width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {scheduleTab === 'crew' && (
+                <div style={s.flightGrid}>
+                  {Array.from(new Map(networkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => (
+                    <div key={nf.id} style={s.card}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={s.ariaAvatar}>{(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}</div>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: 600 }}>{nf.pilot.name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>{nf.pilot.rank} • {nf.pilot.base}</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-mono)', fontWeight: 600 }}>{nf.flightNumber}</span>
+                        <span style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: 600 }}>{nf.status.toUpperCase()}</span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{nf.departure} → {nf.arrival}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ✈️ FLEET VIEW */}
+          {view === 'fleet' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              <div style={s.card}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                   <div style={s.ariaAvatar}>A</div>
+                   <div>
+                      <span style={s.sectionTitle}>ARIA Fleet Intelligence</span>
+                      <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
+                        {fleetBriefingLoading ? 'Analisi stato flotta in corso...' : fleetBriefing}
+                      </p>
+                   </div>
+                </div>
+              </div>
+
+              <div style={s.flightGrid}>
+                {fleetState.map((ac) => {
+                  // Trova se l'aereo è attualmente in volo nel network
+                  const activeFlight = networkFlights.find(nf => nf.tailNumber === ac.id);
+                  const isFlying = activeFlight && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(activeFlight.status);
+                  const liveStatus = isFlying ? activeFlight.status.toUpperCase() : ac.status;
+                  const statusColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
+                                     isFlying ? 'var(--color-primary)' : 'var(--color-success)';
+
+                  return (
+                    <div key={ac.id} style={s.card}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-family-mono)' }}>{ac.id}</span>
+                        <span style={{ 
+                          fontSize: '10px', 
+                          padding: '2px 8px', 
+                          borderRadius: '4px', 
+                          background: `${statusColor}22`, 
+                          color: statusColor, 
+                          fontWeight: 700,
+                          border: `1px solid ${statusColor}44`
+                        }}>
+                          {liveStatus}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{ac.type}</div>
+                      
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-hint)', marginBottom: '5px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{ac.totalFlightHours.toFixed(1)}h</span>
+                            <span>totali</span>
+                          </div>
+                          <span>Check: {Math.floor(((ac.totalFlightHours % 500) / 500) * 100)}%</span>
+                        </div>
+                        <div style={{ height: '6px', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ 
+                            height: '100%', 
+                            width: `${((ac.totalFlightHours % 500) / 500) * 100}%`, 
+                            background: ac.status === 'AOG' ? 'var(--color-danger)' : 
+                                       ((ac.totalFlightHours % 500) > 450) ? 'var(--color-warning)' : 'var(--color-primary)',
+                            transition: 'width 0.5s ease'
+                          }} />
+                        </div>
+                      </div>
+                      
+                      {isFlying && (
+                        <div style={{ marginTop: '10px', padding: '6px', borderRadius: '6px', background: 'var(--color-primary-light)', fontSize: '10px' }}>
+                          <span style={{ fontWeight: 600 }}>{activeFlight?.flightNumber}</span>: {activeFlight?.departure} → {activeFlight?.arrival}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 📡 NETWORK VIEW */}
+          {view === 'network' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>Live Operations</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                     <div style={{ fontSize: '12px', color: 'var(--color-text-hint)' }}>Ultimo segnale: {lastHeartbeat.toLocaleTimeString()}</div>
+                     <button onClick={() => setIsStandbyActive(!isStandbyActive)} style={{ ...s.sidebarBtn, background: isStandbyActive ? 'rgba(255, 107, 129, 0.1)' : 'transparent', color: isStandbyActive ? '#ff6b81' : 'var(--color-text-hint)', border: '1px solid currentColor', padding: '6px 12px', height: 'auto', width: 'auto' }}>
+                        {isStandbyActive ? 'DISATTIVA STANDBY' : 'ATTIVA STANDBY'}
+                     </button>
+                  </div>
+               </div>
+
+               <div style={s.flightGrid}>
+                  {[...networkFlights].sort((a, b) => {
+                    const statusPrio: Record<string, number> = {
+                      'En Route': 100,
+                      'Approach': 90,
+                      'Taxi Out': 80,
+                      'Pushback': 70,
+                      'Boarding': 60,
+                      'Taxi In': 50,
+                      'Arrived': 40,
+                      'Turnaround': 30,
+                      'Scheduled': 20,
+                      'AOG/Cancel': 10
+                    };
+                    const pa = statusPrio[a.status] || 0;
+                    const pb = statusPrio[b.status] || 0;
+                    if (pa !== pb) return pb - pa;
+                    return a.departureTime - b.departureTime;
+                  }).map((nf) => (
+                    <div key={nf.id} style={s.card} onClick={() => { setSelectedFlightForMap(nf); setIsMapZoomed(true); }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: nf.status === 'En Route' ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, margin: '4px 0' }}>{nf.departure} → {nf.arrival}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
+                        <span>Cmdt. {nf.pilot.name}</span>
+                        <span>{nf.aircraft} ({nf.tailNumber})</span>
+                      </div>
+                      {nf.progressPercent > 0 && nf.progressPercent < 100 && (
+                        <div style={{ marginTop: '12px' }}>
+                          <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: 'var(--color-primary)' }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 }
@@ -1512,720 +1516,358 @@ const s: Record<string, React.CSSProperties> = {
   container: {
     fontFamily: 'var(--font-family-sans)',
     background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-xl)',
+    display: 'flex',
+    flexDirection: 'row',
+    height: '100%',
+    width: '100%',
+    color: 'var(--color-text-primary)',
     overflow: 'hidden',
+  },
+  
+  // Sidebar Interna
+  sidebar: {
+    width: '240px',
+    background: 'var(--color-background)',
+    borderRight: '1px solid var(--color-border)',
     display: 'flex',
     flexDirection: 'column',
-    height: '72vh',
-    minHeight: '600px',
-    maxHeight: '860px',
-    color: 'var(--color-text-primary)',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  loadingContainer: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', height: '300px', gap: '16px',
-    background: 'var(--color-surface)',
-  },
-  loadingSpinner: {
-    width: '28px', height: '28px',
-    border: '2px solid var(--color-border)',
-    borderTop: '2px solid var(--color-primary)',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  loadingText: { color: 'var(--color-text-secondary)', fontSize: '14px' },
-
-  // Header
-  header: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '14px 20px',
-    background: 'var(--color-surface)',
-    borderBottom: '1px solid var(--color-border)',
-  },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
-  ariaLogo: {
-    width: '34px', height: '34px', borderRadius: 'var(--radius-md)',
-    background: 'var(--color-primary)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
     flexShrink: 0,
+    zIndex: 10,
+    padding: '24px 0',
   },
-  title: {
-    margin: 0, fontSize: '15px', fontWeight: 600,
+  sidebarHeader: {
+    padding: '0 24px',
+    marginBottom: '32px',
+  },
+  logoContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  ariaIcon: {
+    width: '32px',
+    height: '32px',
+    background: 'var(--color-primary)',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(20, 106, 255, 0.3)',
+  },
+  sidebarTitle: {
+    margin: 0,
+    fontSize: '20px',
+    fontWeight: 600,
     fontFamily: 'var(--font-family-display)',
-    color: 'var(--color-text-primary)',
-    letterSpacing: '0.04em',
-  },
-  subtitle: {
-    margin: 0, fontSize: '11px',
-    color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
     letterSpacing: '0.02em',
   },
-  pilotBadge: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' },
-  rankLabel: {
-    fontSize: '11px', fontWeight: 500,
-    color: 'var(--color-primary)',
-    background: 'var(--color-primary-light)',
-    padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  xpLabel: {
-    fontFamily: 'var(--font-family-mono)',
-  },
-  testBtn: {
-    fontSize: '10px', padding: '4px 8px',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-sm)',
-    color: 'var(--color-text-hint)',
-    cursor: 'pointer', marginLeft: '12px',
-  },
-
-  // Nav
-  nav: {
+  sidebarNav: {
     display: 'flex',
-    borderBottom: '1px solid var(--color-border)',
-    background: 'var(--color-background)',
+    flexDirection: 'column',
+    gap: '4px',
+    padding: '0 12px',
   },
-  navBtn: {
-    flex: 1, padding: '10px 8px', border: 'none',
+  sidebarBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    border: 'none',
     background: 'transparent',
+    borderRadius: 'var(--radius-lg)',
     color: 'var(--color-text-secondary)',
-    fontSize: '12.5px', fontWeight: 400,
-    fontFamily: 'var(--font-family-sans)',
-    cursor: 'pointer',
-    borderBottom: '2px solid transparent',
-    transition: 'all 0.15s',
-  },
-  navBtnActive: {
-    color: 'var(--color-primary)',
-    borderBottomColor: 'var(--color-primary)',
+    fontSize: '14px',
     fontWeight: 500,
-    background: 'var(--color-surface)',
+    cursor: 'pointer',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    textAlign: 'left',
+  },
+  sidebarBtnActive: {
+    background: 'var(--color-primary-light)',
+    color: 'var(--color-primary)',
+  },
+  sidebarBtnIcon: {
+    width: '18px',
+    height: '18px',
   },
 
-  // Chat
-  chatContainer: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' },
-  messageList: {
-    flex: 1, overflowY: 'auto', padding: '16px',
-    display: 'flex', flexDirection: 'column', gap: '12px',
-    background: 'var(--color-background)',
+  // Main Content Area
+  mainArea: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    background: 'var(--color-surface)',
+    overflow: 'hidden',
+    position: 'relative',
   },
-  msgRow: { display: 'flex', gap: '10px', alignItems: 'flex-end' },
+
+  // Map Container
+  mapWrapper: {
+    width: '100%',
+    height: '320px',
+    background: 'var(--color-background)',
+    borderBottom: '1px solid var(--color-border)',
+    position: 'relative',
+    flexShrink: 0,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    zIndex: 500,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  mapBadge: {
+    background: 'rgba(var(--color-surface-rgb), 0.85)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid var(--color-border)',
+    padding: '6px 12px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--color-text-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+
+  // Content Scroller (under the map)
+  contentScroller: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
+
+  // Chat View
+  chatContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    maxWidth: '1000px',
+    margin: '0 auto',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+  },
+  messageList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '32px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
+  msgRow: { display: 'flex', gap: '16px', alignItems: 'flex-start' },
   msgRowPilot: { flexDirection: 'row-reverse' },
   ariaAvatar: {
-    width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+    width: '36px',
+    height: '36px',
+    borderRadius: '12px',
+    flexShrink: 0,
     background: 'var(--color-primary)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '10px', fontWeight: 600, color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: 'white',
     fontFamily: 'var(--font-family-display)',
+    boxShadow: '0 4px 12px rgba(20, 106, 255, 0.2)',
   },
   bubble: {
-    maxWidth: '75%', padding: '10px 14px', borderRadius: '14px',
-    display: 'flex', flexDirection: 'column', gap: '3px',
+    maxWidth: '70%',
+    padding: '16px 20px',
+    borderRadius: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    boxShadow: 'var(--shadow-sm)',
+    position: 'relative',
+    animation: 'fadeSlideUp 0.3s ease-out',
   },
   bubbleAria: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
-    borderBottomLeftRadius: '4px',
+    borderTopLeftRadius: '4px',
   },
   bubblePilot: {
-    background: 'var(--color-primary-light)',
-    border: '1px solid var(--color-primary)',
-    borderBottomRightRadius: '4px',
+    background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-hover))',
+    color: 'white',
+    borderTopRightRadius: '4px',
+    boxShadow: '0 8px 24px rgba(20, 106, 255, 0.25)',
   },
   msgLine: {
-    margin: 0, fontSize: '13.5px', lineHeight: '1.55',
-    color: 'var(--color-text-primary)',
+    margin: 0,
+    fontSize: '14.5px',
+    lineHeight: '1.6',
     fontFamily: 'var(--font-family-sans)',
   },
   msgTime: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    alignSelf: 'flex-end', marginTop: '2px',
+    fontSize: '10px',
+    opacity: 0.6,
+    alignSelf: 'flex-end',
+    marginTop: '4px',
     fontFamily: 'var(--font-family-mono)',
   },
-  typingDots: { display: 'flex', gap: '4px', padding: '4px 0' },
-  dot: {
-    width: '5px', height: '5px', borderRadius: '50%',
-    background: 'var(--color-text-hint)',
-    animation: 'bounce 1.2s infinite',
-  },
-  quickActions: {
-    display: 'flex', gap: '6px', padding: '8px 16px',
-    flexWrap: 'wrap', background: 'var(--color-background)',
+  
+  chatFooter: {
+    padding: '24px',
+    background: 'var(--color-surface)',
     borderTop: '1px solid var(--color-border)',
   },
+  quickActions: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
   quickBtn: {
-    fontSize: '11px', padding: '4px 10px',
-    background: 'var(--color-surface)',
+    fontSize: '12px',
+    padding: '8px 16px',
+    background: 'var(--color-background)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-full)',
     color: 'var(--color-text-secondary)',
-    cursor: 'pointer', whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
     fontFamily: 'var(--font-family-sans)',
+    fontWeight: 500,
   },
   inputRow: {
-    display: 'flex', gap: '8px', padding: '12px 16px',
-    background: 'var(--color-surface)',
-    borderTop: '1px solid var(--color-border)',
+    display: 'flex',
+    gap: '12px',
+    maxWidth: '800px',
+    margin: '0 auto',
+    width: '100%',
+    background: 'var(--color-background)',
+    padding: '8px',
+    borderRadius: 'var(--radius-xl)',
+    border: '1px solid var(--color-border)',
+    boxShadow: 'var(--shadow-sm)',
   },
   input: {
-    flex: 1, padding: '9px 14px',
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
+    flex: 1,
+    padding: '12px 16px',
+    background: 'transparent',
+    border: 'none',
     color: 'var(--color-text-primary)',
-    fontSize: '13.5px', outline: 'none',
+    fontSize: '15px',
+    outline: 'none',
     fontFamily: 'var(--font-family-sans)',
   },
   sendBtn: {
-    width: '38px', height: '38px', borderRadius: 'var(--radius-md)', flexShrink: 0,
-    background: 'var(--color-primary)', border: 'none', color: 'white',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-  },
-
-  // Schedule
-  scheduleContainer: {
-    flex: 1, overflowY: 'auto', padding: '16px',
-    display: 'flex', flexDirection: 'column', gap: '10px',
-    background: 'var(--color-background)',
-  },
-  emptyState: {
-    flex: 1, display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
-    gap: '8px', padding: '40px',
-  },
-  emptyText: {
-    fontSize: '14px', fontWeight: 500,
-    color: 'var(--color-text-secondary)', margin: 0,
-    fontFamily: 'var(--font-family-sans)',
-  },
-  emptySubText: {
-    fontSize: '12.5px', color: 'var(--color-text-hint)',
-    margin: 0, textAlign: 'center', lineHeight: '1.5',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  generateBtn: {
-    marginTop: '16px', padding: '11px 28px',
+    width: '44px',
+    height: '44px',
+    borderRadius: '12px',
+    flexShrink: 0,
     background: 'var(--color-primary)',
-    border: 'none', borderRadius: 'var(--radius-md)', color: 'white',
-    fontSize: '13.5px', fontWeight: 500, cursor: 'pointer',
-    fontFamily: 'var(--font-family-sans)',
-    letterSpacing: '0.02em',
-  },
-  scheduleHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: '4px',
-  },
-  scheduleTitle: {
-    fontSize: '11px', fontWeight: 500,
-    color: 'var(--color-text-hint)',
-    textTransform: 'uppercase', letterSpacing: 'var(--type-label-spacing)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  regenBtn: {
-    fontSize: '12px', padding: '4px 12px',
-    background: 'transparent',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--color-text-secondary)', cursor: 'pointer',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightList: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  flightCard: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)', padding: '14px 16px',
-    cursor: 'pointer', transition: 'all 0.15s',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  flightCardSelected: {
-    background: 'var(--color-primary-light)',
-    border: '1px solid var(--color-primary)',
-  },
-  flightCardTop: {
-    display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px',
-  },
-  flightDay: {
-    fontSize: '12px', fontWeight: 500,
-    color: 'var(--color-primary)',
-    minWidth: '72px',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightNumber: {
-    fontSize: '11px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-mono)',
-  },
-  longHaulBadge: {
-    fontSize: '9px', fontWeight: 500,
-    color: 'var(--color-warning)',
-    background: 'var(--color-warning-bg)',
-    borderRadius: 'var(--radius-sm)',
-    padding: '1px 6px', letterSpacing: '0.06em',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightAircraft: {
-    fontSize: '11px', color: 'var(--color-text-hint)',
-    marginLeft: 'auto',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightRoute: { display: 'flex', alignItems: 'center', gap: '8px' },
-  routePoint: { display: 'flex', flexDirection: 'column', minWidth: '72px' },
-  icao: {
-    fontSize: '17px', fontWeight: 500,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-    letterSpacing: '-0.01em',
-  },
-  routeCity: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    marginTop: '2px', fontFamily: 'var(--font-family-sans)',
-  },
-  flightTime: {
-    fontSize: '11px', color: 'var(--color-text-secondary)',
-    marginTop: '2px', fontFamily: 'var(--font-family-mono)',
-  },
-  routeArrow: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' },
-  routeMeta: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightDetail: {
-    marginTop: '12px', paddingTop: '12px',
-    borderTop: '1px solid var(--color-divider)',
-  },
-  flightReason: {
-    fontSize: '12.5px', color: 'var(--color-text-secondary)',
-    margin: '0 0 10px', lineHeight: '1.55',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  flightActions: { display: 'flex', gap: '8px' },
-  simbriefBtn: {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '7px 14px', background: '#f97316',
-    border: 'none', borderRadius: 'var(--radius-md)',
-    color: 'white', fontSize: '12px', fontWeight: 500,
-    textDecoration: 'none', cursor: 'pointer',
-    fontFamily: 'var(--font-family-sans)',
+    border: 'none',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
   },
 
-  // Schedule sub-nav
-  schedSubNav: {
-    display: 'flex', gap: '4px', padding: '4px',
-    background: 'var(--color-background)',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    flexShrink: 0,
-  },
-  schedSubBtn: {
-    flex: 1, padding: '7px 12px', border: 'none',
-    background: 'transparent',
-    color: 'var(--color-text-secondary)',
-    fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-    borderRadius: 'var(--radius-sm)',
-    fontFamily: 'var(--font-family-sans)',
-    transition: 'all 0.15s',
-  },
-  schedSubBtnActive: {
-    background: 'var(--color-surface)',
-    color: 'var(--color-primary)',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  // Base badge
-  baseBadge: {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '8px 12px',
-    background: 'var(--color-primary-light)',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--radius-md)',
-    flexShrink: 0,
-  },
-  baseDot: { fontSize: '13px' },
-  baseIcao: {
-    fontSize: '13px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-primary)',
-  },
-  baseSep: { color: 'var(--color-text-hint)', fontSize: '12px' },
-  baseCity: {
-    fontSize: '12px', color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--font-family-sans)',
-    flex: 1,
-  },
-  baseRole: {
-    fontSize: '10px', fontWeight: 500,
-    color: 'var(--color-primary)',
-    background: 'var(--color-surface)',
-    padding: '2px 8px', borderRadius: 'var(--radius-full)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.06em',
-  },
-  // Crew Board
-  crewCount: {
-    fontSize: '11px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  crewGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '8px',
-  },
-  crewCard: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)', padding: '12px',
-    display: 'flex', flexDirection: 'column', gap: '10px',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  crewCardHeader: { display: 'flex', alignItems: 'center', gap: '10px' },
-  crewAvatar: {
-    width: '34px', height: '34px', borderRadius: '50%',
-    background: 'var(--color-primary-light)',
-    color: 'var(--color-primary)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '11px', fontWeight: 700,
-    fontFamily: 'var(--font-family-display)',
-    flexShrink: 0,
-  },
-  crewInfo: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 },
-  crewName: {
-    fontSize: '13px', fontWeight: 500,
-    color: 'var(--color-text-primary)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  crewRank: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  crewBase: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' },
-  crewBaseIcao: {
-    fontSize: '12px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-  },
-  crewBaseRole: {
-    fontSize: '9px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
-  },
-  crewFlight: {
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)', padding: '8px 10px',
-    display: 'flex', flexDirection: 'column', gap: '4px',
-  },
-  crewFlightRoute: { display: 'flex', alignItems: 'center' },
-  crewIcao: {
-    fontSize: '15px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-  },
-  crewFlightMeta: { display: 'flex', gap: '8px', alignItems: 'center' },
-  crewFlightNum: {
-    fontSize: '10px', fontWeight: 600,
-    color: 'var(--color-primary)',
-    fontFamily: 'var(--font-family-mono)',
-  },
-  crewFlightAc: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  crewFlightTime: {
-    fontSize: '10px', fontWeight: 500,
-    color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--font-family-mono)',
-    marginLeft: 'auto',
-  },
-  crewFlightCities: {
-    margin: 0, fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  crewOffDuty: {
-    margin: 0, fontSize: '11px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)', fontStyle: 'italic',
-    textAlign: 'center' as const, padding: '6px 0',
-  },
-  // Overview
-  overviewContainer: {
-    flex: 1, overflowY: 'auto', padding: '16px',
-    display: 'flex', flexDirection: 'column', gap: '12px',
-    background: 'var(--color-background)',
-  },
-  overviewLoading: {
-    flex: 1, display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', gap: '14px',
-  },
-  ovBriefingCard: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--radius-lg)', padding: '14px 16px',
-    boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '10px',
-  },
-  ovRefreshBtn: {
-    marginLeft: 'auto', background: 'transparent',
-    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
-    color: 'var(--color-text-hint)', cursor: 'pointer',
-    fontSize: '14px', width: '26px', height: '26px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  ovKpiBar: {
-    display: 'flex', alignItems: 'center',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)', padding: '12px 20px',
-    gap: '0', boxShadow: 'var(--shadow-sm)',
-  },
-  ovKpi: {
-    flex: 1, display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: '3px',
-  },
-  ovKpiValue: {
-    fontSize: '22px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-    lineHeight: 1,
-  },
-  ovKpiLabel: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
-  },
-  ovKpiDivider: {
-    width: '1px', height: '36px',
-    background: 'var(--color-border)', flexShrink: 0, margin: '0 4px',
-  },
-  ovSection: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)', padding: '14px 16px',
-    display: 'flex', flexDirection: 'column', gap: '10px',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  ovHubGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-  },
-  ovHubCard: {
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)', padding: '12px',
-    display: 'flex', flexDirection: 'column', gap: '8px',
-  },
-  ovHubHeader: {
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-  },
-  ovHubIcao: {
-    display: 'block', fontSize: '16px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-  },
-  ovHubRole: {
-    display: 'block', fontSize: '9px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginTop: '2px',
-  },
-  ovHubStatus: {
-    fontSize: '10px', fontWeight: 500,
-    fontFamily: 'var(--font-family-sans)',
-  },
-  ovHubStats: { display: 'flex', gap: '12px' },
-  ovHubStat: { display: 'flex', flexDirection: 'column', gap: '1px' },
-  ovHubStatVal: {
-    fontSize: '18px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)', lineHeight: 1,
-  },
-  ovHubStatLbl: {
-    fontSize: '9px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.04em',
-  },
-  ovHubAlert: {
-    margin: 0, fontSize: '11px', color: 'var(--color-warning)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  ovFlightList: {
-    display: 'flex', flexDirection: 'column', gap: '0',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)', overflow: 'hidden',
-  },
-  ovFlightRow: {
-    display: 'grid',
-    gridTemplateColumns: '72px 110px 80px 48px 1fr 40px 72px 80px',
-    gap: '8px', padding: '9px 12px',
-    alignItems: 'center',
-    borderBottom: '1px solid var(--color-border)',
-    background: 'var(--color-surface)',
-  },
-  ovFlightNum: {
-    fontSize: '11px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-primary)',
-  },
-  ovFlightRoute: {
-    fontSize: '12px', fontWeight: 500,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-primary)',
-  },
-  ovFlightAc: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  ovFlightTime: {
-    fontSize: '11px', fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-text-secondary)',
-  },
-  ovLoadBar: {
-    height: '6px', background: 'var(--color-border)',
-    borderRadius: '3px', overflow: 'hidden',
-  },
-  ovLoadFill: {
-    height: '100%', borderRadius: '3px',
-    transition: 'width 0.4s ease',
-  },
-  ovLoadPct: {
-    fontSize: '11px', fontWeight: 600,
-    fontFamily: 'var(--font-family-mono)',
-    textAlign: 'right' as const,
-  },
-  ovFlightPax: {
-    fontSize: '10px', color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--font-family-mono)',
-    textAlign: 'center' as const,
-  },
-  ovFlightStatus: {
-    fontSize: '10px', fontWeight: 500,
-    fontFamily: 'var(--font-family-sans)',
-    textAlign: 'right' as const,
-  },
-  ovPaxGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-  },
-  ovPaxCard: {
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)', padding: '12px 14px',
-    display: 'flex', flexDirection: 'column', gap: '4px',
-    alignItems: 'center',
-  },
-  ovPaxVal: {
-    fontSize: '22px', fontWeight: 700,
-    fontFamily: 'var(--font-family-mono)',
-    color: 'var(--color-primary)', lineHeight: 1,
-  },
-  ovPaxLbl: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
-    textAlign: 'center' as const,
-  },
-  // Fleet Status
-  fleetContainer: {
-    flex: 1, overflowY: 'auto', padding: '16px',
-    display: 'flex', flexDirection: 'column', gap: '16px',
-    background: 'var(--color-background)',
-  },
-  fleetBriefingCard: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '16px',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  fleetBriefingHeader: {
-    display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px',
-  },
-  fleetBriefingLabel: {
-    margin: 0, fontSize: '12px', fontWeight: 600,
-    color: 'var(--color-primary)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  fleetBriefingTime: {
-    margin: 0, fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-mono)',
-    textTransform: 'capitalize',
-  },
-  fleetBriefingBody: { minHeight: '32px' },
-  fleetBriefingText: {
-    margin: 0, fontSize: '13.5px', lineHeight: '1.65',
-    color: 'var(--color-text-primary)',
-    fontFamily: 'var(--font-family-sans)',
-    fontStyle: 'italic',
-  },
-  fleetSection: {
+  // Common UI Elements (from Briefing/Hangar)
+  card: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-lg)',
-    padding: '14px 16px',
-    display: 'flex', flexDirection: 'column', gap: '10px',
+    padding: '20px',
     boxShadow: 'var(--shadow-sm)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
   },
-  fleetSectionTitle: {
-    fontSize: '11px', fontWeight: 500,
+  glassCard: {
+    background: 'rgba(var(--color-surface-rgb), 0.7)',
+    backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+  sectionTitle: {
+    fontSize: '12px',
+    fontWeight: 600,
     color: 'var(--color-text-hint)',
-    textTransform: 'uppercase', letterSpacing: 'var(--type-label-spacing)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    marginBottom: '8px',
     fontFamily: 'var(--font-family-sans)',
   },
-  fleetGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px',
-  },
-  fleetAcCard: {
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)', padding: '10px 12px',
-    display: 'flex', flexDirection: 'column', gap: '3px',
-  },
-  fleetAcTop: { display: 'flex', alignItems: 'baseline', gap: '6px' },
-  fleetAcCount: {
-    fontSize: '18px', fontWeight: 700,
-    color: 'var(--color-primary)',
+  monoData: {
     fontFamily: 'var(--font-family-mono)',
+    fontWeight: 500,
   },
-  fleetAcType: {
-    fontSize: '12px', fontWeight: 500,
-    color: 'var(--color-text-primary)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  fleetAcRole: {
-    fontSize: '10px', fontWeight: 600,
-    color: 'var(--color-primary)',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase', letterSpacing: '0.04em',
-  },
-  fleetAcMission: {
-    fontSize: '10px', color: 'var(--color-text-hint)',
-    fontFamily: 'var(--font-family-sans)', lineHeight: '1.4',
-  },
-  hubHeader: {
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-  },
-  hubRole: {
-    display: 'block', fontSize: '10px', fontWeight: 500,
-    color: 'var(--color-primary)', marginTop: '2px',
-    fontFamily: 'var(--font-family-sans)',
-    textTransform: 'uppercase', letterSpacing: '0.06em',
-  },
-  hubStatus: {
-    fontSize: '11px', fontWeight: 500, color: 'var(--color-success)',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  hubDesc: {
-    margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--font-family-sans)', lineHeight: '1.5',
-  },
-  routeTable: {
-    display: 'flex', flexDirection: 'column',
-    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden',
-  },
-  routeRow: {
+
+  // KPI UI
+  kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: '60px 1fr 90px 70px 90px 90px',
-    gap: '8px', padding: '8px 12px',
-    alignItems: 'center',
-    background: 'var(--color-surface)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
   },
-  routeRowAlt: { background: 'var(--color-background)' },
+  kpiCard: {
+    padding: '16px 20px',
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+
+  // Flight Lists
+  flightGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: '16px',
+  },
+  flightCard: {
+    padding: '20px',
+    cursor: 'pointer',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  
+  // Pilot Profile Mini
+  pilotInfo: {
+    marginTop: 'auto',
+    padding: '24px 16px',
+    borderTop: '1px solid var(--color-border)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  pilotAvatar: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: 'var(--color-primary-light)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--color-primary)',
+    fontWeight: 700,
+  },
+  pilotText: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  pilotName: {
+    fontSize: '14px',
+    fontWeight: 600,
+  },
+  pilotRank: {
+    fontSize: '11px',
+    color: 'var(--color-text-hint)',
+  }
 };
