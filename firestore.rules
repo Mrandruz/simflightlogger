@@ -9,6 +9,14 @@ service cloud.firestore {
       );
     }
 
+    // Rules for the fleet collection (Velar Fleet Management)
+    match /fleet/{aircraftId} {
+      // Chiunque sia autenticato può leggere lo stato della flotta
+      allow read: if request.auth != null;
+      // Scrittura permessa solo agli amministratori o per aggiornamenti parziali degli aerei (es. ore di volo)
+      allow write: if isAdmin();
+    }
+
     // Rules for the users collection
     match /users {
       allow list: if request.auth != null;
@@ -18,7 +26,7 @@ service cloud.firestore {
         allow create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
 
-        // Sub-collections (flights, settings)
+        // Sub-collections (flights, settings, operations)
         match /{allSubcollections=**} {
           allow read: if request.auth != null;
           allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
