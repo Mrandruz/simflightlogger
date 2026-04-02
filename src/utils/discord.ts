@@ -24,7 +24,15 @@ export async function sendDiscordNotification(message: DiscordMessage) {
     });
 
     if (!response.ok) {
-      throw new Error(`Discord notification failed: ${response.statusText}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: response.statusText };
+      }
+      const msg = errorData.error || response.statusText || 'Unknown Discord Error';
+      const details = errorData.details ? ` (${errorData.details})` : '';
+      return { error: `${msg}${details}` };
     }
 
     // Discord Webhook restituisce spesso 204 No Content se l'invio ha successo.

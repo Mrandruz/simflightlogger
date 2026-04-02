@@ -44,17 +44,9 @@ function fleetDbPlugin(env) {
                  const ac = db.find(a => a.id === logData.id);
                  if (ac) {
                     ac.totalFlightHours += logData.flightHours;
-                    const prevStatus = ac.status;
-                    let wentAOG = false;
-                    if (ac.totalFlightHours - (ac.lastMaintenanceHour || 0) >= 500) {
-                        ac.status = 'AOG';
-                        ac.isAOG = true;
-                        ac.aogUntilTimeMs = Date.now() + (24 * 60 * 60 * 1000); 
-                        wentAOG = true;
-                    }
                     fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ success: true, updated: ac, wentAOG }));
+                    res.end(JSON.stringify({ success: true, updated: ac }));
                     return;
                  }
               }
@@ -64,24 +56,29 @@ function fleetDbPlugin(env) {
            return;
         }
         
-        // --- 🤖 DISCORD ROUTER ---
-        if (req.url === '/api/discord' && req.method === 'POST') {
+        // --- 🤖 DISCORD ROUTER (Handles both standard and proxy) ---
+        if ((req.url === '/api/discord' || req.url === '/api/discord-proxy') && req.method === 'POST') {
            const body = req.body || {};
-           const channel = body.channel || 'generic';
-           const payload = body.payload;
            
-           let webhookUrl = env.VITE_DISCORD_WEBHOOK_URL; // fallback
-           if (channel === 'ops') webhookUrl = env.VITE_DISCORD_WEBHOOK_OPS || webhookUrl;
-           if (channel === 'fleet') webhookUrl = env.VITE_DISCORD_WEBHOOK_FLEET || webhookUrl;
-           if (channel === 'daily') webhookUrl = env.VITE_DISCORD_WEBHOOK_DAILY || webhookUrl;
+           // Se è /api/discord-proxy, il body è già il payload Discord.
+           // Se è /api/discord, il body ha { channel, payload }.
+           const isProxy = req.url === '/api/discord-proxy';
+           const channel = isProxy ? 'generic' : (body.channel || 'generic');
+           const payload = isProxy ? body : body.payload;
+           
+           let webhookUrl = env.VITE_DISCORD_WEBHOOK_URL;
+           if (!isProxy) {
+             if (channel === 'ops') webhookUrl = env.VITE_DISCORD_WEBHOOK_OPS || webhookUrl;
+             if (channel === 'fleet') webhookUrl = env.VITE_DISCORD_WEBHOOK_FLEET || webhookUrl;
+             if (channel === 'daily') webhookUrl = env.VITE_DISCORD_WEBHOOK_DAILY || webhookUrl;
+           }
            
            if (!webhookUrl || !payload) {
              res.statusCode = 400;
-             res.end(JSON.stringify({ error: 'Webhook URL non definito o payload mancante' }));
+             res.end(JSON.stringify({ error: 'Discord Webhook non configurato in .env' }));
              return;
            }
            
-           // Eseguiamo la vera fetch a Discord usando Node
            fetch(webhookUrl, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },

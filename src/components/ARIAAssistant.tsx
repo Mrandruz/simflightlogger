@@ -10,8 +10,10 @@
  *   <ARIAAssistant userId={user.uid} pilotName={user.displayName} />
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { useTheme } from '../hooks/useTheme';
+import styles from './ARIAAssistant.module.css';
 import { 
   collection, 
   getDocs, 
@@ -199,7 +201,8 @@ function computePilotProfile(flights: Flight[]): PilotProfile {
     let xp = Math.floor((fMiles / 10) + (fTime * 50) + 250);
     if (fMiles > 0 && fMiles < 1500) xp = Math.round(xp * 1.5);
     else if (fMiles >= 1500 && fMiles < 3000) xp = Math.round(xp * 1.25);
-    if (maxStreak >= 7) xp *= 2;
+    // Fix: applica x2 solo se la streak è attiva in questo volo (non retroattiva)
+    if (currentStreak >= 7) xp *= 2;
     if (totalXp >= 600000) xp = Math.floor(xp * 1.5);
     totalXp += xp;
 
@@ -283,25 +286,20 @@ interface ARIAMapProps {
     selectedFlight: any | null;
     isDarkMode: boolean;
     onCloseFlight?: () => void;
+    hubIcaos?: string[];
 }
 
-const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMapProps) => {
+const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight, hubIcaos = ['LIRF', 'KBOS', 'WIII'] }: ARIAMapProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstance = useRef<any>(null);
+    const mapInstance = useRef<L.Map | null>(null);
+    const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const markersLayerRef = useRef<L.LayerGroup | null>(null);
+    const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
+    // Inizializzazione Mappa (una sola volta)
     useEffect(() => {
-        if (!mapRef.current) return;
+        if (!mapRef.current || mapInstance.current) return;
 
-        // Cleanup
-        if (mapInstance.current) {
-            mapInstance.current.remove();
-            mapInstance.current = null;
-        }
-
-        const tileUrl = isDarkMode 
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-        
         const map = L.map(mapRef.current, { 
             attributionControl: false,
             zoomControl: false,
@@ -310,12 +308,44 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
         }).setView([30, 10], 2);
         
         mapInstance.current = map;
-        L.tileLayer(tileUrl).addTo(map);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        markersLayerRef.current = L.layerGroup().addTo(map);
+        routeLayerRef.current = L.layerGroup().addTo(map);
+
+        return () => {
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
+            }
+        };
+    }, []);
+
+    // Update Tiles (quando cambia il tema)
+    useEffect(() => {
+        if (!mapInstance.current) return;
+
+        if (tileLayerRef.current) {
+            tileLayerRef.current.remove();
+        }
+
+        const tileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        tileLayerRef.current = L.tileLayer(tileUrl).addTo(mapInstance.current);
+    }, [isDarkMode]);
+
+    // Update Markers & Rotte
+    useEffect(() => {
+        if (!mapInstance.current || !markersLayerRef.current || !routeLayerRef.current) return;
+
+        const map = mapInstance.current;
+        markersLayerRef.current.clearLayers();
+        routeLayerRef.current.clearLayers();
 
         const bounds = L.latLngBounds([]);
 
-        // Icone personalizzate - Migliorate per visibilità e forma
         const planeIcon = L.divIcon({
             className: 'custom-plane-icon',
             html: `
@@ -336,19 +366,16 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
             iconAnchor: [5, 5]
         });
 
-        // Helper per ottenere posizione interpolata
         const getFlightPos = (f: any): [number, number] | null => {
             const dep = findAirport(f.departure);
             const arr = findAirport(f.arrival);
             if (!dep || !arr) return null;
-            
             const pct = (f.progressPercent || 0) / 100;
             const lat = dep.latitude + (arr.latitude - dep.latitude) * pct;
             const lon = dep.longitude + (arr.longitude - dep.longitude) * pct;
             return [lat, lon];
         };
 
-        // Stile comune per tooltips
         const tooltipOptions = {
             permanent: true,
             direction: 'top' as any,
@@ -356,7 +383,6 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
             offset: [0, -10] as any
         };
 
-        // Se c'è un volo selezionato, disegna la rotta
         if (selectedFlight) {
             const dep = findAirport(selectedFlight.departure);
             const arr = findAirport(selectedFlight.arrival);
@@ -370,11 +396,11 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
                     weight: 3,
                     opacity: 0.8,
                     dashArray: '10, 10'
-                }).addTo(map);
+                }).addTo(routeLayerRef.current);
 
-                L.circleMarker(depPos, { radius: 6, color: 'var(--color-success)', fillOpacity: 1 }).addTo(map)
+                L.circleMarker(depPos, { radius: 6, color: 'var(--color-success)', fillOpacity: 1 }).addTo(routeLayerRef.current)
                     .bindTooltip(selectedFlight.departure, { ...tooltipOptions, direction: 'bottom' });
-                L.circleMarker(arrPos, { radius: 6, color: 'var(--color-danger)', fillOpacity: 1 }).addTo(map)
+                L.circleMarker(arrPos, { radius: 6, color: 'var(--color-danger)', fillOpacity: 1 }).addTo(routeLayerRef.current)
                     .bindTooltip(selectedFlight.arrival, { ...tooltipOptions, direction: 'bottom' });
                 
                 bounds.extend(depPos);
@@ -382,7 +408,7 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
                 
                 const planePos = getFlightPos(selectedFlight);
                 if (planePos) {
-                    L.marker(planePos, { icon: planeIcon }).addTo(map)
+                    L.marker(planePos, { icon: planeIcon }).addTo(routeLayerRef.current)
                         .bindTooltip(selectedFlight.flightNumber, tooltipOptions);
                     bounds.extend(planePos);
                 }
@@ -390,49 +416,37 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
                 map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
             }
         } else {
-            // Network view
             flights.forEach(f => {
                 const pos = getFlightPos(f);
                 if (pos) {
                     L.marker(pos, { icon: planeIcon })
-                        .addTo(map)
+                        .addTo(markersLayerRef.current!)
                         .bindTooltip(f.flightNumber, tooltipOptions)
                         .bindPopup(`<b>${f.flightNumber}</b><br>${f.departure} → ${f.arrival}<br>${f.status}`);
                     bounds.extend(pos);
                 }
             });
 
-            // Aggiungi Hubs principali
-            ['LIRF', 'KBOS', 'VHHH', 'EGLL'].forEach(icao => {
+            hubIcaos.forEach(icao => {
                 const apt = findAirport(icao);
                 if (apt) {
                     const pos: [number, number] = [apt.latitude, apt.longitude];
-                    L.marker(pos, { icon: hubIcon }).addTo(map)
+                    L.marker(pos, { icon: hubIcon }).addTo(markersLayerRef.current!)
                         .bindTooltip(icao, { ...tooltipOptions, offset: [0, 5], direction: 'bottom' });
                     bounds.extend(pos);
                 }
             });
 
-            if (bounds.isValid()) {
+            if (bounds.isValid() && flights.length > 0) {
                 map.fitBounds(bounds, { padding: [100, 100], maxZoom: 3 });
             }
         }
-
-        return () => {
-            if (mapInstance.current) {
-                mapInstance.current.remove();
-                mapInstance.current = null;
-            }
-        };
-    }, [flights, selectedFlight, isDarkMode]);
+    }, [flights, selectedFlight, hubIcaos]);
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            {/* CSS Iniezione per Leaflet Overrides */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .leaflet-container {
-                    font-family: var(--font-family-sans) !important;
-                }
+                .leaflet-container { font-family: var(--font-family-sans) !important; }
                 .aria-map-tooltip {
                     background: rgba(var(--color-surface-rgb), 0.85) !important;
                     backdrop-filter: blur(8px);
@@ -444,49 +458,32 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight }: ARIAMap
                     font-family: var(--font-family-mono) !important;
                     color: var(--color-text-primary) !important;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+                    pointer-events: none !important;
                 }
-                .aria-map-tooltip::before {
-                    display: none !important;
-                }
+                .aria-map-tooltip::before { display: none !important; }
                 .leaflet-popup-content-wrapper {
                     background: var(--color-surface) !important;
                     color: var(--color-text-primary) !important;
                     border-radius: var(--radius-md) !important;
                     font-family: var(--font-family-sans) !important;
                 }
-                .leaflet-popup-tip {
-                    background: var(--color-surface) !important;
-                }
+                .leaflet-popup-tip { background: var(--color-surface) !important; }
             `}} />
             <div ref={mapRef} style={{ width: '100%', height: '100%', background: 'var(--color-background)' }} />
             {selectedFlight && (
-                <div style={{ 
-                    position: 'absolute', top: '16px', left: '16px', zIndex: 1000,
-                    display: 'flex', flexDirection: 'column', gap: '8px'
-                }}>
-                    <div style={{ 
-                        background: 'rgba(var(--color-surface-rgb), 0.9)', backdropFilter: 'blur(10px)',
-                        padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)',
-                        boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', gap: '12px'
-                    }}>
+                <div className={styles.mapFocusOverlay}>
+                    <div className={styles.mapFocusCard}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 600, textTransform: 'uppercase' }}>Focus Flight</span>
+                            <span className={styles.sectionTitle} style={{ marginBottom: '2px' }}>Focus Flight</span>
                             <span style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{selectedFlight.flightNumber}</span>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--color-divider)', paddingLeft: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--color-border)', paddingLeft: '12px' }}>
                              <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontSize: '9px', color: 'var(--color-text-hint)' }}>Route</span>
                                 <span style={{ fontSize: '12px', fontWeight: 600 }}>{selectedFlight.departure} → {selectedFlight.arrival}</span>
                             </div>
                         </div>
-                        <button 
-                            onClick={onCloseFlight}
-                            style={{ 
-                                marginLeft: '8px', background: 'var(--color-background)', border: '1px solid var(--color-border)',
-                                borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', color: 'var(--color-text-secondary)'
-                            }}
-                        >
+                        <button onClick={onCloseFlight} className={styles.mapCloseBtn}>
                             <ChevronRight size={16} />
                         </button>
                     </div>
@@ -516,7 +513,6 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [fleetBriefing, setFleetBriefing] = useState('');
   const [fleetBriefingLoading, setFleetBriefingLoading] = useState(false);
   const [overviewData, setOverviewData] = useState<any>(null);
-  const [overviewLoading, setOverviewLoading] = useState(false);
   const [opsPlan, setOpsPlan] = useState<VelarPlan | null>(null);
   const [npcRoster, setNpcRoster] = useState<NpcPilot[]>([]);
   const [fleetState, setFleetState] = useState<any[]>([]);
@@ -529,12 +525,42 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [mapMode, setMapMode] = useState<'network' | 'flight'>('network');
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
+  const [discordTesting, setDiscordTesting] = useState(false);
   
-  // Refs per prevenire double-counting
+  // Refs per prevenire double-counting e sincronizzare Cloud
   const networkFlightsRef = useRef<NetworkFlight[]>([]);
-  const processedArrivedFlights = useRef<Set<string>>(new Set(
-    JSON.parse(localStorage.getItem('velar_processed_flights') || '[]')
-  ));
+  const processedArrivedFlights = useRef<Set<string>>(new Set());
+
+  // Caricamento iniziale Processed Flights da Cloud/Local
+  useEffect(() => {
+    if (!userId) return;
+    const loadProcessed = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'users', userId, 'operations'), limit(1)));
+        if (!snap.empty) {
+          const cloudData = snap.docs[0].data().processed_ids || [];
+          processedArrivedFlights.current = new Set(cloudData);
+          console.log('[ARIA Ops] Registro Cloud sincronizzato:', cloudData.length);
+        } else {
+          // Fallback Migration from LocalStorage
+          const local = JSON.parse(localStorage.getItem('velar_processed_flights') || '[]');
+          if (local.length > 0) {
+            processedArrivedFlights.current = new Set(local);
+            await setDoc(doc(db, 'users', userId, 'operations', 'processed_flights'), {
+              processed_ids: local,
+              last_sync: Date.now()
+            });
+            console.log('[ARIA Ops] Migrazione Cloud completata.');
+          }
+        }
+      } catch (err) {
+        console.warn('[ARIA Ops] Sincronizzazione Cloud fallita, uso local fallback.');
+        const local = JSON.parse(localStorage.getItem('velar_processed_flights') || '[]');
+        processedArrivedFlights.current = new Set(local);
+      }
+    };
+    loadProcessed();
+  }, [userId]);
 
   const sendDailyReport = useCallback(() => {
     const activeVols = networkFlights.length;
@@ -561,7 +587,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
           }]
         }
       })
-    }).then(() => alert("Daily Report inviato correttamente su Discord (#daily-reports)!"));
+    }).then(() => toast.success('Daily Report inviato su #daily-reports ✅'));
   }, [networkFlights, fleetState]);
 
   // ── Base attuale del pilota (dall'ultimo arrivo nel logbook) ───────────────
@@ -655,6 +681,13 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
           if (oldFlight && oldFlight.status !== 'Arrived' && flight.status === 'Arrived') {
               if (flight.tailNumber && flight.tailNumber !== 'Generic' && !processedArrivedFlights.current.has(flight.id)) {
                    processedArrivedFlights.current.add(flight.id);
+                   
+                   // Sync Firestore
+                   setDoc(doc(db, 'users', userId, 'operations', 'processed_flights'), {
+                      processed_ids: Array.from(processedArrivedFlights.current),
+                      last_sync: Date.now()
+                   }, { merge: true }).catch(e => console.error('[ARIA Sync] Failed:', e));
+
                    localStorage.setItem('velar_processed_flights', JSON.stringify(Array.from(processedArrivedFlights.current)));
                    
                    // Calcolo ore basato su flight plan (in ore)
@@ -823,11 +856,18 @@ REGOLE:
           messages: [...history, { role: 'user', content: userMsg.content }],
         }),
       });
+      
+      if (!res.ok) throw new Error('API Error');
+      
       const data = await res.json();
       const text = data.content?.[0]?.text || 'Nessuna risposta ricevuta.';
       setMessages(prev => [...prev, { role: 'aria', content: text, timestamp: new Date() }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'aria', content: 'Errore di comunicazione. Riprova.', timestamp: new Date() }]);
+    } catch (err) {
+      console.error('[ARIA Chat] Error:', err);
+      // Fallback: Risposta basata sui dati reali se l'IA fallisce
+      const activeCount = networkFlights.length;
+      const fallbackMsg = `Comandante, i miei sistemi di comunicazione IA sono temporaneamente offline. \n\nPosso però confermarti che il network è operativo con **${activeCount} voli attivi**. La tua base attuale è **${currentBase}**.`;
+      setMessages(prev => [...prev, { role: 'aria', content: fallbackMsg, timestamp: new Date() }]);
     } finally {
       setIsTyping(false);
     }
@@ -912,149 +952,95 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
 
   // ── Test Discord ────────────────────────────────────────────────────────
   const testDiscord = async () => {
-    await sendOperationalAlert(
-      "Connessione Stabilita",
-      `Sistemi Operativi Velar Airlines: Collegamento Discord stabilito per il Comandante **${pilotName || 'Pilota'}**. Pronto a monitorare la flotta.`,
-      [{ name: "Stato", value: "🟢 Operativo", inline: true }, { name: "Hub", value: currentBase, inline: true }]
-    );
-    alert("Test inviato a Discord!");
+    if (discordTesting) return;
+    setDiscordTesting(true);
+    const id = toast.loading('Invio test a Discord...');
+    
+    try {
+      const res = await sendOperationalAlert(
+        "Connessione Stabilita",
+        `Sistemi Operativi Velar Airlines: Collegamento Discord stabilito per il Comandante **${pilotName || 'Pilota'}**. Pronto a monitorare la flotta.`,
+        [{ name: "Stato", value: "🟢 Operativo", inline: true }, { name: "Hub", value: currentBase, inline: true }]
+      );
+      
+      if (res.error) throw new Error(res.error);
+      
+      toast.success('Test inviato a Discord! ✅', { id });
+    } catch (err: any) {
+      console.error('[ARIA Discord] Test Error:', err);
+      // Mostriamo l'errore completo per il debug
+      const msg = err.error || err.message || 'Unknown Discord Error';
+      const details = err.details ? ` (${err.details})` : '';
+      toast.error(`Errore: ${msg}${details}`, { id });
+    } finally {
+      setDiscordTesting(false);
+    }
   };
 
 
 
-  // ── Genera Overview dinamico ──────────────────────────────────────────────
-  const generateOverview = useCallback(async () => {
-    if (!profile || overviewLoading || overviewData) return;
-    setOverviewLoading(true);
+  // ── Genera Overview con dati reali (no AI hallucination) ───────────────────
+  const generateOverview = useCallback(() => {
+    if (!profile || !opsPlan) return;
 
     const aogCount = fleetState.filter(ac => ac.status === 'AOG' || ac.isAOG).length;
-    const activeVols = networkFlights.length;
-    const hubStats = opsPlan?.hubs?.map((hub: VelarHub) => {
-       const activeAtHub = networkFlights.filter(f => f.departure === hub.icao).length;
-       return `${hub.icao} (${hub.city}): ${activeAtHub} voli attivi ora.`;
-    }).join('\n') || '';
+    const operationalCount = fleetState.length - aogCount;
+    const activeVols = networkFlights.filter(f =>
+      !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
+    ).length;
+    const totalFlights = networkFlights.length;
+    const onTimeFlights = networkFlights.filter(f => f.status !== 'AOG/Cancel').length;
+    const onTimePercentage = totalFlights > 0 ? Math.round((onTimeFlights / totalFlights) * 100) : 100;
+    const totalFH = fleetState.reduce((acc: number, ac: any) => acc + (ac.totalFlightHours || 0), 0);
 
-    const activeRoutesList = opsPlan?.hubs?.map((hub: VelarHub) =>
-      hub.routes.map((route: VelarRoute) => {
-        const flights = route.flight.split(/[\\/-]/).map((f: string) => f.trim()).filter((f: string) => f.startsWith('VLR') || !isNaN(Number(f)));
-        const baseRoute = route.flight.split(' ')[0];
-        const capacity = opsPlan.fleet.find((f: VelarFleetItem) => f.type.includes(route.aircraft))?.capacity || 'N/A';
-        return flights.map((f: string) => {
-          let fullFlight = f.startsWith('VLR') ? f : `${baseRoute}${f}`;
-          if (route.flight.includes('-')) {
-              const parts = route.flight.split('-');
-              const start = parseInt(parts[0].replace(/[^0-9]/g, ''));
-              const end = parseInt(parts[1].replace(/[^0-9]/g, ''));
-              let lines = [];
-              for (let i = start; i <= end; i++) {
-                   lines.push(`- VLR${i} ${hub.icao}→${route.dest} (${route.aircraft}, cap ${capacity} pax)`);
-              }
-              return lines.join('\n');
-          } else {
-               let fn = fullFlight.replace(' ', '');
-               return `- ${fn} ${hub.icao}→${route.dest} (${route.aircraft}, cap ${capacity} pax)`;
-          }
-        }).join('\n');
-      }).join('\n')
-    ).join('\n') || 'Nessuna rotta attiva';
+    const avgCapacity = opsPlan.fleet.length > 0
+      ? opsPlan.fleet.reduce((acc: number, f: VelarFleetItem) => acc + f.capacity * f.count, 0) /
+        opsPlan.fleet.reduce((acc: number, f: VelarFleetItem) => acc + f.count, 0)
+      : 180;
 
-    const totalFleetCount = opsPlan?.fleet?.reduce((acc: number, f: VelarFleetItem) => acc + f.count, 0) || 25;
-    const totalHubsCount = opsPlan?.hubs?.length || 3;
+    const hubs = opsPlan.hubs.map((hub: VelarHub) => {
+      const activeAtHub = networkFlights.filter(
+        f => f.departure === hub.icao && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
+      ).length;
+      const paxToday = Math.round(activeAtHub * avgCapacity * 0.82);
+      return {
+        icao: hub.icao,
+        role: hub.role,
+        city: hub.city,
+        status: aogCount > 2 ? 'Reduced' : 'Operational',
+        activeFlights: activeAtHub,
+        routeCount: hub.routes.length,
+        paxToday,
+        alertMessage: aogCount > 2 ? `${aogCount} AOG — rotazioni ridotte` : null,
+      };
+    });
 
-    const prompt = `Sei ARIA, il sistema operativo di Velar Airlines.
-Genera un report operativo JSON per il Chief Officer ${pilotName || 'Comandante'} con dati realistici per OGGI.
+    const totalPaxToday = hubs.reduce((acc: number, h: any) => acc + h.paxToday, 0);
+    const briefingStatus = aogCount === 0
+      ? 'Tutti i sistemi operativi. Flotta al 100%.'
+      : `${aogCount} aeromobile${aogCount > 1 ? 'i' : ''} in manutenzione AOG. Rotazioni sostitutive attive.`;
 
-La flotta Velar ha ${totalFleetCount} aeromobili (${totalFleetCount - aogCount} operativi, ${aogCount} in manutenzione AOG).
-Hub attivi e stato network:
-${hubStats}
-Voli totali attivi nel network ora: ${activeVols}
+    setOverviewData({
+      briefing: `Comandante ${pilotName || ''}, situazione operativa aggiornata. ${briefingStatus}`,
+      operationalStatus: {
+        fleetOperational: operationalCount,
+        fleetTotal: fleetState.length,
+        flightsToday: totalFlights,
+        activeNow: activeVols,
+        onTimePercentage,
+        totalFlightHours: Math.floor(totalFH),
+      },
+      hubs,
+      passengerSummary: { totalPaxToday, avgLoadFactor: 82 },
+    });
+  }, [profile, pilotName, opsPlan, fleetState, networkFlights]);
 
-Rotte attive oggi (con relative capacità aeromobile):
-${activeRoutesList}
-
-Rispondi SOLO con JSON valido, nessun testo extra, nessun markdown:
-{
-  "briefing": "Frase di stato operativo stile ARIA 2.0 — max 2 frasi concise",
-  "operationalStatus": {
-    "fleetOperational": <numero 23-25>,
-    "fleetTotal": 25,
-    "flightsToday": <numero 12-16>,
-    "onTimePercentage": <numero 85-99>
-  },
-  "hubs": [
-    {
-      "icao": "LIRF",
-      "role": "Global Hub",
-      "status": "Operational",
-      "activeFlights": <2-5>,
-      "paxToday": <numero realistico>,
-      "alertMessage": null
-    },
-    {
-      "icao": "WIII",
-      "role": "Asian Gateway",
-      "status": "Operational",
-      "activeFlights": <2-4>,
-      "paxToday": <numero realistico>,
-      "alertMessage": null
-    },
-    {
-      "icao": "KBOS",
-      "role": "Tech Corridor",
-      "status": "Operational",
-      "activeFlights": <1-3>,
-      "paxToday": <numero realistico>,
-      "alertMessage": null
-    }
-  ],
-  "flights": [
-    {
-      "flightNumber": "VLR101",
-      "dep": "LIRF",
-      "arr": "KBOS",
-      "aircraft": "A350-900",
-      "paxBoarded": <0-369>,
-      "paxCapacity": 369,
-      "loadFactor": <percentuale 0-100>,
-      "status": "On Time" | "Boarding" | "Departed" | "Delayed" | "Arrived",
-      "depTime": "10:30"
-    }
-  ],
-  "passengerSummary": {
-    "totalPaxToday": <somma realistica>,
-    "avgLoadFactor": <media percentuale>,
-    "vipPax": <numero 0-12>,
-    "connectionPax": <numero realisti>
-  }
-}`;
-
-    try {
-      const res = await fetch('/api/aria-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      const raw = data.content?.[0]?.text || '{}';
-      const clean = raw.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      setOverviewData(parsed);
-    } catch {
-      setOverviewData(null);
-    } finally {
-      setOverviewLoading(false);
-    }
-  }, [profile, pilotName, overviewLoading, overviewData]);
 
   useEffect(() => {
-    if (view === 'overview' && profile && !overviewData && !overviewLoading) {
+    if (view === 'overview' && profile && opsPlan) {
       generateOverview();
     }
-  }, [view, profile, overviewData, overviewLoading, generateOverview]);
+  }, [view, profile, opsPlan, networkFlights, fleetState, generateOverview]);
 
   // ── Genera briefing flotta ────────────────────────────────────────────────
   const generateFleetBriefing = useCallback(async () => {
@@ -1100,44 +1086,45 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
   if (loading) {
     return (
-      <div style={s.loadingContainer}>
-        <div style={s.loadingSpinner} />
-        <p style={s.loadingText}>ARIA sta analizzando il logbook...</p>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner} />
+        <p className={styles.loadingText}>ARIA sta analizzando il logbook...</p>
       </div>
     );
   }
 
   return (
-    <div style={s.container}>
-      
+    <div className={styles.container}>
+      <Toaster position="top-right" toastOptions={{ style: { fontFamily: 'var(--font-family-sans)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}} />
+
       {/* ── SIDEBAR INTERNA (FISSA) ── */}
-      <aside style={s.sidebar}>
-        <div style={s.sidebarHeader}>
-          <div style={s.logoContainer}>
-            <div style={s.ariaIcon}>
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>
+          <div className={styles.logoContainer}>
+            <div className={styles.ariaIcon}>
                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <h2 style={s.sidebarTitle}>ARIA</h2>
+            <h2 className={styles.sidebarTitle}>ARIA</h2>
           </div>
           <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 600, letterSpacing: '0.05em' }}>
             OPERATIONAL DASHBOARD
           </div>
         </div>
 
-        <nav style={s.sidebarNav}>
+        <nav className={styles.sidebarNav}>
           {(['chat', 'overview', 'schedule', 'fleet', 'network'] as ViewState[]).map(v => (
             <button 
               key={v} 
               onClick={() => setView(v)}
-              style={{ ...s.sidebarBtn, ...(view === v ? s.sidebarBtnActive : {}) }}
+              className={`${styles.sidebarBtn} ${view === v ? styles.sidebarBtnActive : ''}`}
             >
-              {v === 'chat' && <MessageSquare style={s.sidebarBtnIcon} />}
-              {v === 'overview' && <LayoutDashboard style={s.sidebarBtnIcon} />}
-              {v === 'schedule' && <Calendar style={s.sidebarBtnIcon} />}
-              {v === 'fleet' && <Plane style={s.sidebarBtnIcon} />}
-              {v === 'network' && <Activity style={s.sidebarBtnIcon} />}
+              {v === 'chat' && <MessageSquare className={styles.sidebarBtnIcon} />}
+              {v === 'overview' && <LayoutDashboard className={styles.sidebarBtnIcon} />}
+              {v === 'schedule' && <Calendar className={styles.sidebarBtnIcon} />}
+              {v === 'fleet' && <Plane className={styles.sidebarBtnIcon} />}
+              {v === 'network' && <Activity className={styles.sidebarBtnIcon} />}
               <span style={{ textTransform: 'capitalize' }}>{v}</span>
               {view === v && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
             </button>
@@ -1145,13 +1132,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </nav>
 
         {profile && (
-          <div style={s.pilotInfo}>
-            <div style={s.pilotAvatar}>
+          <div className={styles.pilotInfo}>
+            <div className={styles.pilotAvatar}>
               {pilotName ? pilotName.charAt(0).toUpperCase() : 'P'}
             </div>
-            <div style={s.pilotText}>
-              <span style={s.pilotName}>{pilotName || 'Comandante'}</span>
-              <span style={s.pilotRank}>{profile.currentRank.name}</span>
+            <div className={styles.pilotText}>
+              <span className={styles.pilotName}>{pilotName || 'Comandante'}</span>
+              <span className={styles.pilotRank}>{profile.currentRank.name}</span>
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)' }}>{profile.totalXp.toLocaleString()}</span>
@@ -1161,29 +1148,43 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         )}
         
         <div style={{ padding: '0 16px 16px' }}>
-             <button onClick={testDiscord} style={{ ...s.sidebarBtn, width: '100%', border: '1px solid var(--color-border)', fontSize: '11px', padding: '8px 12px', marginTop: '12px' }}>
-                <Activity size={14} /> Discord Test
+             <button 
+                onClick={testDiscord} 
+                className={styles.sidebarBtn} 
+                disabled={discordTesting}
+                style={{ 
+                  border: '1px solid var(--color-border)', 
+                  fontSize: '11px', 
+                  padding: '8px 12px', 
+                  marginTop: '12px',
+                  opacity: discordTesting ? 0.6 : 1,
+                  cursor: discordTesting ? 'not-allowed' : 'pointer'
+                }}
+             >
+                {discordTesting ? <RefreshCw size={14} className={styles.spin} /> : <Activity size={14} />}
+                {discordTesting ? 'Invio in corso...' : 'Discord Test'}
              </button>
         </div>
       </aside>
 
       {/* ── AREA PRINCIPALE ── */}
-      <main style={s.mainArea}>
+      <main className={styles.mainArea}>
         
         {/* MAPPA IN ALTO */}
-        <div style={s.mapWrapper}>
+        <div className={styles.mapWrapper}>
           <ARIAMap 
             flights={networkFlights} 
             selectedFlight={selectedFlightForMap} 
             isDarkMode={isDarkMode} 
             onCloseFlight={() => { setSelectedFlightForMap(null); setMapMode('network'); }}
+            hubIcaos={opsPlan?.hubs.map((h: VelarHub) => h.icao) ?? ['LIRF', 'KBOS', 'WIII']}
           />
-          <div style={s.mapOverlay}>
-            <div style={s.mapBadge}>
+          <div className={styles.mapOverlay}>
+            <div className={styles.mapBadge}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', animation: 'pulse 2s infinite' }} />
                 LIVE NETWORK: {networkFlights.length} VOLI
             </div>
-            <div style={s.mapBadge}>
+            <div className={styles.mapBadge}>
                 <Clock size={12} />
                 {new Date().getUTCHours().toString().padStart(2, '0')}:{new Date().getUTCMinutes().toString().padStart(2, '0')} ZULU
             </div>
@@ -1191,60 +1192,60 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
 
         {/* CONTENUTO SCROLLABILE */}
-        <div style={s.contentScroller}>
+        <div className={styles.contentScroller}>
 
           {/* 💬 CHAT VIEW */}
           {view === 'chat' && (
-            <div style={s.chatContent}>
-               <div style={s.messageList}>
+            <div className={styles.chatContent}>
+               <div className={styles.messageList}>
                 {messages.map((msg, i) => (
-                  <div key={i} style={{ ...s.msgRow, ...(msg.role === 'pilot' ? s.msgRowPilot : {}) }}>
-                    {msg.role === 'aria' && <div style={s.ariaAvatar}>A</div>}
-                    <div style={{ ...s.bubble, ...(msg.role === 'pilot' ? s.bubblePilot : s.bubbleAria) }}>
+                  <div key={i} className={`${styles.msgRow} ${msg.role === 'pilot' ? styles.msgRowPilot : ''}`}>
+                    {msg.role === 'aria' && <div className={styles.ariaAvatar}>A</div>}
+                    <div className={`${styles.bubble} ${msg.role === 'pilot' ? styles.bubblePilot : styles.bubbleAria}`}>
                       {msg.content.split('\n').map((line, j) => {
                         const parts = line.split(/\*\*(.*?)\*\*/g);
                         return (
-                          <p key={j} style={s.msgLine}>
+                          <p key={j} className={styles.msgLine}>
                             {parts.map((p, k) => k % 2 === 1 ? <strong key={k}>{p}</strong> : p)}
                           </p>
                         );
                       })}
-                      <span style={s.msgTime}>
+                      <span className={styles.msgTime}>
                         {msg.timestamp.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
                 ))}
                 {isTyping && (
-                  <div style={s.msgRow}>
-                    <div style={s.ariaAvatar}>A</div>
-                    <div style={{ ...s.bubble, ...s.bubbleAria }}>
-                       <RefreshCw size={16} className="spin" style={{ color: 'var(--color-text-hint)' }} />
+                  <div className={styles.msgRow}>
+                    <div className={styles.ariaAvatar}>A</div>
+                    <div className={`${styles.bubble} ${styles.bubbleAria}`}>
+                       <RefreshCw size={16} className={styles.spin} style={{ color: 'var(--color-text-hint)' }} />
                     </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              <div style={s.chatFooter}>
-                <div style={s.quickActions}>
+              <div className={styles.chatFooter}>
+                <div className={styles.quickActions}>
                   {[
                     'Analisi rotte XP',
                     'Stato flotta attiva',
                     'Prossimo rank',
                   ].map(q => (
-                    <button key={q} style={s.quickBtn} onClick={() => setInput(q)}>{q}</button>
+                    <button key={q} className={styles.quickBtn} onClick={() => setInput(q)}>{q}</button>
                   ))}
                 </div>
-                <div style={s.inputRow}>
+                <div className={styles.inputRow}>
                   <input
-                    style={s.input}
+                    className={styles.input}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && sendMessage()}
                     placeholder="Invia un comando tattico ad ARIA..."
                   />
-                  <button style={s.sendBtn} onClick={sendMessage} disabled={isTyping || !input.trim()}>
+                  <button className={styles.sendBtn} onClick={sendMessage} disabled={isTyping || !input.trim()}>
                     <ChevronRight size={20} />
                   </button>
                 </div>
@@ -1256,26 +1257,26 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           {/* 📊 OVERVIEW VIEW */}
           {view === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              <div style={s.kpiGrid}>
-                 <div style={s.kpiCard}>
-                    <span style={s.sectionTitle}>Total XP</span>
+              <div className={styles.kpiGrid}>
+                 <div className={styles.kpiCard}>
+                    <span className={styles.sectionTitle}>Total XP</span>
                     <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-primary)' }}>{profile?.totalXp.toLocaleString()}</span>
                  </div>
-                 <div style={s.kpiCard}>
-                    <span style={s.sectionTitle}>Block Hours</span>
+                 <div className={styles.kpiCard}>
+                    <span className={styles.sectionTitle}>Block Hours</span>
                     <span style={{ fontSize: '24px', fontWeight: 700 }}>{profile?.totalHours.toFixed(1)}h</span>
                  </div>
-                 <div style={s.kpiCard}>
-                    <span style={s.sectionTitle}>Total Flights</span>
+                 <div className={styles.kpiCard}>
+                    <span className={styles.sectionTitle}>Total Flights</span>
                     <span style={{ fontSize: '24px', fontWeight: 700 }}>{profile?.totalFlights}</span>
                  </div>
-                 <div style={s.kpiCard}>
-                    <span style={s.sectionTitle}>Network Traffic</span>
+                 <div className={styles.kpiCard}>
+                    <span className={styles.sectionTitle}>Network Traffic</span>
                     <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-success)' }}>{networkFlights.length}</span>
                  </div>
               </div>
 
-              <div style={s.card}>
+              <div className={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ margin: 0, fontSize: '18px' }}>Hub Performance</h3>
                   <button onClick={generateOverview} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '13px' }}>
@@ -1284,16 +1285,44 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 </div>
                 
                 {overviewData ? (
-                  <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--color-text-secondary)' }}>
-                     {typeof overviewData === 'string' ? (
-                       overviewData.split('\n').map((line: string, i: number) => <p key={i} style={{ margin: '0 0 12px' }}>{line}</p>)
-                     ) : (
-                       <p>Dati non disponibili nel formato corretto.</p>
-                     )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+                      {overviewData.briefing}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                      {overviewData.hubs?.map((hub: any) => (
+                        <div key={hub.icao} style={{ padding: '12px 16px', background: 'var(--color-background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontFamily: 'var(--font-family-mono)', fontWeight: 700, fontSize: '14px' }}>{hub.icao}</span>
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: hub.status === 'Operational' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: hub.status === 'Operational' ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>
+                              {hub.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginBottom: '4px' }}>{hub.role}</div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{hub.activeFlights} voli attivi</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>{hub.paxToday?.toLocaleString()} pax stimati</div>
+                          {hub.alertMessage && <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600 }}>⚠ {hub.alertMessage}</div>}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid var(--color-border)' }}>
+                      {[
+                        { label: 'Flotta', value: `${overviewData.operationalStatus?.fleetOperational}/${overviewData.operationalStatus?.fleetTotal} operativi` },
+                        { label: 'On-time', value: `${overviewData.operationalStatus?.onTimePercentage}%`, color: 'var(--color-success)' },
+                        { label: 'Attivi ora', value: `${overviewData.operationalStatus?.activeNow} voli` },
+                        { label: 'Pax oggi', value: overviewData.passengerSummary?.totalPaxToday?.toLocaleString() },
+                        { label: 'FH Flotta', value: `${overviewData.operationalStatus?.totalFlightHours?.toLocaleString()}h` },
+                      ].map(stat => (
+                        <div key={stat.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{stat.label}</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: stat.color ?? 'var(--color-text-primary)' }}>{stat.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-hint)' }}>
-                     {overviewLoading ? <RefreshCw className="spin" size={24} /> : 'Nessuna analisi generata. Clicca su Aggiorna.'}
+                    Nessun dato disponibile. Assicurati che il piano operativo sia caricato.
                   </div>
                 )}
               </div>
@@ -1305,13 +1334,15 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  style={{ ...s.sidebarBtn, ...(scheduleTab === 'mine' ? s.sidebarBtnActive : {}), width: 'auto' }}
+                  className={`${styles.sidebarBtn} ${scheduleTab === 'mine' ? styles.sidebarBtnActive : ''}`}
+                  style={{ width: 'auto' }}
                   onClick={() => setScheduleTab('mine')}
                 >
                   <Calendar size={16} /> I miei voli
                 </button>
                 <button
-                  style={{ ...s.sidebarBtn, ...(scheduleTab === 'crew' ? s.sidebarBtnActive : {}), width: 'auto' }}
+                  className={`${styles.sidebarBtn} ${scheduleTab === 'crew' ? styles.sidebarBtnActive : ''}`}
+                  style={{ width: 'auto' }}
                   onClick={() => setScheduleTab('crew')}
                 >
                   <Users size={16} /> Crew Board
@@ -1319,13 +1350,17 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               </div>
 
               {scheduleTab === 'mine' && (
-                <div style={s.flightGrid}>
+                <div className={styles.flightGrid}>
                   {schedule.length > 0 ? (
                     schedule.map((f, i) => (
-                      <div key={i} style={{ ...s.card, ...s.flightCard, ...(selectedFlight === f ? { borderColor: 'var(--color-primary)', boxShadow: '0 0 0 1px var(--color-primary)' } : {}) }} onClick={() => { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }}>
+                      <div 
+                        key={i} 
+                        className={`${styles.card} ${styles.flightCard} ${selectedFlight === f ? styles.flightCardSelected : ''}`} 
+                        onClick={() => { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
-                            <span style={s.sectionTitle}>{f.day} • {f.flightNumber}</span>
+                            <span className={styles.sectionTitle}>{f.day} • {f.flightNumber}</span>
                             <div style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0' }}>{f.departure} → {f.arrival}</div>
                           </div>
                           <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>{f.aircraft}</span>
@@ -1337,7 +1372,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         {selectedFlight === f && (
                           <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
                             <p style={{ margin: '0 0 12px' }}>{f.reason}</p>
-                            <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer" style={{ ...s.sendBtn, width: '100%', height: '36px', fontSize: '13px', textDecoration: 'none', gap: '8px' }}>
+                            <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer" className={styles.sendBtn} style={{ width: '100%', height: '36px', fontSize: '13px', textDecoration: 'none', gap: '8px' }}>
                               <ExternalLink size={14} /> Briefing in SimBrief
                             </a>
                           </div>
@@ -1348,18 +1383,18 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--color-text-hint)' }}>
                        <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
                        <p>Nessun volo programmato. Genera una nuova schedule settimanale.</p>
-                       <button onClick={generateSchedule} style={{ ...s.sendBtn, width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
+                       <button onClick={generateSchedule} className={styles.sendBtn} style={{ width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
                     </div>
                   )}
                 </div>
               )}
 
               {scheduleTab === 'crew' && (
-                <div style={s.flightGrid}>
+                <div className={styles.flightGrid}>
                   {Array.from(new Map(networkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => (
-                    <div key={nf.id} style={s.card}>
+                    <div key={nf.id} className={styles.card}>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div style={s.ariaAvatar}>{(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}</div>
+                        <div className={styles.ariaAvatar}>{(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}</div>
                         <div>
                           <div style={{ fontSize: '15px', fontWeight: 600 }}>{nf.pilot.name}</div>
                           <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>{nf.pilot.rank} • {nf.pilot.base}</div>
@@ -1380,11 +1415,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           {/* ✈️ FLEET VIEW */}
           {view === 'fleet' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              <div style={s.card}>
+              <div className={styles.card}>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                   <div style={s.ariaAvatar}>A</div>
+                   <div className={styles.ariaAvatar}>A</div>
                    <div>
-                      <span style={s.sectionTitle}>ARIA Fleet Intelligence</span>
+                      <span className={styles.sectionTitle}>ARIA Fleet Intelligence</span>
                       <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
                         {fleetBriefingLoading ? 'Analisi stato flotta in corso...' : fleetBriefing}
                       </p>
@@ -1392,17 +1427,24 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 </div>
               </div>
 
-              <div style={s.flightGrid}>
+              <div className={styles.flightGrid}>
                 {fleetState.map((ac) => {
-                  // Trova se l'aereo è attualmente in volo nel network
                   const activeFlight = networkFlights.find(nf => nf.tailNumber === ac.id);
                   const isFlying = activeFlight && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(activeFlight.status);
                   const liveStatus = isFlying ? activeFlight.status.toUpperCase() : ac.status;
+                  
+                  const maintProgress = (ac.totalFlightHours % 500) / 500;
+                  const hoursUntilCheck = 500 - (ac.totalFlightHours % 500);
+                  
                   const statusColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
                                      isFlying ? 'var(--color-primary)' : 'var(--color-success)';
+                  
+                  const progressColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
+                                       (hoursUntilCheck < 50) ? 'var(--color-danger)' :
+                                       (hoursUntilCheck < 150) ? 'var(--color-warning)' : 'var(--color-primary)';
 
-                  return (
-                    <div key={ac.id} style={s.card}>
+                   return (
+                    <div key={ac.id} className={styles.card}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-family-mono)' }}>{ac.id}</span>
                         <span style={{ 
@@ -1425,14 +1467,15 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                             <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{ac.totalFlightHours.toFixed(1)}h</span>
                             <span>totali</span>
                           </div>
-                          <span>Check: {Math.floor(((ac.totalFlightHours % 500) / 500) * 100)}%</span>
+                          <span style={{ fontWeight: 600, color: hoursUntilCheck < 50 ? 'var(--color-danger)' : 'inherit' }}>
+                            Next Check: {hoursUntilCheck.toFixed(1)}h
+                          </span>
                         </div>
                         <div style={{ height: '6px', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ 
                             height: '100%', 
-                            width: `${((ac.totalFlightHours % 500) / 500) * 100}%`, 
-                            background: ac.status === 'AOG' ? 'var(--color-danger)' : 
-                                       ((ac.totalFlightHours % 500) > 450) ? 'var(--color-warning)' : 'var(--color-primary)',
+                            width: `${maintProgress * 100}%`, 
+                            background: progressColor,
                             transition: 'width 0.5s ease'
                           }} />
                         </div>
@@ -1441,6 +1484,12 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                       {isFlying && (
                         <div style={{ marginTop: '10px', padding: '6px', borderRadius: '6px', background: 'var(--color-primary-light)', fontSize: '10px' }}>
                           <span style={{ fontWeight: 600 }}>{activeFlight?.flightNumber}</span>: {activeFlight?.departure} → {activeFlight?.arrival}
+                        </div>
+                      )}
+                      {(ac.status === 'AOG' || ac.isAOG) && ac.aogUntilTimeMs > Date.now() && (
+                        <div style={{ marginTop: '10px', padding: '6px 8px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '10px', color: 'var(--color-danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Clock size={10} />
+                          AOG fino a {new Date(ac.aogUntilTimeMs).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       )}
                     </div>
@@ -1457,13 +1506,24 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   <h3 style={{ margin: 0, fontSize: '18px' }}>Live Operations</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                      <div style={{ fontSize: '12px', color: 'var(--color-text-hint)' }}>Ultimo segnale: {lastHeartbeat.toLocaleTimeString()}</div>
-                     <button onClick={() => setIsStandbyActive(!isStandbyActive)} style={{ ...s.sidebarBtn, background: isStandbyActive ? 'rgba(255, 107, 129, 0.1)' : 'transparent', color: isStandbyActive ? '#ff6b81' : 'var(--color-text-hint)', border: '1px solid currentColor', padding: '6px 12px', height: 'auto', width: 'auto' }}>
+                     <button 
+                        onClick={() => setIsStandbyActive(!isStandbyActive)} 
+                        className={styles.sidebarBtn}
+                        style={{ 
+                          background: isStandbyActive ? 'rgba(255, 107, 129, 0.1)' : 'transparent', 
+                          color: isStandbyActive ? '#ff6b81' : 'var(--color-text-hint)', 
+                          border: '1px solid currentColor', 
+                          padding: '6px 12px', 
+                          height: 'auto', 
+                          width: 'auto' 
+                        }}
+                     >
                         {isStandbyActive ? 'DISATTIVA STANDBY' : 'ATTIVA STANDBY'}
                      </button>
                   </div>
                </div>
 
-               <div style={s.flightGrid}>
+               <div className={styles.flightGrid}>
                   {[...networkFlights].sort((a, b) => {
                     const statusPrio: Record<string, number> = {
                       'En Route': 100,
@@ -1482,7 +1542,12 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     if (pa !== pb) return pb - pa;
                     return a.departureTime - b.departureTime;
                   }).map((nf) => (
-                    <div key={nf.id} style={s.card} onClick={() => { setSelectedFlightForMap(nf); setIsMapZoomed(true); }}>
+                    <div 
+                      key={nf.id} 
+                      className={styles.card} 
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => { setSelectedFlightForMap(nf); setIsMapZoomed(true); }}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</div>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: nf.status === 'En Route' ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
@@ -1512,362 +1577,3 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
 // ─── Stili — usa variabili CSS Skydeck, funziona in light e dark mode ────────
 
-const s: Record<string, React.CSSProperties> = {
-  container: {
-    fontFamily: 'var(--font-family-sans)',
-    background: 'var(--color-surface)',
-    display: 'flex',
-    flexDirection: 'row',
-    height: '100%',
-    width: '100%',
-    color: 'var(--color-text-primary)',
-    overflow: 'hidden',
-  },
-  
-  // Sidebar Interna
-  sidebar: {
-    width: '240px',
-    background: 'var(--color-background)',
-    borderRight: '1px solid var(--color-border)',
-    display: 'flex',
-    flexDirection: 'column',
-    flexShrink: 0,
-    zIndex: 10,
-    padding: '24px 0',
-  },
-  sidebarHeader: {
-    padding: '0 24px',
-    marginBottom: '32px',
-  },
-  logoContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  ariaIcon: {
-    width: '32px',
-    height: '32px',
-    background: 'var(--color-primary)',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(20, 106, 255, 0.3)',
-  },
-  sidebarTitle: {
-    margin: 0,
-    fontSize: '20px',
-    fontWeight: 600,
-    fontFamily: 'var(--font-family-display)',
-    letterSpacing: '0.02em',
-  },
-  sidebarNav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    padding: '0 12px',
-  },
-  sidebarBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
-    border: 'none',
-    background: 'transparent',
-    borderRadius: 'var(--radius-lg)',
-    color: 'var(--color-text-secondary)',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    textAlign: 'left',
-  },
-  sidebarBtnActive: {
-    background: 'var(--color-primary-light)',
-    color: 'var(--color-primary)',
-  },
-  sidebarBtnIcon: {
-    width: '18px',
-    height: '18px',
-  },
-
-  // Main Content Area
-  mainArea: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    background: 'var(--color-surface)',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-
-  // Map Container
-  mapWrapper: {
-    width: '100%',
-    height: '320px',
-    background: 'var(--color-background)',
-    borderBottom: '1px solid var(--color-border)',
-    position: 'relative',
-    flexShrink: 0,
-    overflow: 'hidden',
-    zIndex: 1,
-  },
-  mapOverlay: {
-    position: 'absolute',
-    top: '16px',
-    right: '16px',
-    zIndex: 500,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  mapBadge: {
-    background: 'rgba(var(--color-surface-rgb), 0.85)',
-    backdropFilter: 'blur(8px)',
-    border: '1px solid var(--color-border)',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    fontWeight: 600,
-    color: 'var(--color-text-secondary)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    boxShadow: 'var(--shadow-sm)',
-  },
-
-  // Content Scroller (under the map)
-  contentScroller: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  },
-
-  // Chat View
-  chatContent: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    maxWidth: '1000px',
-    margin: '0 auto',
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-  },
-  messageList: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '32px 24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  },
-  msgRow: { display: 'flex', gap: '16px', alignItems: 'flex-start' },
-  msgRowPilot: { flexDirection: 'row-reverse' },
-  ariaAvatar: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '12px',
-    flexShrink: 0,
-    background: 'var(--color-primary)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '14px',
-    fontWeight: 600,
-    color: 'white',
-    fontFamily: 'var(--font-family-display)',
-    boxShadow: '0 4px 12px rgba(20, 106, 255, 0.2)',
-  },
-  bubble: {
-    maxWidth: '70%',
-    padding: '16px 20px',
-    borderRadius: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    boxShadow: 'var(--shadow-sm)',
-    position: 'relative',
-    animation: 'fadeSlideUp 0.3s ease-out',
-  },
-  bubbleAria: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderTopLeftRadius: '4px',
-  },
-  bubblePilot: {
-    background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-hover))',
-    color: 'white',
-    borderTopRightRadius: '4px',
-    boxShadow: '0 8px 24px rgba(20, 106, 255, 0.25)',
-  },
-  msgLine: {
-    margin: 0,
-    fontSize: '14.5px',
-    lineHeight: '1.6',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  msgTime: {
-    fontSize: '10px',
-    opacity: 0.6,
-    alignSelf: 'flex-end',
-    marginTop: '4px',
-    fontFamily: 'var(--font-family-mono)',
-  },
-  
-  chatFooter: {
-    padding: '24px',
-    background: 'var(--color-surface)',
-    borderTop: '1px solid var(--color-border)',
-  },
-  quickActions: {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '16px',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  quickBtn: {
-    fontSize: '12px',
-    padding: '8px 16px',
-    background: 'var(--color-background)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-full)',
-    color: 'var(--color-text-secondary)',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    fontFamily: 'var(--font-family-sans)',
-    fontWeight: 500,
-  },
-  inputRow: {
-    display: 'flex',
-    gap: '12px',
-    maxWidth: '800px',
-    margin: '0 auto',
-    width: '100%',
-    background: 'var(--color-background)',
-    padding: '8px',
-    borderRadius: 'var(--radius-xl)',
-    border: '1px solid var(--color-border)',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  input: {
-    flex: 1,
-    padding: '12px 16px',
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--color-text-primary)',
-    fontSize: '15px',
-    outline: 'none',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  sendBtn: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '12px',
-    flexShrink: 0,
-    background: 'var(--color-primary)',
-    border: 'none',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    transition: 'transform 0.2s',
-  },
-
-  // Common UI Elements (from Briefing/Hangar)
-  card: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '20px',
-    boxShadow: 'var(--shadow-sm)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  glassCard: {
-    background: 'rgba(var(--color-surface-rgb), 0.7)',
-    backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-  sectionTitle: {
-    fontSize: '12px',
-    fontWeight: 600,
-    color: 'var(--color-text-hint)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    marginBottom: '8px',
-    fontFamily: 'var(--font-family-sans)',
-  },
-  monoData: {
-    fontFamily: 'var(--font-family-mono)',
-    fontWeight: 500,
-  },
-
-  // KPI UI
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-  },
-  kpiCard: {
-    padding: '16px 20px',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-
-  // Flight Lists
-  flightGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '16px',
-  },
-  flightCard: {
-    padding: '20px',
-    cursor: 'pointer',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-  },
-  
-  // Pilot Profile Mini
-  pilotInfo: {
-    marginTop: 'auto',
-    padding: '24px 16px',
-    borderTop: '1px solid var(--color-border)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  pilotAvatar: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: 'var(--color-primary-light)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'var(--color-primary)',
-    fontWeight: 700,
-  },
-  pilotText: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  pilotName: {
-    fontSize: '14px',
-    fontWeight: 600,
-  },
-  pilotRank: {
-    fontSize: '11px',
-    color: 'var(--color-text-hint)',
-  }
-};
