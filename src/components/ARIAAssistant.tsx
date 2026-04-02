@@ -670,7 +670,8 @@ const FinancialsView = ({ data, selectedHub, onHubSelect, period, setPeriod }: {
             </div>
             <span style={{ fontSize: '24px', fontWeight: 700 }}>{formatCurrency(current.revenue)}</span>
             <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
-                <TrendingUp size={12} /> +12% vs last {period}
+                {/* FIX 11: rimosso delta "+12%" hardcoded non calcolato dai dati reali */}
+                {current.flights > 0 ? `${current.flights} voli nel periodo` : 'Nessun volo nel periodo'}
             </div>
          </div>
          <div className={styles.kpiCard}>
@@ -1058,6 +1059,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
            hs.today.fixedCosts += dailyFc;
            hs.week.fixedCosts += dailyFc * 7;
            hs.month.fixedCosts += dailyFc * 30;
+           hs.year.fixedCosts += dailyFc * 365; // FIX 11: era mancante — hub year period mostrava profitto gonfiato
            hs.total.fixedCosts += dailyFc * daysOfOps;
         }
         
@@ -1193,6 +1195,26 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     };
 
     // 2. Dati NPCs (con simulazione FH dinamica e sincrona)
+    // FIX 1: costruiamo la mappa legId→pilota una sola volta con usedPilotIds,
+    // speculare a calculateNetworkState, per evitare ore duplicate da hash collision.
+    const legPilotMap = new Map<string, string>(); // legId → pilotId
+    {
+      const usedPilotIdsForRoster = new Set<string>();
+      opsPlan.hubs.forEach((hub: any) => {
+        hub.routes?.forEach((route: any) => {
+          route.legs?.forEach((leg: any, idx: number) => {
+            const depTime = parseTime(leg.dep_utc);
+            const legId = `${leg.flight}-${idx}`;
+            const p = assignPilot(legId, route.aircraft, depTime, npcRoster, hub.icao, usedPilotIdsForRoster);
+            if (p.id !== 'N/A') {
+              usedPilotIdsForRoster.add(p.id);
+              legPilotMap.set(legId, p.id);
+            }
+          });
+        });
+      });
+    }
+
     const npcList = npcRoster.map(npc => {
       // A. ORE STORICHE (Dall'inizio al giorno precedente)
       let avgDailyHours = 0;
@@ -1206,7 +1228,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       const seed = (npc.id.split('-')[1] || "0").split('').reduce((a, b) => a + b.charCodeAt(0), 0);
       const randomVariante = (seed % 200); // Variante fissa per pilota per differenziare l'anzianità
 
-      // B. ORE ODIERNE (Sincronizzate con il network live oggi)
+      // B. ORE ODIERNE (Sincronizzate con il network live oggi, usando la mappa precalcolata)
       let todayHours = 0;
       opsPlan.hubs.forEach((hub: any) => {
         hub.routes?.forEach((route: any) => {
@@ -1216,15 +1238,11 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
             const arrTime = depTime + blockMins;
             const legId = `${leg.flight}-${idx}`;
 
-            // Identifichiamo se questo volo è assegnato a questo NPC
-            const pilotOnThisFlight = assignPilot(legId, route.aircraft, depTime, npcRoster, hub.icao);
-            
-            if (pilotOnThisFlight.id === npc.id) {
+            // FIX 1: usa la mappa precalcolata invece di richiamare assignPilot per ogni NPC×leg
+            if (legPilotMap.get(legId) === npc.id) {
               if (currentMinsUtc >= arrTime) {
-                // Volo già completato oggi
                 todayHours += (blockMins / 60);
               } else if (currentMinsUtc >= depTime) {
-                // Volo attualmente "In Corso" - aggiungiamo il progresso reale
                 todayHours += ((currentMinsUtc - depTime) / 60);
               }
             }
@@ -1353,7 +1371,9 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                    const specs = AIRCRAFT_FINANCIALS[flight.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
                    const pax = Math.round(specs.capacity * 0.82);
                    const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
-                   const miles = Math.round(blockHours * 450);
+                   // FIX 4: velocità per tipo aeromobile invece di 450kt fisso
+                   const discordSpeed = CRUISE_SPEED_KT[flight.aircraft] || 450;
+                   const miles = Math.round(blockHours * discordSpeed);
                    const rev = (miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
                    const costs = (blockHours * specs.fuelBurnHr * FINANCIAL_CONFIG.FUEL_PRICE_PER_KG) + (blockHours * FINANCIAL_CONFIG.CREW_COST_PER_HOUR) + FINANCIAL_CONFIG.LANDING_FEE_FIXED;
                    const profit = Math.round(rev - costs);
@@ -1403,7 +1423,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
                          if (wentAOG) {
                            sendDiscord('ops', {
-                              content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${ac.id}** (${ac.type}) ha superato la soglia critica delle 500 ore. Sospeso per 24h.\n\n⚠️ **URGENZA OPS**: Volo ${flight.flightNumber} completato. Rotazione successiva scoperta.`
+                              content: `🚨 **MAINTENANCE ALERT (CHECK-A)**\nL'aeromobile **${ac.id}** (${ac.type}) ha superato la soglia di manutenzione (${MAINTENANCE_CYCLE_HOURS}h). Sospeso per 24h.\n\n⚠️ **URGENZA OPS**: Volo ${flight.flightNumber} completato. Rotazione successiva scoperta.`
                            });
                            setStandbyAlerts(p => [...p, { 
                              id: Date.now().toString(), 
@@ -1465,9 +1485,12 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
     if (!lastCleanup || now - parseInt(lastCleanup) > SEVEN_DAYS) {
       console.log('[ARIA Ops] Cleanup settimanale registro arrivi eseguito.');
+      // FIX 2: non azzerare processedArrivedFlights.current — causerebbe re-billing
+      // di tutti i voli NPC già arrivati al prossimo render del useMemo finanziario.
+      // Puliamo solo il localStorage; il Set in memoria resta intatto per la sessione corrente.
       localStorage.setItem('velar_processed_flights', '[]');
       localStorage.setItem('velar_last_cleanup', now.toString());
-      processedArrivedFlights.current = new Set();
+      // processedArrivedFlights.current = new Set(); // ← RIMOSSO intenzionalmente
     }
   }, []);
 
@@ -1616,7 +1639,8 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
+          // FIX 5: allineato al modello usato nel resto del componente
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -1633,7 +1657,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
     } finally {
       setScheduleLoading(false);
     }
-  }, [profile, pilotName]);
+  }, [profile, pilotName, opsPlan]); // FIX 5: aggiunto opsPlan per evitare chiusura su null
 
   // ── Test Discord ────────────────────────────────────────────────────────
   const testDiscord = async () => {
@@ -1674,8 +1698,14 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
       !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
     ).length;
     const totalFlights = networkFlights.length;
-    const onTimeFlights = networkFlights.filter(f => f.status !== 'AOG/Cancel').length;
-    const onTimePercentage = totalFlights > 0 ? Math.round((onTimeFlights / totalFlights) * 100) : 100;
+    // FIX 11: on-time calcolato solo su voli con status operativo (non Scheduled/AOG)
+    const operatedFlights = networkFlights.filter(f =>
+      !['Scheduled', 'AOG/Cancel'].includes(f.status)
+    );
+    const onTimeFlights = operatedFlights.filter(f => f.status !== 'AOG/Cancel').length;
+    const onTimePercentage = operatedFlights.length > 0
+      ? Math.round((onTimeFlights / operatedFlights.length) * 100)
+      : 100;
     const totalFH = fleetState.reduce((acc: number, ac: any) => acc + (ac.totalFlightHours || 0), 0);
 
     const avgCapacity = opsPlan.fleet.length > 0
@@ -1741,8 +1771,14 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
     setFleetBriefingLoading(true);
 
     const systemPrompt = buildSystemPrompt(profile);
+    // FIX 6: descrizione flotta costruita dinamicamente dal piano operativo
+    const fleetTotal = opsPlan?.fleet.reduce((s: number, f: VelarFleetItem) => s + f.count, 0) || 25;
+    const fleetDesc = opsPlan?.fleet.map((f: VelarFleetItem) =>
+      `${f.count}x${f.type.replace('Airbus ', '')}`
+    ).join(', ') || '5xA319, 10xA320, 5xA321LR, 3xA330neo, 4xA350-900';
+
     const prompt = `Genera un messaggio di stato operativo della flotta Velar per il Comandante ${pilotName || 'Comandante'}.
-Flotta: 25 aeromobili (5xA319, 10xA320, 5xA321LR, 2xA330neo, 3xA350-900).
+Flotta: ${fleetTotal} aeromobili (${fleetDesc}).
 Hub attivi: Roma Fiumicino (Global Hub), Giacarta (Asian Gateway), Boston (Tech Corridor).
 Tutte le rotte sono operative.
 Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo ARIA 2.0. Max 3 frasi. Inizia con "Buongiorno Comandante".`;
@@ -1769,6 +1805,16 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
   }, [profile, pilotName, buildSystemPrompt, fleetBriefingLoading, fleetBriefing]);
 
   // Auto-genera briefing quando si apre la tab fleet
+  // FIX 7: il briefing viene invalidato se il numero di AOG cambia durante la sessione
+  const aogCountForBriefing = fleetState.filter(ac => ac.status === 'AOG' || ac.isAOG).length;
+  const prevAogCountRef = useRef<number>(aogCountForBriefing);
+  useEffect(() => {
+    if (prevAogCountRef.current !== aogCountForBriefing) {
+      setFleetBriefing(''); // invalida briefing — si rigenererà al prossimo render del tab fleet
+      prevAogCountRef.current = aogCountForBriefing;
+    }
+  }, [aogCountForBriefing]);
+
   useEffect(() => {
     if (view === 'fleet' && profile && !fleetBriefing && !fleetBriefingLoading) {
       generateFleetBriefing();
@@ -2135,8 +2181,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   const maintProgress = (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS) / MAINTENANCE_CYCLE_HOURS;
                   const hoursUntilCheck = MAINTENANCE_CYCLE_HOURS - (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS);
                   
-                  const statusColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
-                                     isFlying ? 'var(--color-primary)' : 'var(--color-success)';
+                  // FIX 8: statusColor derivato da liveStatus (stato effettivo visualizzato),
+                  // non da ac.status (Firestore) che può essere stantio rispetto al network live
+                  const liveStatusLower = liveStatus?.toString().toLowerCase() || '';
+                  const statusColor = liveStatusLower === 'aog' ? 'var(--color-danger)' :
+                                     (isFlying || liveStatusLower === 'en route' || liveStatusLower === 'approach' || liveStatusLower === 'taxi out' || liveStatusLower === 'pushback' || liveStatusLower === 'boarding') ? 'var(--color-primary)' : 'var(--color-success)';
                   
                   const progressColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
                                        (hoursUntilCheck < 50) ? 'var(--color-danger)' :
@@ -2303,13 +2352,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         onChange={(e) => setRosterRankFilter(e.target.value)}
                         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', color: 'var(--color-text-primary)' }}
                       >
+                        {/* FIX 9: opzioni allineate ai rank reali del roster (Chief Captain, Junior First Officer, ecc.) */}
                         <option value="ALL">TUTTI I RATING</option>
-                        <option value="Chief Pilot">Chief Pilot</option>
+                        <option value="Chief Captain">Chief Captain</option>
                         <option value="Senior Captain">Senior Captain</option>
                         <option value="Captain">Captain</option>
-                        <option value="Senior First Officer">Senior First Officer</option>
                         <option value="First Officer">First Officer</option>
-                        <option value="Second Officer">Second Officer</option>
+                        <option value="Junior First Officer">Junior First Officer</option>
                       </select>
                     </div>
                   </div>
@@ -2369,7 +2418,10 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
                       {pilot.isUser && (
                         <div style={{ marginTop: '12px', padding: '8px', borderRadius: '4px', background: 'rgba(var(--color-primary-rgb), 0.1)', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>
-                          POSIZIONE ATTUALE NELLA TOP CREW: #{index + 1}
+                          {/* FIX 10: posizione contestualizzata al filtro attivo */}
+                          {rosterHubFilter !== 'ALL' || rosterRankFilter !== 'ALL'
+                            ? `POSIZIONE NELLA SELEZIONE ATTIVA: #${index + 1}`
+                            : `POSIZIONE ATTUALE NELLA TOP CREW: #${index + 1}`}
                         </div>
                       )}
                     </div>
