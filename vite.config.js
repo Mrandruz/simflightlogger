@@ -153,7 +153,7 @@ export default defineConfig(({ mode }) => {
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000,
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/checklists\/.+\.pdf$/],
+        navigateFallbackDenylist: [/^\/checklists\/.+\.pdf$/, /^\/api\/.*/],
       }
     })
   ],
