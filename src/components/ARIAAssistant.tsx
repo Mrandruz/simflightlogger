@@ -1097,8 +1097,9 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
       
       // Calcoliamo i passeggeri solo sui voli in PARTENZA per il totale finanziario del singolo hub,
       // ma usiamo il totale globale per la dashboard.
-      const paxFromHub = networkFlights.filter(
-        f => f.departure === hub.icao && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
+      const paxAtHub = networkFlights.filter(
+        f => (f.departure === hub.icao || f.arrival === hub.icao) && 
+             !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
       ).length * avgCapacity * 0.82;
 
       return {
@@ -1108,7 +1109,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
         status: aogCount > 2 ? 'Reduced' : 'Operational',
         activeFlights: activeAtHub,
         routeCount: hub.routes.length,
-        paxToday: Math.round(paxFromHub),
+        paxToday: Math.round(paxAtHub),
         alertMessage: aogCount > 2 ? `${aogCount} AOG — rotazioni ridotte` : null,
       };
     });
