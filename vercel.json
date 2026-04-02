@@ -18,19 +18,10 @@
       "destination": "https://api.aviationstack.com/v1/:path*"
     },
     {
-      "source": "/api/simbrief",
-      "destination": "/api/simbrief"
+      "handle": "filesystem"
     },
     {
-      "source": "/checklists/:file*",
-      "destination": "/checklists/:file*"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/((?!api|checklists).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
