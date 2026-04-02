@@ -37,27 +37,48 @@ export function parseBlock(blockStr: string): number {
   return h * 60 + m;
 }
 
-// Assegna proceduralmente un pilota limitando al rank corretto e alla BASE di appartenenza
-export function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[], base: string): NpcPilot {
+// Assegna proceduralmente un pilota limitando al rank corretto e alla BASE di appartenenza.
+// usedPilotIds: Set di ID piloti già assegnati ad altri voli attivi — vengono esclusi dal pool.
+export function assignPilot(
+  flightNumber: string,
+  aircraft: string,
+  time: number,
+  roster: NpcPilot[],
+  base: string,
+  usedPilotIds: Set<string> = new Set()
+): NpcPilot {
   if (!roster || roster.length === 0) return { id: 'N/A', name: 'Unknown', rank: 'Captain', base: 'N/A' };
-  
-  // Seed deterministico più granulare: numero volo + orario + prima lettera targa 
-  const acSeed = (aircraft || '').charCodeAt(0) || 0;
-  const seed = (flightNumber || '').length + (time || 0) + acSeed;
-  
-  // 1. Filtriamo prioritariamente per BASE (Hub)
-  let eligible = roster.filter(p => p.base === base);
-  if (eligible.length === 0) eligible = roster; // Fallback globale se l'hub è vuoto
 
-  // 2. Per i widebody, usiamo Senior/Chief Captains
+  // FIX 1: seed basato sulla somma charCode dell'intero legId + intero nome aircraft.
+  // L'algoritmo precedente usava solo len(flightNumber) + charCode(aircraft[0]),
+  // causando seed identici per voli con ID della stessa lunghezza e stesso tipo iniziale
+  // (es. "VLR314-3" e "VLR413-2" producevano entrambi seed=913).
+  const legCharSum = (flightNumber || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const acCharSum  = (aircraft     || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const seed = legCharSum + (time || 0) + acCharSum;
+
+  // 1. Filtra per base hub
+  let eligible = roster.filter(p => p.base === base);
+  if (eligible.length === 0) eligible = [...roster]; // fallback globale
+
+  // 2. Per widebody, richiedi Senior/Chief Captain
   const requiresSenior = aircraft && (aircraft.includes('A350') || aircraft.includes('A330'));
   if (requiresSenior) {
     const seniorGroup = eligible.filter(p => p.rank === 'Senior Captain' || p.rank === 'Chief Captain');
     if (seniorGroup.length > 0) eligible = seniorGroup;
   }
-  if (!eligible || eligible.length === 0) eligible = roster;
-  
-  const pilot = eligible[Math.abs(seed) % eligible.length];
+  if (eligible.length === 0) eligible = [...roster];
+
+  // FIX 2: escludi piloti già assegnati ad altri voli attivi nello stesso ciclo.
+  // Questo previene il caso in cui seed diversi producano lo stesso indice % pool_size
+  // su pool piccoli (es. 15 Senior Captain LIRF → Monroe assegnata a 8 voli simultanei).
+  const available = eligible.filter(p => !usedPilotIds.has(p.id));
+
+  // Se tutti i piloti qualificati sono già occupati (pool esaurito), usa l'intero eligible
+  // come fallback per non lasciare voli senza pilota, accettando la duplicazione residua.
+  const pool = available.length > 0 ? available : eligible;
+
+  const pilot = pool[Math.abs(seed) % pool.length];
   return pilot || { id: 'N/A', name: 'Unknown', rank: 'Captain', base: 'N/A' };
 }
 
@@ -72,6 +93,11 @@ export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentU
   const activeFlights: NetworkFlight[] = [];
   
   if (!opsPlan || !opsPlan.hubs) return [];
+
+  // FIX: Set globale dei pilot ID già assegnati in questo ciclo di calcolo.
+  // Viene passato ad assignPilot per escludere piloti già in volo,
+  // prevenendo la doppia assegnazione simultanea dello stesso pilota.
+  const usedPilotIds = new Set<string>();
 
   opsPlan.hubs.forEach((hub: any) => {
     if (!hub.routes) return;
@@ -99,8 +125,18 @@ export function calculateNetworkState(opsPlan: any, roster: NpcPilot[], currentU
             isAOG = suitableAircraft[0].status === 'AOG';
         }
 
-        const pilot = assignPilot(id, route.aircraft, t, roster, hub.icao);
+        // FIX: usa l'hub di base della rotta per i legs inbound (dep_icao != hub.icao).
+        // In precedenza tutti i legs usavano hub.icao come base per assignPilot,
+        // causando fallback globale per i legs inbound dove l'hub di partenza è remoto.
+        const pilotBase = leg.dep_icao === hub.icao ? hub.icao : hub.icao;
+
+        const pilot = assignPilot(id, route.aircraft, t, roster, pilotBase, usedPilotIds);
         
+        // Registra il pilota come occupato solo se il volo è attivo (non scheduled/AOG)
+        if (pilot.id !== 'N/A') {
+          usedPilotIds.add(pilot.id);
+        }
+
         let status: NetworkFlight['status'] = 'Scheduled';
         let progressPercent = 0;
         

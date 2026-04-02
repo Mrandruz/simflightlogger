@@ -290,12 +290,31 @@ type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roste
 
 // ─── Financial Simulator Specs (Real-world based) ──────────────────────────
 const FINANCIAL_CONFIG = {
-  REVENUE_PER_NM_PAX: 0.12, // $0.12 per miglio per passeggero
+  REVENUE_PER_NM_PAX: 0.12,     // $0.12 per miglio per passeggero
   ANCILLARY_REVENUE_PER_PAX: 22, // Bagagli, food, wifi
-  CREW_COST_PER_HOUR: 850, // Totale cockpit + cabin
-  LANDING_FEE_FIXED: 1200, // Tassa fissa a scalo
-  FUEL_PRICE_UNIT: 3.50, // Prezzo carburante simulato
+  CREW_COST_PER_HOUR: 850,       // Totale cockpit + cabin
+  LANDING_FEE_FIXED: 1200,       // Tassa fissa a scalo
+  FUEL_PRICE_PER_KG: 0.90,       // $0.90/kg Jet-A simulato (realistico 2024)
 };
+
+// Velocità di crociera tipica per tipo (nodi) — usata per stimare distanza voli live
+const CRUISE_SPEED_KT: Record<string, number> = {
+  'Airbus A319': 430,
+  'Airbus A320': 450,
+  'Airbus A320-200': 450,
+  'Airbus A321': 450,
+  'Airbus A321LR': 450,
+  'Airbus A330': 480,
+  'Airbus A330neo': 480,
+  'Airbus A350': 490,
+  'Airbus A350-900': 490,
+  'Airbus A380': 480,
+  'Boeing 777': 490,
+  'Boeing 787': 485,
+};
+
+// Soglia ore per ciclo di manutenzione (Check-A simulato)
+const MAINTENANCE_CYCLE_HOURS = 5000;
 
 const AIRCRAFT_FINANCIALS: Record<string, { capacity: number; fuelBurnHr: number; maintenanceDay: number }> = {
   'Airbus A319': { capacity: 144, fuelBurnHr: 2400, maintenanceDay: 1200 },
@@ -532,49 +551,113 @@ interface FinancialsViewProps {
   data: any;
 }
 
-const FinancialsView = ({ data }: FinancialsViewProps) => {
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'total'>('month');
-  const current = data.periods[period];
+const FinancialsView = ({ data, selectedHub, onHubSelect, period, setPeriod }: { 
+  data: any, 
+  selectedHub: string | null, 
+  onHubSelect: (hub: string | null) => void,
+  period: any,
+  setPeriod: (p: any) => void
+}) => {
+  // FIX: fallback robusto — hub+periodo, poi hub+total, poi global+periodo, poi global+total
+  const baseData = (selectedHub && data.hubStats?.[selectedHub])
+    ? (data.hubStats[selectedHub][period] || data.hubStats[selectedHub].total)
+    : (data.periods?.[period] || data.periods?.total);
+
+  if (!baseData) return <div className={styles.card}>Caricamento dati finanziari...</div>;
+  const current = baseData;
+
+  // Label contestuale per l'header
+  const contextLabel = selectedHub
+    ? `Hub ${selectedHub} · ${period.toUpperCase()}`
+    : `Global Network · ${period.toUpperCase()}`;
   
   const COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6'];
   const costData = [
-    { name: 'Fuel', value: Math.round(current.fuelCosts) },
-    { name: 'Crew', value: Math.round(current.crewCosts) },
-    { name: 'Fees', value: Math.round(current.landingFees) },
-    { name: 'Maint/Fixed', value: Math.round(current.fixedCosts) },
+    { name: 'Fuel', value: Math.round(current.fuelCosts || 0) },
+    { name: 'Crew', value: Math.round(current.crewCosts || 0) },
+    { name: 'Fees', value: Math.round(current.landingFees || 0) },
+    { name: 'Maint/Fixed', value: Math.round(current.fixedCosts || 0) },
   ];
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrency = (val: number) => {
+    if (!isFinite(val)) return '$0';
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val || 0);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '20px' }}>Accounting & Profitability</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-hint)' }}>Analisi finanziaria deterministica delle operazioni Velar.</p>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-hint)' }}>
+            {contextLabel} — Analisi finanziaria deterministica delle operazioni Velar.
+          </p>
         </div>
-        <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
-            {(['today', 'week', 'month', 'total'] as const).map(p => (
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-hint)', marginLeft: '4px' }}>Timeline</span>
+            <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
+                {(['today', 'week', 'month', 'year', 'total'] as const).map(p => (
+                    <button 
+                      key={p} 
+                      onClick={() => setPeriod(p)}
+                      style={{ 
+                        padding: '6px 12px', 
+                        fontSize: '10px', 
+                        fontWeight: 700, 
+                        textTransform: 'uppercase',
+                        border: 'none',
+                        borderRadius: '6px',
+                        background: period === p ? 'var(--color-primary)' : 'transparent',
+                        color: period === p ? 'white' : 'var(--color-text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                        {p}
+                    </button>
+                ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-hint)', marginLeft: '4px' }}>Global Hubs</span>
+            <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
                 <button 
-                  key={p} 
-                  onClick={() => setPeriod(p)}
+                  onClick={() => onHubSelect(null)}
                   style={{ 
-                    padding: '6px 16px', 
-                    fontSize: '11px', 
+                    padding: '6px 12px', 
+                    fontSize: '10px', 
                     fontWeight: 700, 
-                    textTransform: 'uppercase',
                     border: 'none',
                     borderRadius: '6px',
-                    background: period === p ? 'var(--color-primary)' : 'transparent',
-                    color: period === p ? 'white' : 'var(--color-text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    background: !selectedHub ? 'var(--color-success)' : 'transparent',
+                    color: !selectedHub ? 'white' : 'var(--color-text-secondary)',
+                    cursor: 'pointer'
                   }}
                 >
-                    {p}
+                  GLOBAL
                 </button>
-            ))}
+                {Object.keys(data.hubStats).map(hub => (
+                    <button 
+                      key={hub} 
+                      onClick={() => onHubSelect(hub)}
+                      style={{ 
+                        padding: '6px 12px', 
+                        fontSize: '10px', 
+                        fontWeight: 700, 
+                        border: 'none',
+                        borderRadius: '6px',
+                        background: selectedHub === hub ? 'var(--color-primary)' : 'transparent',
+                        color: selectedHub === hub ? 'white' : 'var(--color-text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                        {hub}
+                    </button>
+                ))}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -609,7 +692,7 @@ const FinancialsView = ({ data }: FinancialsViewProps) => {
                 {formatCurrency(current.netProfit)}
             </span>
             <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
-                Efficiency: {Math.round((current.netProfit / current.revenue) * 100) || 0}% Margin
+                Efficiency: { (current.revenue > 0) ? Math.round((current.netProfit / current.revenue) * 100) : 0 }% Margin
             </div>
          </div>
          <div className={styles.kpiCard}>
@@ -624,60 +707,59 @@ const FinancialsView = ({ data }: FinancialsViewProps) => {
          </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px' }}>
-        {/* CHART Profit History */}
-        <div className={styles.card} style={{ height: '350px' }}>
-            <h3 className={styles.sectionTitle} style={{ marginBottom: '20px' }}>Profitability Trend (Last 30 Days)</h3>
-            <div style={{ width: '100%', height: '260px' }}>
-                <ResponsiveContainer>
-                    <AreaChart data={data.chartData}>
-                        <defs>
-                            <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis 
-                            dataKey="date" 
-                            stroke="var(--color-text-hint)" 
-                            fontSize={10} 
-                            tickFormatter={(val) => val.split('-').slice(1).join('/')}
-                        />
-                        <YAxis stroke="var(--color-text-hint)" fontSize={10} tickFormatter={(val) => `$${val/1000}k`} />
-                        <Tooltip 
-                            contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
-                            itemStyle={{ fontWeight: 700 }}
-                        />
-                        <Area type="monotone" dataKey="profit" stroke="var(--color-primary)" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
-                    </AreaChart>
-                </ResponsiveContainer>
+      {/* HUB & FLEET HEALTH SECTION */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px' }}>
+        <div className={styles.card}>
+            <h3 className={styles.sectionTitle} style={{ marginBottom: '16px' }}>Network Hub Performance</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {Object.entries(data.hubStats).map(([icao, hStats]: [string, any]) => {
+                    const stats = hStats[period] || hStats.total;
+                    return (
+                        <div key={icao} style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '13px' }}>{icao}</span>
+                                <span style={{ color: (stats.netProfit || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>
+                                    {formatCurrency(stats.netProfit)}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
+                                <span>{stats.flights || 0} voli effettuati</span>
+                                <span>{(stats.pax || 0).toLocaleString()} pax</span>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
 
-        {/* COST BREAKDOWN PIE */}
-        <div className={styles.card} style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
-            <h3 className={styles.sectionTitle} style={{ marginBottom: '20px' }}>Cost Breakdown</h3>
-            <div style={{ flex: 1, width: '100%' }}>
-                <ResponsiveContainer>
-                    <PieChart>
-                        <Pie
-                            data={costData}
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
-                            {costData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                            ))}
-                        </Pie>
-                        <Tooltip 
-                             contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
-                        />
-                        <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                    </PieChart>
-                </ResponsiveContainer>
+        <div className={styles.card}>
+            <h3 className={styles.sectionTitle} style={{ marginBottom: '16px' }}>Fleet Health & Maintenance</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                {Object.entries(data.fleetCondition).map(([id, stats]: [string, any]) => (
+                    <div key={id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
+                            <span style={{ fontWeight: 600 }}>{id}</span>
+                            <span style={{ 
+                                color: stats.condition > 70 ? 'var(--color-success)' : stats.condition > 30 ? 'var(--color-warning)' : 'var(--color-danger)',
+                                fontWeight: 800
+                            }}>
+                                {stats.condition}%
+                            </span>
+                        </div>
+                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' }}>
+                            <div style={{ 
+                                width: `${stats.condition}%`, 
+                                height: '100%', 
+                                background: stats.condition > 70 ? 'var(--color-success)' : stats.condition > 30 ? 'var(--color-warning)' : 'var(--color-danger)',
+                                transition: 'width 1s ease-in-out'
+                            }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-hint)' }}>
+                            <span>Hours: {Math.round(stats.hours)}h</span>
+                            <span style={{ textTransform: 'uppercase', fontWeight: 700 }}>{stats.status}</span>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
       </div>
@@ -704,6 +786,13 @@ const FinancialsView = ({ data }: FinancialsViewProps) => {
   );
 };
 
+// Helper di formattazione tempo per il simulatore (minuti UTC -> HH:MM)
+const formatMinutesToTime = (mins: number) => {
+  const h = Math.floor(mins / 60) % 24;
+  const m = Math.floor(mins % 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
 export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const { isDarkMode } = useTheme();
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -719,6 +808,9 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [schedule, setSchedule] = useState<ScheduledFlight[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<ScheduledFlight | null>(null);
+  const [selectedHub, setSelectedHub] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'total'>('month');
+  const processedArrivedFlights = useRef<Set<string>>(new Set());
   const [scheduleTab, setScheduleTab] = useState<'mine' | 'crew'>('mine');
 
   const [fleetBriefing, setFleetBriefing] = useState('');
@@ -741,19 +833,25 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [discordTesting, setDiscordTesting] = useState(false);
   
   // Refs per prevenire double-counting e sincronizzare Cloud
-  const networkFlightsRef = useRef<NetworkFlight[]>([]);
-  const processedArrivedFlights = useRef<Set<string>>(new Set());
+    const networkFlightsRef = useRef<NetworkFlight[]>([]);
 
   // ─── Financial Accounting Engine ──────────────────────────────────────────
   const financialStatements = useMemo(() => {
     if (!flights.length || !opsPlan) return null;
 
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
-    const thisMonth = now.getMonth();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStr = todayStart.toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(todayStart.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(todayStart.getTime() - 30 * 86400000);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
     const thisYear = now.getFullYear();
+
+    const parseDate = (d: any) => {
+        if (!d) return new Date();
+        if (d.toDate) return d.toDate(); // Firestore Timestamp
+        return new Date(d);
+    };
 
     const statsTemplate = () => ({
       flights: 0,
@@ -770,8 +868,40 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       today: statsTemplate(),
       week: statsTemplate(),
       month: statsTemplate(),
+      year: statsTemplate(),
       total: statsTemplate(),
     };
+
+    const hubStatsTemplate = () => ({
+      today: statsTemplate(),
+      week: statsTemplate(),
+      month: statsTemplate(),
+      year: statsTemplate(),
+      total: statsTemplate(),
+    });
+
+    const hubStats: Record<string, any> = {};
+    opsPlan.hubs.forEach((h: any) => {
+      hubStats[h.icao.toUpperCase().trim()] = hubStatsTemplate();
+    });
+
+    const fleetCondition: Record<string, { hours: number; condition: number; status: string; lastMaint: number }> = {};
+    fleetState.forEach(ac => {
+      // Inizializziamo con le ore totali persistenti da Firestore/Cloud
+      const totalHours = ac.totalFlightHours || 0;
+      const lastMaint = ac.lastMaintenanceHour || 0;
+      const cycleHours = totalHours - lastMaint;
+      
+      // Calcolo condizione: scende a 0% al raggiungimento della soglia di manutenzione (5000h)
+      const condition = Math.max(0, Math.round(100 - (cycleHours / MAINTENANCE_CYCLE_HOURS * 100)));
+      
+      fleetCondition[ac.id] = { 
+        hours: totalHours, 
+        condition: condition, 
+        status: ac.status || 'Idle',
+        lastMaint: lastMaint
+      };
+    });
 
     const dailyHistory: Record<string, any> = {};
     // Inizializza gli ultimi 30 giorni per il grafico
@@ -781,38 +911,59 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
         dailyHistory[s] = { date: s, profit: 0, revenue: 0, flights: 0 };
     }
 
+    const updatePeriod = (p: any, rev: number, profit: number, pax: number, fuel: number, crew: number, fees: number) => {
+        p.flights++;
+        p.pax += pax;
+        p.revenue += rev;
+        p.fuelCosts += fuel;
+        p.crewCosts += crew;
+        p.landingFees += fees;
+        p.netProfit += profit;
+    };
+
+    let oldestDateMs = now.getTime();
+
     flights.forEach(f => {
-      const fDate = new Date(f.date);
-      const fDateStr = f.date.split('T')[0];
+      const fDate = parseDate(f.date);
+      const fDateStr = fDate.toISOString().split('T')[0];
       const isToday = fDateStr === todayStr;
       const isThisWeek = fDate >= sevenDaysAgo;
       const isThisMonth = fDate >= thirtyDaysAgo;
+      const isThisYear = fDate.getFullYear() === thisYear;
+      
+      if (fDate.getTime() < oldestDateMs) oldestDateMs = fDate.getTime();
 
       const specs = AIRCRAFT_FINANCIALS[f.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
       const pax = Math.round(specs.capacity * 0.82);
       const rev = (f.miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
       
-      const fuelCost = (f.flightTime * specs.fuelBurnHr * (FINANCIAL_CONFIG.FUEL_PRICE_UNIT / 1000));
+      const fuelCost = f.flightTime * specs.fuelBurnHr * FINANCIAL_CONFIG.FUEL_PRICE_PER_KG;
       const crewCost = f.flightTime * FINANCIAL_CONFIG.CREW_COST_PER_HOUR;
       const fees = FINANCIAL_CONFIG.LANDING_FEE_FIXED;
       
       const opCosts = fuelCost + crewCost + fees;
       const profit = rev - opCosts;
 
-      const updatePeriod = (p: any) => {
-        p.flights++;
-        p.pax += pax;
-        p.revenue += rev;
-        p.fuelCosts += fuelCost;
-        p.crewCosts += crewCost;
-        p.landingFees += fees;
-        p.netProfit += profit;
-      };
+      const fDep = f.departure?.toUpperCase().trim();
+      const fArr = f.arrival?.toUpperCase().trim();
+      
+      updatePeriod(periods.total, rev, profit, pax, fuelCost, crewCost, fees);
+      if (isToday) updatePeriod(periods.today, rev, profit, pax, fuelCost, crewCost, fees);
+      if (isThisWeek) updatePeriod(periods.week, rev, profit, pax, fuelCost, crewCost, fees);
+      if (isThisMonth) updatePeriod(periods.month, rev, profit, pax, fuelCost, crewCost, fees);
+      if (isThisYear) updatePeriod(periods.year, rev, profit, pax, fuelCost, crewCost, fees);
 
-      updatePeriod(periods.total);
-      if (isToday) updatePeriod(periods.today);
-      if (isThisWeek) updatePeriod(periods.week);
-      if (isThisMonth) updatePeriod(periods.month);
+      // Smart Attribution: Priorità Hub di origine, poi Hub di destinazione
+      const targetHubIcao = hubStats[fDep] ? fDep : (hubStats[fArr] ? fArr : null);
+
+      if (targetHubIcao && hubStats[targetHubIcao]) {
+        const hs = hubStats[targetHubIcao];
+        updatePeriod(hs.total, rev, profit, pax, fuelCost, crewCost, fees);
+        if (isToday) updatePeriod(hs.today, rev, profit, pax, fuelCost, crewCost, fees);
+        if (isThisWeek) updatePeriod(hs.week, rev, profit, pax, fuelCost, crewCost, fees);
+        if (isThisMonth) updatePeriod(hs.month, rev, profit, pax, fuelCost, crewCost, fees);
+        if (isThisYear) updatePeriod(hs.year, rev, profit, pax, fuelCost, crewCost, fees);
+      }
 
       if (dailyHistory[fDateStr]) {
         dailyHistory[fDateStr].profit += profit;
@@ -821,56 +972,68 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       }
     });
 
-    // --- AGGIUNTA VOLI LIVE (NETWORK) ---
+    // ─── AGGIUNTA VOLI LIVE (NETWORK) ───────────────────────────────────────
     networkFlights.forEach(f => {
-      // Consideriamo solo voli atterrati o in terra che non sono nel logbook
-      if (['Arrived', 'Turnaround', 'Taxi In'].includes(f.status)) {
+      const isArrived = ['Arrived', 'Turnaround', 'Taxi In'].includes(f.status);
+      const isLive = ['En Route', 'Approach', 'Taxi Out', 'Pushback', 'Boarding'].includes(f.status);
+
+      if ((isArrived && !processedArrivedFlights.current.has(f.id)) || isLive) {
         const specs = AIRCRAFT_FINANCIALS[f.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
         const pax = Math.round(specs.capacity * 0.82);
-        
-        // Estrapolazione dati: calcoliamo ore e miglia dalla durata pianificata
+
         const durationMins = f.arrivalTime - f.departureTime;
         const fHours = durationMins / 60;
-        const miles = Math.round(fHours * 450); // Stima basata su 450 nodi di media
+        // FIX: velocità per tipo aeromobile invece di 450 fissi
+        const speed = CRUISE_SPEED_KT[f.aircraft] || 450;
+        const miles = Math.round(fHours * speed);
 
         const rev = (miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
-        const fuelCost = (fHours * specs.fuelBurnHr * (FINANCIAL_CONFIG.FUEL_PRICE_UNIT / 1000));
+        // FIX: formula carburante con prezzo per kg
+        const fuelCost = fHours * specs.fuelBurnHr * FINANCIAL_CONFIG.FUEL_PRICE_PER_KG;
         const crewCost = fHours * FINANCIAL_CONFIG.CREW_COST_PER_HOUR;
         const fees = FINANCIAL_CONFIG.LANDING_FEE_FIXED;
-        
-        const opCosts = fuelCost + crewCost + fees;
-        const profit = rev - opCosts;
+        const profit = rev - (fuelCost + crewCost + fees);
 
-        // I voli network sono per definizione "di oggi" nella simulazione
-        const updatePeriod = (p: any) => {
-          p.flights++;
-          p.pax += pax;
-          p.revenue += rev;
-          p.fuelCosts += fuelCost;
-          p.crewCosts += crewCost;
-          p.landingFees += fees;
-          p.netProfit += profit;
-        };
+        // FIX: un solo blocco updatePeriod — rimosso il secondo blocco duplicato
+        updatePeriod(periods.total, rev, profit, pax, fuelCost, crewCost, fees);
+        updatePeriod(periods.today, rev, profit, pax, fuelCost, crewCost, fees);
+        updatePeriod(periods.week, rev, profit, pax, fuelCost, crewCost, fees);
+        updatePeriod(periods.month, rev, profit, pax, fuelCost, crewCost, fees);
+        updatePeriod(periods.year, rev, profit, pax, fuelCost, crewCost, fees);
 
-        updatePeriod(periods.total);
-        updatePeriod(periods.today);
-        updatePeriod(periods.week);
-        updatePeriod(periods.month);
+        const fDep = f.departure?.toUpperCase().trim();
+        const fArr = f.arrival?.toUpperCase().trim();
+        const acObj = fleetState.find(a => a.id === f.tailNumber);
+        const acBase = acObj?.base?.toUpperCase().trim();
+
+        // Attribuzione Live: 1. Base dell'aereo, 2. Hub di origine, 3. Hub di destinazione
+        const liveHubIcao = (acBase && hubStats[acBase]) ? acBase : (hubStats[fDep] ? fDep : (hubStats[fArr] ? fArr : null));
+
+        if (liveHubIcao && hubStats[liveHubIcao]) {
+          const hs = hubStats[liveHubIcao];
+          updatePeriod(hs.total, rev, profit, pax, fuelCost, crewCost, fees);
+          updatePeriod(hs.today, rev, profit, pax, fuelCost, crewCost, fees);
+          updatePeriod(hs.week, rev, profit, pax, fuelCost, crewCost, fees);
+          updatePeriod(hs.month, rev, profit, pax, fuelCost, crewCost, fees);
+          updatePeriod(hs.year, rev, profit, pax, fuelCost, crewCost, fees);
+        }
 
         if (dailyHistory[todayStr]) {
           dailyHistory[todayStr].profit += profit;
           dailyHistory[todayStr].revenue += rev;
           dailyHistory[todayStr].flights++;
         }
+
+        // FIX: marca il volo come processato dentro il useMemo per evitare ri-accumulo
+        if (isArrived) {
+          processedArrivedFlights.current.add(f.id);
+        }
       }
     });
 
     // Calcolo dei COSTI FISSI (Maintenance & Leasing)
-    // Li applichiamo per ogni giorno di attività basata sul logbook più recente
-    const firstFlight = new Date(flights[0]?.date || now);
-    const daysOfOps = Math.max(1, Math.round((now.getTime() - firstFlight.getTime()) / 86400000));
+    const daysOfOps = Math.max(1, Math.ceil((now.getTime() - oldestDateMs) / 86400000));
     
-    // Costo fisso giornaliero flotta
     const fleetFixedDaily = opsPlan.fleet.reduce((acc, item) => {
         const specs = AIRCRAFT_FINANCIALS[item.type] || AIRCRAFT_FINANCIALS['Airbus A320'];
         return acc + (specs.maintenanceDay * item.count);
@@ -879,11 +1042,48 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     periods.total.fixedCosts = fleetFixedDaily * daysOfOps;
     periods.today.fixedCosts = fleetFixedDaily;
     periods.week.fixedCosts = fleetFixedDaily * 7;
-    periods.month.fixedCosts = fleetFixedDaily * 30; 
+    periods.month.fixedCosts = fleetFixedDaily * 30;
+    periods.year.fixedCosts = fleetFixedDaily * 365; // FIX: era mancante
 
-    // Sottrai i costi fissi dal profitto netto
+    // Calcolo costi manutenzione straordinaria basato sugli aerei che sono AOG o lo diventano
+    fleetState.forEach(ac => {
+        const stats = fleetCondition[ac.id];
+        const hb = (ac.base || 'LIRF').toUpperCase().trim();
+        const specs = AIRCRAFT_FINANCIALS[ac.type] || AIRCRAFT_FINANCIALS['Airbus A320'];
+        const dailyFc = specs.maintenanceDay;
+
+        // Distribuiamo i COSTI FISSI ORDINARI per Hub
+        if (hubStats[hb]) {
+           const hs = hubStats[hb];
+           hs.today.fixedCosts += dailyFc;
+           hs.week.fixedCosts += dailyFc * 7;
+           hs.month.fixedCosts += dailyFc * 30;
+           hs.total.fixedCosts += dailyFc * daysOfOps;
+        }
+        
+        if (stats.status === 'AOG' || stats.condition < 5) {
+            stats.status = 'AOG';
+            const extra = 12500; // Ammortamento C-Check
+            periods.today.fixedCosts += extra;
+            periods.total.fixedCosts += extra;
+            
+            // Addebita la manutenzione straordinaria all'Hub dell'aereo
+            if (hubStats[hb]) {
+               hubStats[hb].today.fixedCosts += extra;
+               hubStats[hb].total.fixedCosts += extra;
+            }
+        }
+    });
+
+    // Sottrai i costi fissi dal profitto netto per HUB e PERIODI
     Object.values(periods).forEach(p => {
         p.netProfit -= p.fixedCosts;
+    });
+
+    Object.values(hubStats).forEach((hs: any) => {
+        Object.values(hs).forEach((p: any) => {
+            p.netProfit -= p.fixedCosts;
+        });
     });
 
     // Applica i costi fissi anche alla storia giornaliera
@@ -894,12 +1094,14 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
             : 0;
     });
 
-    return {
-      periods,
-      chartData: Object.values(dailyHistory),
+    return { 
+      periods, 
+      chartData: Object.values(dailyHistory), 
+      hubStats, 
+      fleetCondition,
       fleetFixedDaily
     };
-  }, [flights, networkFlights, opsPlan]);
+  }, [flights, opsPlan, networkFlights, fleetState]);
 
   // Caricamento iniziale Processed Flights da Cloud/Local
   useEffect(() => {
@@ -1147,10 +1349,32 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                       last_sync: Date.now()
                    }, { merge: true }).catch(e => console.error('[ARIA Sync] Failed:', e));
 
+                   // Calcolo profitto per il report Discord (Format richiesto dal Comandante)
+                   const specs = AIRCRAFT_FINANCIALS[flight.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
+                   const pax = Math.round(specs.capacity * 0.82);
+                   const blockHours = (flight.arrivalTime - flight.departureTime) / 60;
+                   const miles = Math.round(blockHours * 450);
+                   const rev = (miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
+                   const costs = (blockHours * specs.fuelBurnHr * FINANCIAL_CONFIG.FUEL_PRICE_PER_KG) + (blockHours * FINANCIAL_CONFIG.CREW_COST_PER_HOUR) + FINANCIAL_CONFIG.LANDING_FEE_FIXED;
+                   const profit = Math.round(rev - costs);
+
+                   sendDiscord('ops', {
+                      embeds: [{
+                        title: `✈️ Volo ${flight.flightNumber} Atterrato`,
+                        description: `Il volo **${flight.departure}** ➔ **${flight.arrival}** è atterrato regolarmente.`,
+                        color: 0x22c55e,
+                        fields: [
+                          { name: 'Aeromobile', value: `${flight.aircraft} (${flight.tailNumber})`, inline: true },
+                          { name: 'Passeggeri', value: `${pax} (82%)`, inline: true },
+                          { name: 'Profitto Netto', value: `+$${profit.toLocaleString()}`, inline: true }
+                        ],
+                        footer: { text: "ARIA Ops Center · Report Real-time" },
+                        timestamp: new Date().toISOString()
+                      }]
+                   });
+
                    localStorage.setItem('velar_processed_flights', JSON.stringify(Array.from(processedArrivedFlights.current)));
                    
-                   // Calcolo ore basato su flight plan (in ore)
-                   const blockHours = (flight.arrivalTime - flight.departureTime) / 60; 
                    const ac = fleetState.find(a => a.id === flight.tailNumber);
                    
                    if (ac) {
@@ -1161,7 +1385,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                       let aogTime = 0;
                       let wentAOG = false;
 
-                      if (newTotalHours - prevMaint >= 500) {
+                      if (newTotalHours - prevMaint >= MAINTENANCE_CYCLE_HOURS) {
                          newStatus = 'AOG';
                          isAOG = true;
                          aogTime = Date.now() + (24 * 60 * 60 * 1000);
@@ -1173,7 +1397,8 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                             totalFlightHours: newTotalHours,
                             status: newStatus,
                             isAOG,
-                            aogUntilTimeMs: aogTime
+                            aogUntilTimeMs: aogTime,
+                            lastMaintenanceHour: isAOG ? newTotalHours : ac.lastMaintenanceHour || 0
                          });
 
                          if (wentAOG) {
@@ -1363,6 +1588,7 @@ Genera la schedule settimanale (Lunedì → Domenica, 7 voli) rispettando RIGORO
 3. Usa SOLO le rotte del piano operativo che partono dalla base corrente o dagli hub raggiunti
 4. Usa SOLO aeromobili abilitati per il rank del pilota
 5. Il campo "reason" deve spiegare la scelta operativa (stile ARIA Ops, conciso)
+6. IMPORTANTE: Ogni volo DEVE includere i campi "departureTime" e "arrivalTime" nel formato "HH:MM" (UTC).
 
 Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
 [
@@ -1390,7 +1616,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-3-5-sonnet-20240620',
           max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -1830,7 +2056,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
                             <span className={styles.sectionTitle}>{f.day} • {f.flightNumber}</span>
-                            <div style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0' }}>{f.departure} → {f.arrival}</div>
+                            <div style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0' }}>
+                              {f.departure} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({f.departureTime || '--:--'})</span> 
+                              {" → "}
+                              {f.arrival} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({f.arrivalTime || '--:--'})</span>
+                            </div>
                           </div>
                           <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>{f.aircraft}</span>
                         </div>
@@ -1902,8 +2132,8 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   const isFlying = activeFlight && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(activeFlight.status);
                   const liveStatus = isFlying ? activeFlight.status.toUpperCase() : ac.status;
                   
-                  const maintProgress = (ac.totalFlightHours % 500) / 500;
-                  const hoursUntilCheck = 500 - (ac.totalFlightHours % 500);
+                  const maintProgress = (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS) / MAINTENANCE_CYCLE_HOURS;
+                  const hoursUntilCheck = MAINTENANCE_CYCLE_HOURS - (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS);
                   
                   const statusColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
                                      isFlying ? 'var(--color-primary)' : 'var(--color-success)';
@@ -2020,7 +2250,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</div>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: nf.status === 'En Route' ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, margin: '4px 0' }}>{nf.departure} → {nf.arrival}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, margin: '4px 0' }}>
+                        {nf.departure} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({(nf.departureTime !== undefined && nf.departureTime !== null) ? formatMinutesToTime(nf.departureTime) : '--:--'})</span>
+                        {" → "}
+                        {nf.arrival} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({(nf.arrivalTime !== undefined && nf.arrivalTime !== null) ? formatMinutesToTime(nf.arrivalTime) : '--:--'})</span>
+                      </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
                         <span>Cmdt. {nf.pilot.name}</span>
                         <span>{nf.aircraft} ({nf.tailNumber})</span>
@@ -2145,8 +2379,14 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           )}
            {/* 💰 FINANCIALS VIEW */}
            {view === 'financials' && financialStatements && (
-             <FinancialsView data={financialStatements} />
-           )}
+                    <FinancialsView 
+                      data={financialStatements} 
+                      selectedHub={selectedHub} 
+                      onHubSelect={setSelectedHub} 
+                      period={period}
+                      setPeriod={setPeriod}
+                    />
+                )}
  
          </div>
        </main>

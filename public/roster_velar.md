@@ -102,7 +102,7 @@
 | VLR-093 | Wu Qiang | Captain |
 | VLR-094 | Lin Xiao | Junior First Officer |
 | VLR-095 | Saito Ken | Junior First Officer |
-| VLR-096 | Park Eun-ji | Senior Captain |
+| VLR-096 | Elexis Monroe | Senior Captain |
 | VLR-097 | Kato Misaki | Captain |
 | VLR-098 | Vu Minh | Captain |
 | VLR-099 | Zhou Feng | First Officer |

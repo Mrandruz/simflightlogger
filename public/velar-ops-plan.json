@@ -1,13 +1,14 @@
 {
   "_meta": {
-    "version": "5.0",
+    "version": "5.1",
     "name": "Velar Airlines Global Strategic Plan",
-    "updated": "2026-03-31",
+    "updated": "2026-04-02",
     "motto": "Motion, simplified.",
     "positioning": "Boutique Tech-Luxury Airline",
     "schedule_version": "routes_new v2.0",
     "roster_source": "roster_velar.md",
     "changelog": [
+      "v5.1 — Aggiunte 4 rotte P1/P2: KBOS-KJFK (VLR951-954, A319 slot3), LIRF-LMML (VLR331-334, A320 slot6), LIRF-LEMD (VLR421/422, A320 slot4), WIII-VTBS (VLR851/852, A320 slot8). Zero nuovi aerei. Piloti assegnati verificati non in conflitto.",
       "v5.0 — Struttura routes ripristinata al formato atteso da networkSimulator.ts e ARIAAssistant.tsx.",
       "v5.0 — Chiave 'flight' ripristinata (era stata rinominata 'pair' in v4.x, causando crash).",
       "v5.0 — Chiavi 'dest', 'freq', 'aircraft', 'city', 'note' mantenute al livello route per compatibilità.",
@@ -20,21 +21,19 @@
       "v5.0 — Blocchi e orari schedule corretti per tutte le rotte (vedi routes_new.md v2.0)."
     ]
   },
-
   "operational_standards": {
     "turnaround_minutes": {
       "A350-900": 120,
-      "A330neo":  120,
-      "A321LR":   75,
-      "A320":     60,
-      "A319":     60
+      "A330neo": 120,
+      "A321LR": 75,
+      "A320": 60,
+      "A319": 60
     },
     "flight_numbering": "Dispari = outbound dall'hub. Pari = inbound verso l'hub.",
     "rotation_3xdaily": "2 AC per rotta. AC#1: 2 rotazioni (mattina+pomeriggio). AC#2: 1 rotazione (sera).",
     "rotation_2xdaily": "1 AC esegue entrambe le rotazioni.",
     "all_times": "UTC"
   },
-
   "fleet": [
     {
       "type": "Airbus A319",
@@ -72,7 +71,6 @@
       "capacity": 369
     }
   ],
-
   "hubs": [
     {
       "icao": "LIRF",
@@ -82,109 +80,596 @@
       "description": "Porta d'ingresso globale di Velar. Cuore intercontinentale e hub europeo principale.",
       "routes": [
         {
-          "dest": "KBOS", "city": "Boston Logan",
-          "aircraft": "A350-900", "freq": "Daily",
-          "flight": "VLR 101/102", "note": "Hub-to-Hub Flagship",
+          "dest": "KBOS",
+          "city": "Boston Logan",
+          "aircraft": "A350-900",
+          "freq": "Daily",
+          "flight": "VLR 101/102",
+          "note": "Hub-to-Hub Flagship",
           "legs": [
-            { "flight": "VLR101", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KBOS", "dep_utc": "10:00", "arr_utc": "19:30", "block": "9h30m", "ac_slot": 1 },
-            { "flight": "VLR102", "direction": "inbound",  "dep_icao": "KBOS", "arr_icao": "LIRF", "dep_utc": "22:00", "arr_utc": "05:30+1", "block": "7h30m", "turnaround_min": 150, "ac_slot": 1 }
+            {
+              "flight": "VLR101",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "KBOS",
+              "dep_utc": "10:00",
+              "arr_utc": "19:30",
+              "block": "9h30m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR102",
+              "direction": "inbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "LIRF",
+              "dep_utc": "22:00",
+              "arr_utc": "05:30+1",
+              "block": "7h30m",
+              "turnaround_min": 150,
+              "ac_slot": 1
+            }
           ]
         },
         {
-          "dest": "KJFK", "city": "New York JFK",
-          "aircraft": "A330neo", "freq": "Daily",
-          "flight": "VLR 111/112", "note": "Intercontinental Daily",
+          "dest": "KJFK",
+          "city": "New York JFK",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 111/112",
+          "note": "Intercontinental Daily",
           "legs": [
-            { "flight": "VLR111", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KJFK", "dep_utc": "10:30", "arr_utc": "20:00", "block": "9h30m", "ac_slot": 1 },
-            { "flight": "VLR112", "direction": "inbound",  "dep_icao": "KJFK", "arr_icao": "LIRF", "dep_utc": "23:30", "arr_utc": "07:00+1", "block": "7h30m", "turnaround_min": 210, "ac_slot": 1 }
+            {
+              "flight": "VLR111",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "KJFK",
+              "dep_utc": "10:30",
+              "arr_utc": "20:00",
+              "block": "9h30m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR112",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "LIRF",
+              "dep_utc": "23:30",
+              "arr_utc": "07:00+1",
+              "block": "7h30m",
+              "turnaround_min": 210,
+              "ac_slot": 1
+            }
           ]
         },
         {
-          "dest": "KSFO", "city": "San Francisco",
-          "aircraft": "A350-900", "freq": "4x Weekly",
-          "flight": "VLR 121/122", "note": "Strategic Long-Range",
+          "dest": "KSFO",
+          "city": "San Francisco",
+          "aircraft": "A350-900",
+          "freq": "4x Weekly",
+          "flight": "VLR 121/122",
+          "note": "Strategic Long-Range",
           "legs": [
-            { "flight": "VLR121", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "KSFO", "dep_utc": "11:00", "arr_utc": "00:30+1", "block": "13h30m", "ac_slot": 2 },
-            { "flight": "VLR122", "direction": "inbound",  "dep_icao": "KSFO", "arr_icao": "LIRF", "dep_utc": "03:30+1", "arr_utc": "19:00+1", "block": "11h30m", "turnaround_min": 180, "ac_slot": 2 }
+            {
+              "flight": "VLR121",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "KSFO",
+              "dep_utc": "11:00",
+              "arr_utc": "00:30+1",
+              "block": "13h30m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR122",
+              "direction": "inbound",
+              "dep_icao": "KSFO",
+              "arr_icao": "LIRF",
+              "dep_utc": "03:30+1",
+              "arr_utc": "19:00+1",
+              "block": "11h30m",
+              "turnaround_min": 180,
+              "ac_slot": 2
+            }
           ]
         },
         {
-          "dest": "WIII", "city": "Giacarta",
-          "aircraft": "A350-900", "freq": "Daily",
-          "flight": "VLR 201/202", "note": "Hub-to-Hub Flagship",
+          "dest": "WIII",
+          "city": "Giacarta",
+          "aircraft": "A350-900",
+          "freq": "Daily",
+          "flight": "VLR 201/202",
+          "note": "Hub-to-Hub Flagship",
           "legs": [
-            { "flight": "VLR201", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "WIII", "dep_utc": "21:00", "arr_utc": "10:30+1", "block": "13h30m", "ac_slot": 3 },
-            { "flight": "VLR202", "direction": "inbound",  "dep_icao": "WIII", "arr_icao": "LIRF", "dep_utc": "17:30+1", "arr_utc": "07:00+2", "block": "13h30m", "turnaround_min": 420, "ac_slot": 4 }
+            {
+              "flight": "VLR201",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "WIII",
+              "dep_utc": "21:00",
+              "arr_utc": "10:30+1",
+              "block": "13h30m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR202",
+              "direction": "inbound",
+              "dep_icao": "WIII",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:30+1",
+              "arr_utc": "07:00+2",
+              "block": "13h30m",
+              "turnaround_min": 420,
+              "ac_slot": 4
+            }
           ]
         },
         {
-          "dest": "OMDB", "city": "Dubai",
-          "aircraft": "A321LR", "freq": "Daily",
-          "flight": "VLR 211/212", "note": "Strategic Long-Range",
+          "dest": "OMDB",
+          "city": "Dubai",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 211/212",
+          "note": "Strategic Long-Range",
           "legs": [
-            { "flight": "VLR211", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "OMDB", "dep_utc": "06:00", "arr_utc": "12:00", "block": "6h00m", "ac_slot": 1 },
-            { "flight": "VLR212", "direction": "inbound",  "dep_icao": "OMDB", "arr_icao": "LIRF", "dep_utc": "13:15", "arr_utc": "17:30", "block": "5h15m", "turnaround_min": 75, "ac_slot": 1 }
+            {
+              "flight": "VLR211",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "OMDB",
+              "dep_utc": "06:00",
+              "arr_utc": "12:00",
+              "block": "6h00m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR212",
+              "direction": "inbound",
+              "dep_icao": "OMDB",
+              "arr_icao": "LIRF",
+              "dep_utc": "13:15",
+              "arr_utc": "17:30",
+              "block": "5h15m",
+              "turnaround_min": 75,
+              "ac_slot": 1
+            }
           ]
         },
         {
-          "dest": "LIML", "city": "Milano Linate",
-          "aircraft": "A320", "freq": "3x Daily",
-          "flight": "VLR 311-316", "note": "Domestic Feeder",
+          "dest": "LIML",
+          "city": "Milano Linate",
+          "aircraft": "A320",
+          "freq": "3x Daily",
+          "flight": "VLR 311-316",
+          "note": "Domestic Feeder",
           "legs": [
-            { "flight": "VLR311", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LIML", "dep_utc": "06:30", "arr_utc": "07:45", "block": "1h15m", "ac_slot": 1 },
-            { "flight": "VLR312", "direction": "inbound",  "dep_icao": "LIML", "arr_icao": "LIRF", "dep_utc": "09:00", "arr_utc": "10:15", "block": "1h15m", "turnaround_min": 75, "ac_slot": 1 },
-            { "flight": "VLR313", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LIML", "dep_utc": "11:30", "arr_utc": "12:45", "block": "1h15m", "ac_slot": 1 },
-            { "flight": "VLR314", "direction": "inbound",  "dep_icao": "LIML", "arr_icao": "LIRF", "dep_utc": "14:00", "arr_utc": "15:15", "block": "1h15m", "turnaround_min": 75, "ac_slot": 1 },
-            { "flight": "VLR315", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LIML", "dep_utc": "17:30", "arr_utc": "18:45", "block": "1h15m", "ac_slot": 2 },
-            { "flight": "VLR316", "direction": "inbound",  "dep_icao": "LIML", "arr_icao": "LIRF", "dep_utc": "20:00", "arr_utc": "21:15", "block": "1h15m", "turnaround_min": 75, "ac_slot": 2 }
+            {
+              "flight": "VLR311",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIML",
+              "dep_utc": "06:30",
+              "arr_utc": "07:45",
+              "block": "1h15m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR312",
+              "direction": "inbound",
+              "dep_icao": "LIML",
+              "arr_icao": "LIRF",
+              "dep_utc": "09:00",
+              "arr_utc": "10:15",
+              "block": "1h15m",
+              "turnaround_min": 75,
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR313",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIML",
+              "dep_utc": "11:30",
+              "arr_utc": "12:45",
+              "block": "1h15m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR314",
+              "direction": "inbound",
+              "dep_icao": "LIML",
+              "arr_icao": "LIRF",
+              "dep_utc": "14:00",
+              "arr_utc": "15:15",
+              "block": "1h15m",
+              "turnaround_min": 75,
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR315",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIML",
+              "dep_utc": "17:30",
+              "arr_utc": "18:45",
+              "block": "1h15m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR316",
+              "direction": "inbound",
+              "dep_icao": "LIML",
+              "arr_icao": "LIRF",
+              "dep_utc": "20:00",
+              "arr_utc": "21:15",
+              "block": "1h15m",
+              "turnaround_min": 75,
+              "ac_slot": 2
+            }
           ]
         },
         {
-          "dest": "EGLL", "city": "Londra LHR",
-          "aircraft": "A320", "freq": "3x Daily",
-          "flight": "VLR 411-416", "note": "European Feeder",
+          "dest": "EGLL",
+          "city": "Londra LHR",
+          "aircraft": "A320",
+          "freq": "3x Daily",
+          "flight": "VLR 411-416",
+          "note": "European Feeder",
           "legs": [
-            { "flight": "VLR411", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "EGLL", "dep_utc": "07:00", "arr_utc": "09:15", "block": "2h15m", "ac_slot": 3 },
-            { "flight": "VLR412", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "LIRF", "dep_utc": "10:30", "arr_utc": "12:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 3 },
-            { "flight": "VLR413", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "EGLL", "dep_utc": "14:00", "arr_utc": "16:15", "block": "2h15m", "ac_slot": 3 },
-            { "flight": "VLR414", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "LIRF", "dep_utc": "17:30", "arr_utc": "19:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 3 },
-            { "flight": "VLR415", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "EGLL", "dep_utc": "19:00", "arr_utc": "21:15", "block": "2h15m", "ac_slot": 4 },
-            { "flight": "VLR416", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "LIRF", "dep_utc": "22:30", "arr_utc": "00:45+1", "block": "2h15m", "turnaround_min": 75, "ac_slot": 4 }
+            {
+              "flight": "VLR411",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EGLL",
+              "dep_utc": "07:00",
+              "arr_utc": "09:15",
+              "block": "2h15m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR412",
+              "direction": "inbound",
+              "dep_icao": "EGLL",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:30",
+              "arr_utc": "12:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR413",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EGLL",
+              "dep_utc": "14:00",
+              "arr_utc": "16:15",
+              "block": "2h15m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR414",
+              "direction": "inbound",
+              "dep_icao": "EGLL",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:30",
+              "arr_utc": "19:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR415",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EGLL",
+              "dep_utc": "19:00",
+              "arr_utc": "21:15",
+              "block": "2h15m",
+              "ac_slot": 4
+            },
+            {
+              "flight": "VLR416",
+              "direction": "inbound",
+              "dep_icao": "EGLL",
+              "arr_icao": "LIRF",
+              "dep_utc": "22:30",
+              "arr_utc": "00:45+1",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 4
+            }
           ]
         },
         {
-          "dest": "LFPG", "city": "Parigi CDG",
-          "aircraft": "A320", "freq": "3x Daily",
-          "flight": "VLR 511-516", "note": "European Feeder",
+          "dest": "LFPG",
+          "city": "Parigi CDG",
+          "aircraft": "A320",
+          "freq": "3x Daily",
+          "flight": "VLR 511-516",
+          "note": "European Feeder",
           "legs": [
-            { "flight": "VLR511", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LFPG", "dep_utc": "06:00", "arr_utc": "08:15", "block": "2h15m", "ac_slot": 5 },
-            { "flight": "VLR512", "direction": "inbound",  "dep_icao": "LFPG", "arr_icao": "LIRF", "dep_utc": "09:30", "arr_utc": "11:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 5 },
-            { "flight": "VLR513", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LFPG", "dep_utc": "13:00", "arr_utc": "15:15", "block": "2h15m", "ac_slot": 5 },
-            { "flight": "VLR514", "direction": "inbound",  "dep_icao": "LFPG", "arr_icao": "LIRF", "dep_utc": "16:30", "arr_utc": "18:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 5 },
-            { "flight": "VLR515", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LFPG", "dep_utc": "18:30", "arr_utc": "20:45", "block": "2h15m", "ac_slot": 6 },
-            { "flight": "VLR516", "direction": "inbound",  "dep_icao": "LFPG", "arr_icao": "LIRF", "dep_utc": "22:00", "arr_utc": "00:15+1", "block": "2h15m", "turnaround_min": 75, "ac_slot": 6 }
+            {
+              "flight": "VLR511",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LFPG",
+              "dep_utc": "06:00",
+              "arr_utc": "08:15",
+              "block": "2h15m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR512",
+              "direction": "inbound",
+              "dep_icao": "LFPG",
+              "arr_icao": "LIRF",
+              "dep_utc": "09:30",
+              "arr_utc": "11:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR513",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LFPG",
+              "dep_utc": "13:00",
+              "arr_utc": "15:15",
+              "block": "2h15m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR514",
+              "direction": "inbound",
+              "dep_icao": "LFPG",
+              "arr_icao": "LIRF",
+              "dep_utc": "16:30",
+              "arr_utc": "18:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR515",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LFPG",
+              "dep_utc": "18:30",
+              "arr_utc": "20:45",
+              "block": "2h15m",
+              "ac_slot": 6
+            },
+            {
+              "flight": "VLR516",
+              "direction": "inbound",
+              "dep_icao": "LFPG",
+              "arr_icao": "LIRF",
+              "dep_utc": "22:00",
+              "arr_utc": "00:15+1",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 6
+            }
           ]
         },
         {
-          "dest": "LSZH", "city": "Zurigo",
-          "aircraft": "A319", "freq": "2x Daily",
-          "flight": "VLR 611-614", "note": "Finance Corridor",
+          "dest": "LSZH",
+          "city": "Zurigo",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 611-614",
+          "note": "Finance Corridor",
           "legs": [
-            { "flight": "VLR611", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LSZH", "dep_utc": "07:30", "arr_utc": "09:45", "block": "2h15m", "ac_slot": 1 },
-            { "flight": "VLR612", "direction": "inbound",  "dep_icao": "LSZH", "arr_icao": "LIRF", "dep_utc": "11:00", "arr_utc": "13:15", "block": "2h15m", "turnaround_min": 75, "ac_slot": 1 },
-            { "flight": "VLR613", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "LSZH", "dep_utc": "15:00", "arr_utc": "17:15", "block": "2h15m", "ac_slot": 1 },
-            { "flight": "VLR614", "direction": "inbound",  "dep_icao": "LSZH", "arr_icao": "LIRF", "dep_utc": "18:30", "arr_utc": "20:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 1 }
+            {
+              "flight": "VLR611",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LSZH",
+              "dep_utc": "07:30",
+              "arr_utc": "09:45",
+              "block": "2h15m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR612",
+              "direction": "inbound",
+              "dep_icao": "LSZH",
+              "arr_icao": "LIRF",
+              "dep_utc": "11:00",
+              "arr_utc": "13:15",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR613",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LSZH",
+              "dep_utc": "15:00",
+              "arr_utc": "17:15",
+              "block": "2h15m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR614",
+              "direction": "inbound",
+              "dep_icao": "LSZH",
+              "arr_icao": "LIRF",
+              "dep_utc": "18:30",
+              "arr_utc": "20:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 1
+            }
           ]
         },
         {
-          "dest": "EDDF", "city": "Francoforte",
-          "aircraft": "A319", "freq": "2x Daily",
-          "flight": "VLR 711-714", "note": "Finance Corridor",
+          "dest": "EDDF",
+          "city": "Francoforte",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 711-714",
+          "note": "Finance Corridor",
           "legs": [
-            { "flight": "VLR711", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "EDDF", "dep_utc": "08:00", "arr_utc": "10:15", "block": "2h15m", "ac_slot": 2 },
-            { "flight": "VLR712", "direction": "inbound",  "dep_icao": "EDDF", "arr_icao": "LIRF", "dep_utc": "11:30", "arr_utc": "13:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 2 },
-            { "flight": "VLR713", "direction": "outbound", "dep_icao": "LIRF", "arr_icao": "EDDF", "dep_utc": "16:00", "arr_utc": "18:15", "block": "2h15m", "ac_slot": 2 },
-            { "flight": "VLR714", "direction": "inbound",  "dep_icao": "EDDF", "arr_icao": "LIRF", "dep_utc": "19:30", "arr_utc": "21:45", "block": "2h15m", "turnaround_min": 75, "ac_slot": 2 }
+            {
+              "flight": "VLR711",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EDDF",
+              "dep_utc": "08:00",
+              "arr_utc": "10:15",
+              "block": "2h15m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR712",
+              "direction": "inbound",
+              "dep_icao": "EDDF",
+              "arr_icao": "LIRF",
+              "dep_utc": "11:30",
+              "arr_utc": "13:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR713",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EDDF",
+              "dep_utc": "16:00",
+              "arr_utc": "18:15",
+              "block": "2h15m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR714",
+              "direction": "inbound",
+              "dep_icao": "EDDF",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:30",
+              "arr_utc": "21:45",
+              "block": "2h15m",
+              "turnaround_min": 75,
+              "ac_slot": 2
+            }
+          ]
+        },
+        {
+          "dest": "LMML",
+          "city": "Malta Luqa",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 331-334",
+          "note": "Mediterranean Boutique",
+          "_note_slot": "A320 ac_slot=6 — VLR515/516 LFPG dep 18:30/22:00. Finestre 07:00-17:25 non sovrapposte. VLR334 arr 17:25 → 65min margine su VLR515.",
+          "legs": [
+            {
+              "flight": "VLR331",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LMML",
+              "dep_utc": "07:00",
+              "arr_utc": "08:50",
+              "block": "1h50m",
+              "ac_slot": 6,
+              "crew": {
+                "id": "VLR-001",
+                "name": "Alessandro Rossi",
+                "rank": "Captain"
+              }
+            },
+            {
+              "flight": "VLR332",
+              "direction": "inbound",
+              "dep_icao": "LMML",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:05",
+              "arr_utc": "11:55",
+              "block": "1h50m",
+              "turnaround_min": 75,
+              "ac_slot": 6,
+              "crew": {
+                "id": "VLR-001",
+                "name": "Alessandro Rossi",
+                "rank": "Captain"
+              }
+            },
+            {
+              "flight": "VLR333",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LMML",
+              "dep_utc": "12:30",
+              "arr_utc": "14:20",
+              "block": "1h50m",
+              "ac_slot": 6,
+              "crew": {
+                "id": "VLR-004",
+                "name": "Sofia Moretti",
+                "rank": "Captain"
+              }
+            },
+            {
+              "flight": "VLR334",
+              "direction": "inbound",
+              "dep_icao": "LMML",
+              "arr_icao": "LIRF",
+              "dep_utc": "15:35",
+              "arr_utc": "17:25",
+              "block": "1h50m",
+              "turnaround_min": 75,
+              "ac_slot": 6,
+              "crew": {
+                "id": "VLR-004",
+                "name": "Sofia Moretti",
+                "rank": "Captain"
+              }
+            }
+          ]
+        },
+        {
+          "dest": "LEMD",
+          "city": "Madrid Barajas",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 421/422",
+          "note": "Iberian Premium",
+          "_note_slot": "A320 ac_slot=4 — VLR415/416 EGLL dep 19:00/22:30. VLR422 arr 14:15, margine 4h45m. Nessun conflitto.",
+          "legs": [
+            {
+              "flight": "VLR421",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LEMD",
+              "dep_utc": "07:30",
+              "arr_utc": "10:15",
+              "block": "2h45m",
+              "ac_slot": 4,
+              "crew": {
+                "id": "VLR-006",
+                "name": "Matteo Bruno",
+                "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR422",
+              "direction": "inbound",
+              "dep_icao": "LEMD",
+              "arr_icao": "LIRF",
+              "dep_utc": "11:30",
+              "arr_utc": "14:15",
+              "block": "2h45m",
+              "turnaround_min": 75,
+              "ac_slot": 4,
+              "crew": {
+                "id": "VLR-006",
+                "name": "Matteo Bruno",
+                "rank": "Senior Captain"
+              }
+            }
           ]
         }
       ]
@@ -197,46 +682,233 @@
       "description": "Cuore dell'identità Nusantara. Gateway per l'Oceania e l'Asia del Pacifico.",
       "routes": [
         {
-          "dest": "YSSY", "city": "Sydney",
-          "aircraft": "A330neo", "freq": "Daily",
-          "flight": "VLR 811/812", "note": "Oceania Link",
+          "dest": "YSSY",
+          "city": "Sydney",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 811/812",
+          "note": "Oceania Link",
           "legs": [
-            { "flight": "VLR811", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "YSSY", "dep_utc": "08:00", "arr_utc": "15:00", "block": "7h00m", "ac_slot": 2 },
-            { "flight": "VLR812", "direction": "inbound",  "dep_icao": "YSSY", "arr_icao": "WIII", "dep_utc": "17:30", "arr_utc": "23:30", "block": "7h00m", "turnaround_min": 150, "ac_slot": 2 }
+            {
+              "flight": "VLR811",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "YSSY",
+              "dep_utc": "08:00",
+              "arr_utc": "15:00",
+              "block": "7h00m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR812",
+              "direction": "inbound",
+              "dep_icao": "YSSY",
+              "arr_icao": "WIII",
+              "dep_utc": "17:30",
+              "arr_utc": "23:30",
+              "block": "7h00m",
+              "turnaround_min": 150,
+              "ac_slot": 2
+            }
           ]
         },
         {
-          "dest": "RJTT", "city": "Tokyo HND",
-          "aircraft": "A330neo", "freq": "Daily",
-          "flight": "VLR 831/832", "note": "Tech Heritage",
+          "dest": "RJTT",
+          "city": "Tokyo HND",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 831/832",
+          "note": "Tech Heritage",
           "_change": "Aeromobile cambiato da A321LR ad A330neo (range WIII-RJTT ~5.700km).",
           "legs": [
-            { "flight": "VLR831", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "RJTT", "dep_utc": "06:00", "arr_utc": "13:00", "block": "7h00m", "ac_slot": 3 },
-            { "flight": "VLR832", "direction": "inbound",  "dep_icao": "RJTT", "arr_icao": "WIII", "dep_utc": "15:00", "arr_utc": "21:30", "block": "7h30m", "turnaround_min": 120, "ac_slot": 3 }
+            {
+              "flight": "VLR831",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "RJTT",
+              "dep_utc": "06:00",
+              "arr_utc": "13:00",
+              "block": "7h00m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR832",
+              "direction": "inbound",
+              "dep_icao": "RJTT",
+              "arr_icao": "WIII",
+              "dep_utc": "15:00",
+              "arr_utc": "21:30",
+              "block": "7h30m",
+              "turnaround_min": 120,
+              "ac_slot": 3
+            }
           ]
         },
         {
-          "dest": "WSSS", "city": "Singapore",
-          "aircraft": "A320", "freq": "3x Daily",
-          "flight": "VLR 821-826", "note": "Regional Business",
+          "dest": "WSSS",
+          "city": "Singapore",
+          "aircraft": "A320",
+          "freq": "3x Daily",
+          "flight": "VLR 821-826",
+          "note": "Regional Business",
           "legs": [
-            { "flight": "VLR821", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "WSSS", "dep_utc": "06:00", "arr_utc": "08:00", "block": "2h00m", "ac_slot": 7 },
-            { "flight": "VLR822", "direction": "inbound",  "dep_icao": "WSSS", "arr_icao": "WIII", "dep_utc": "09:00", "arr_utc": "11:00", "block": "2h00m", "turnaround_min": 60, "ac_slot": 7 },
-            { "flight": "VLR823", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "WSSS", "dep_utc": "12:00", "arr_utc": "14:00", "block": "2h00m", "ac_slot": 7 },
-            { "flight": "VLR824", "direction": "inbound",  "dep_icao": "WSSS", "arr_icao": "WIII", "dep_utc": "15:00", "arr_utc": "17:00", "block": "2h00m", "turnaround_min": 60, "ac_slot": 7 },
-            { "flight": "VLR825", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "WSSS", "dep_utc": "17:30", "arr_utc": "19:30", "block": "2h00m", "ac_slot": 8 },
-            { "flight": "VLR826", "direction": "inbound",  "dep_icao": "WSSS", "arr_icao": "WIII", "dep_utc": "20:30", "arr_utc": "22:30", "block": "2h00m", "turnaround_min": 60, "ac_slot": 8 }
+            {
+              "flight": "VLR821",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WSSS",
+              "dep_utc": "06:00",
+              "arr_utc": "08:00",
+              "block": "2h00m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR822",
+              "direction": "inbound",
+              "dep_icao": "WSSS",
+              "arr_icao": "WIII",
+              "dep_utc": "09:00",
+              "arr_utc": "11:00",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR823",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WSSS",
+              "dep_utc": "12:00",
+              "arr_utc": "14:00",
+              "block": "2h00m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR824",
+              "direction": "inbound",
+              "dep_icao": "WSSS",
+              "arr_icao": "WIII",
+              "dep_utc": "15:00",
+              "arr_utc": "17:00",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR825",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WSSS",
+              "dep_utc": "17:30",
+              "arr_utc": "19:30",
+              "block": "2h00m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR826",
+              "direction": "inbound",
+              "dep_icao": "WSSS",
+              "arr_icao": "WIII",
+              "dep_utc": "20:30",
+              "arr_utc": "22:30",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 8
+            }
           ]
         },
         {
-          "dest": "WADD", "city": "Bali",
-          "aircraft": "A320", "freq": "2x Daily",
-          "flight": "VLR 841-844", "note": "Boutique Leisure",
+          "dest": "WADD",
+          "city": "Bali",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 841-844",
+          "note": "Boutique Leisure",
           "legs": [
-            { "flight": "VLR841", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "WADD", "dep_utc": "08:00", "arr_utc": "10:00", "block": "2h00m", "ac_slot": 9 },
-            { "flight": "VLR842", "direction": "inbound",  "dep_icao": "WADD", "arr_icao": "WIII", "dep_utc": "11:00", "arr_utc": "13:00", "block": "2h00m", "turnaround_min": 60, "ac_slot": 9 },
-            { "flight": "VLR843", "direction": "outbound", "dep_icao": "WIII", "arr_icao": "WADD", "dep_utc": "15:00", "arr_utc": "17:00", "block": "2h00m", "ac_slot": 9 },
-            { "flight": "VLR844", "direction": "inbound",  "dep_icao": "WADD", "arr_icao": "WIII", "dep_utc": "18:00", "arr_utc": "20:00", "block": "2h00m", "turnaround_min": 60, "ac_slot": 9 }
+            {
+              "flight": "VLR841",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WADD",
+              "dep_utc": "08:00",
+              "arr_utc": "10:00",
+              "block": "2h00m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR842",
+              "direction": "inbound",
+              "dep_icao": "WADD",
+              "arr_icao": "WIII",
+              "dep_utc": "11:00",
+              "arr_utc": "13:00",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR843",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WADD",
+              "dep_utc": "15:00",
+              "arr_utc": "17:00",
+              "block": "2h00m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR844",
+              "direction": "inbound",
+              "dep_icao": "WADD",
+              "arr_icao": "WIII",
+              "dep_utc": "18:00",
+              "arr_utc": "20:00",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            }
+          ]
+        },
+        {
+          "dest": "VTBS",
+          "city": "Bangkok Suvarnabhumi",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 851/852",
+          "note": "Indochina Gateway",
+          "_note_slot": "A320 ac_slot=8 — VLR825/826 SGN dep 17:30/20:30. VLR852 arr 10:45 UTC, margine 6h45m. Nessun conflitto.",
+          "legs": [
+            {
+              "flight": "VLR851",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VTBS",
+              "dep_utc": "02:30",
+              "arr_utc": "06:00",
+              "block": "3h30m",
+              "ac_slot": 8,
+              "crew": {
+                "id": "VLR-163",
+                "name": "Aditya Putra",
+                "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR852",
+              "direction": "inbound",
+              "dep_icao": "VTBS",
+              "arr_icao": "WIII",
+              "dep_utc": "07:15",
+              "arr_utc": "10:45",
+              "block": "3h30m",
+              "turnaround_min": 75,
+              "ac_slot": 8,
+              "crew": {
+                "id": "VLR-163",
+                "name": "Aditya Putra",
+                "rank": "Senior Captain"
+              }
+            }
           ]
         }
       ]
@@ -249,55 +921,219 @@
       "description": "Porto d'ingresso per l'innovazione. Connessione tra Europa, East Coast e Silicon Valley.",
       "routes": [
         {
-          "dest": "EGLL", "city": "Londra LHR",
-          "aircraft": "A330neo", "freq": "Daily",
-          "flight": "VLR 941/942", "note": "Academic Link",
+          "dest": "EGLL",
+          "city": "Londra LHR",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 941/942",
+          "note": "Academic Link",
           "_fix": "Dep corretta: 22:00 UTC (18:00 EDT). Orig. 08:00 UTC (04:00 EDT) impraticabile.",
           "legs": [
-            { "flight": "VLR941", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "EGLL", "dep_utc": "23:00", "arr_utc": "06:30+1", "block": "7h30m", "ac_slot": 1 },
-            { "flight": "VLR942", "direction": "inbound",  "dep_icao": "EGLL", "arr_icao": "KBOS", "dep_utc": "12:30+1", "arr_utc": "21:00+1", "block": "8h30m", "turnaround_min": 180, "ac_slot": 1 }
+            {
+              "flight": "VLR941",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "EGLL",
+              "dep_utc": "23:00",
+              "arr_utc": "06:30+1",
+              "block": "7h30m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR942",
+              "direction": "inbound",
+              "dep_icao": "EGLL",
+              "arr_icao": "KBOS",
+              "dep_utc": "12:30+1",
+              "arr_utc": "21:00+1",
+              "block": "8h30m",
+              "turnaround_min": 180,
+              "ac_slot": 1
+            }
           ]
         },
         {
-          "dest": "KSFO", "city": "San Francisco",
-          "aircraft": "A321LR", "freq": "Daily",
-          "flight": "VLR 911/912", "note": "Transcontinental Tech",
+          "dest": "KSFO",
+          "city": "San Francisco",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 911/912",
+          "note": "Transcontinental Tech",
           "legs": [
-            { "flight": "VLR911", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "KSFO", "dep_utc": "11:00", "arr_utc": "17:30", "block": "6h30m", "ac_slot": 2 },
-            { "flight": "VLR912", "direction": "inbound",  "dep_icao": "KSFO", "arr_icao": "KBOS", "dep_utc": "20:15", "arr_utc": "04:15+1", "block": "6h00m", "turnaround_min": 165, "ac_slot": 2 }
+            {
+              "flight": "VLR911",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KSFO",
+              "dep_utc": "11:00",
+              "arr_utc": "17:30",
+              "block": "6h30m",
+              "ac_slot": 2
+            },
+            {
+              "flight": "VLR912",
+              "direction": "inbound",
+              "dep_icao": "KSFO",
+              "arr_icao": "KBOS",
+              "dep_utc": "20:15",
+              "arr_utc": "04:15+1",
+              "block": "6h00m",
+              "turnaround_min": 165,
+              "ac_slot": 2
+            }
           ]
         },
         {
-          "dest": "KAUS", "city": "Austin",
-          "aircraft": "A321LR", "freq": "Daily",
-          "flight": "VLR 921/922", "note": "Silicon Hills Link",
+          "dest": "KAUS",
+          "city": "Austin",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 921/922",
+          "note": "Silicon Hills Link",
           "legs": [
-            { "flight": "VLR921", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "KAUS", "dep_utc": "13:00", "arr_utc": "17:30", "block": "4h30m", "ac_slot": 3 },
-            { "flight": "VLR922", "direction": "inbound",  "dep_icao": "KAUS", "arr_icao": "KBOS", "dep_utc": "19:15", "arr_utc": "23:45", "block": "4h30m", "turnaround_min": 105, "ac_slot": 3 }
+            {
+              "flight": "VLR921",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KAUS",
+              "dep_utc": "13:00",
+              "arr_utc": "17:30",
+              "block": "4h30m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR922",
+              "direction": "inbound",
+              "dep_icao": "KAUS",
+              "arr_icao": "KBOS",
+              "dep_utc": "19:15",
+              "arr_utc": "23:45",
+              "block": "4h30m",
+              "turnaround_min": 105,
+              "ac_slot": 3
+            }
           ]
         },
         {
-          "dest": "CYYZ", "city": "Toronto",
-          "aircraft": "A319", "freq": "Daily",
-          "flight": "VLR 931/932", "note": "North-East Link",
+          "dest": "CYYZ",
+          "city": "Toronto",
+          "aircraft": "A319",
+          "freq": "Daily",
+          "flight": "VLR 931/932",
+          "note": "North-East Link",
           "legs": [
-            { "flight": "VLR931", "direction": "outbound", "dep_icao": "KBOS", "arr_icao": "CYYZ", "dep_utc": "13:00", "arr_utc": "14:30", "block": "1h30m", "ac_slot": 3 },
-            { "flight": "VLR932", "direction": "inbound",  "dep_icao": "CYYZ", "arr_icao": "KBOS", "dep_utc": "16:00", "arr_utc": "17:30", "block": "1h30m", "turnaround_min": 90, "ac_slot": 3 }
+            {
+              "flight": "VLR931",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "CYYZ",
+              "dep_utc": "13:00",
+              "arr_utc": "14:30",
+              "block": "1h30m",
+              "ac_slot": 3
+            },
+            {
+              "flight": "VLR932",
+              "direction": "inbound",
+              "dep_icao": "CYYZ",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:00",
+              "arr_utc": "17:30",
+              "block": "1h30m",
+              "turnaround_min": 90,
+              "ac_slot": 3
+            }
+          ]
+        },
+        {
+          "dest": "KJFK",
+          "city": "New York JFK",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 951-954",
+          "note": "Northeast Business Shuttle",
+          "_note_slot": "A319 ac_slot=3 — condiviso con VLR931/932 CYYZ (13:00-17:30 UTC). Finestre non sovrapposte verificate.",
+          "legs": [
+            {
+              "flight": "VLR951",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KJFK",
+              "dep_utc": "07:00",
+              "arr_utc": "08:00",
+              "block": "1h00m",
+              "ac_slot": 3,
+              "crew": {
+                "id": "VLR-103",
+                "name": "Thomas Wright",
+                "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR952",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "KBOS",
+              "dep_utc": "09:15",
+              "arr_utc": "10:15",
+              "block": "1h00m",
+              "turnaround_min": 75,
+              "ac_slot": 3,
+              "crew": {
+                "id": "VLR-103",
+                "name": "Thomas Wright",
+                "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR953",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KJFK",
+              "dep_utc": "18:30",
+              "arr_utc": "19:30",
+              "block": "1h00m",
+              "ac_slot": 3,
+              "crew": {
+                "id": "VLR-109",
+                "name": "Edward King",
+                "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR954",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "KBOS",
+              "dep_utc": "20:30",
+              "arr_utc": "21:30",
+              "block": "1h00m",
+              "turnaround_min": 60,
+              "ac_slot": 3,
+              "crew": {
+                "id": "VLR-109",
+                "name": "Edward King",
+                "rank": "Senior Captain"
+              }
+            }
           ]
         }
       ]
     }
   ],
-
   "crew": [
     {
       "name": "Marco Ferretti",
       "rank": "Chief Captain",
       "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR201", "dep": "LIRF", "arr": "WIII",
-        "depCity": "Roma", "arrCity": "Giacarta",
-        "aircraft": "A350-900", "time": "21:00"
+        "flightNumber": "VLR201",
+        "dep": "LIRF",
+        "arr": "WIII",
+        "depCity": "Roma",
+        "arrCity": "Giacarta",
+        "aircraft": "A350-900",
+        "time": "21:00"
       }
     },
     {
@@ -305,9 +1141,13 @@
       "rank": "Senior Captain",
       "base": "WIII",
       "todayFlight": {
-        "flightNumber": "VLR831", "dep": "WIII", "arr": "RJTT",
-        "depCity": "Giacarta", "arrCity": "Tokyo",
-        "aircraft": "A330neo", "time": "06:00"
+        "flightNumber": "VLR831",
+        "dep": "WIII",
+        "arr": "RJTT",
+        "depCity": "Giacarta",
+        "arrCity": "Tokyo",
+        "aircraft": "A330neo",
+        "time": "06:00"
       }
     },
     {
@@ -315,9 +1155,13 @@
       "rank": "Captain",
       "base": "KBOS",
       "todayFlight": {
-        "flightNumber": "VLR911", "dep": "KBOS", "arr": "KSFO",
-        "depCity": "Boston", "arrCity": "San Francisco",
-        "aircraft": "A321LR", "time": "11:00"
+        "flightNumber": "VLR911",
+        "dep": "KBOS",
+        "arr": "KSFO",
+        "depCity": "Boston",
+        "arrCity": "San Francisco",
+        "aircraft": "A321LR",
+        "time": "11:00"
       }
     },
     {
@@ -325,9 +1169,13 @@
       "rank": "Captain",
       "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR111", "dep": "LIRF", "arr": "KJFK",
-        "depCity": "Roma", "arrCity": "New York",
-        "aircraft": "A330neo", "time": "10:30"
+        "flightNumber": "VLR111",
+        "dep": "LIRF",
+        "arr": "KJFK",
+        "depCity": "Roma",
+        "arrCity": "New York",
+        "aircraft": "A330neo",
+        "time": "10:30"
       }
     },
     {
@@ -335,9 +1183,13 @@
       "rank": "First Officer",
       "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR512", "dep": "LFPG", "arr": "LIRF",
-        "depCity": "Parigi", "arrCity": "Roma",
-        "aircraft": "A320", "time": "09:30"
+        "flightNumber": "VLR512",
+        "dep": "LFPG",
+        "arr": "LIRF",
+        "depCity": "Parigi",
+        "arrCity": "Roma",
+        "aircraft": "A320",
+        "time": "09:30"
       }
     },
     {
@@ -345,9 +1197,13 @@
       "rank": "First Officer",
       "base": "WIII",
       "todayFlight": {
-        "flightNumber": "VLR821", "dep": "WIII", "arr": "WSSS",
-        "depCity": "Giacarta", "arrCity": "Singapore",
-        "aircraft": "A320", "time": "06:00"
+        "flightNumber": "VLR821",
+        "dep": "WIII",
+        "arr": "WSSS",
+        "depCity": "Giacarta",
+        "arrCity": "Singapore",
+        "aircraft": "A320",
+        "time": "06:00"
       }
     },
     {
@@ -355,9 +1211,13 @@
       "rank": "Junior F.O.",
       "base": "KBOS",
       "todayFlight": {
-        "flightNumber": "VLR941", "dep": "KBOS", "arr": "EGLL",
-        "depCity": "Boston", "arrCity": "Londra",
-        "aircraft": "A330neo", "time": "22:00"
+        "flightNumber": "VLR941",
+        "dep": "KBOS",
+        "arr": "EGLL",
+        "depCity": "Boston",
+        "arrCity": "Londra",
+        "aircraft": "A330neo",
+        "time": "22:00"
       }
     },
     {
@@ -365,24 +1225,159 @@
       "rank": "First Officer",
       "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR412", "dep": "EGLL", "arr": "LIRF",
-        "depCity": "Londra", "arrCity": "Roma",
-        "aircraft": "A320", "time": "10:30"
+        "flightNumber": "VLR412",
+        "dep": "EGLL",
+        "arr": "LIRF",
+        "depCity": "Londra",
+        "arrCity": "Roma",
+        "aircraft": "A320",
+        "time": "10:30"
+      }
+    },
+    {
+      "name": "Thomas Wright",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR951",
+        "dep": "KBOS",
+        "arr": "KJFK",
+        "depCity": "Boston",
+        "arrCity": "New York JFK",
+        "aircraft": "A319",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Edward King",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR953",
+        "dep": "KBOS",
+        "arr": "KJFK",
+        "depCity": "Boston",
+        "arrCity": "New York JFK",
+        "aircraft": "A319",
+        "time": "18:30"
+      }
+    },
+    {
+      "name": "Alessandro Rossi",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR331",
+        "dep": "LIRF",
+        "arr": "LMML",
+        "depCity": "Roma",
+        "arrCity": "Malta",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Sofia Moretti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR333",
+        "dep": "LIRF",
+        "arr": "LMML",
+        "depCity": "Roma",
+        "arrCity": "Malta",
+        "aircraft": "A320",
+        "time": "12:30"
+      }
+    },
+    {
+      "name": "Matteo Bruno",
+      "rank": "Senior Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR421",
+        "dep": "LIRF",
+        "arr": "LEMD",
+        "depCity": "Roma",
+        "arrCity": "Madrid",
+        "aircraft": "A320",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Aditya Putra",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR851",
+        "dep": "WIII",
+        "arr": "VTBS",
+        "depCity": "Giacarta",
+        "arrCity": "Bangkok",
+        "aircraft": "A320",
+        "time": "02:30"
       }
     }
   ],
-
   "aria_ops": {
     "tone": "Sintetico, tecnico, autoritativo ma collaborativo.",
     "language": "it",
-    "priorities": ["Sicurezza", "Puntualità", "Efficienza carburante"],
+    "priorities": [
+      "Sicurezza",
+      "Puntualità",
+      "Efficienza carburante"
+    ],
     "rank_progression": [
-      { "name": "Cadet",          "minXp": 0,      "aircraft": ["Airbus A319"] },
-      { "name": "Junior F.O.",    "minXp": 5000,   "aircraft": ["Airbus A319", "Airbus A320"] },
-      { "name": "First Officer",  "minXp": 15000,  "aircraft": ["Airbus A319", "Airbus A320", "Airbus A321LR"] },
-      { "name": "Captain",        "minXp": 75000,  "aircraft": ["Airbus A320", "Airbus A321LR", "Airbus A330neo"] },
-      { "name": "Senior Captain", "minXp": 400000, "aircraft": ["Airbus A321LR", "Airbus A330neo", "Airbus A350-900"] },
-      { "name": "Chief Captain",  "minXp": 700000, "aircraft": ["Airbus A330neo", "Airbus A350-900"] }
+      {
+        "name": "Cadet",
+        "minXp": 0,
+        "aircraft": [
+          "Airbus A319"
+        ]
+      },
+      {
+        "name": "Junior F.O.",
+        "minXp": 5000,
+        "aircraft": [
+          "Airbus A319",
+          "Airbus A320"
+        ]
+      },
+      {
+        "name": "First Officer",
+        "minXp": 15000,
+        "aircraft": [
+          "Airbus A319",
+          "Airbus A320",
+          "Airbus A321LR"
+        ]
+      },
+      {
+        "name": "Captain",
+        "minXp": 75000,
+        "aircraft": [
+          "Airbus A320",
+          "Airbus A321LR",
+          "Airbus A330neo"
+        ]
+      },
+      {
+        "name": "Senior Captain",
+        "minXp": 400000,
+        "aircraft": [
+          "Airbus A321LR",
+          "Airbus A330neo",
+          "Airbus A350-900"
+        ]
+      },
+      {
+        "name": "Chief Captain",
+        "minXp": 700000,
+        "aircraft": [
+          "Airbus A330neo",
+          "Airbus A350-900"
+        ]
+      }
     ]
   }
 }
