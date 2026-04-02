@@ -277,7 +277,8 @@ interface ARIAProps {
   pilotName?: string;
 }
 
-type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network';
+type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roster';
+type MapMode = 'network' | 'route' | 'focused';
 
 // ─── Componente Mappa ─────────────────────────────────────────────────────────
 
@@ -365,7 +366,6 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight, hubIcaos 
             iconSize: [10, 10],
             iconAnchor: [5, 5]
         });
-
         const getFlightPos = (f: any): [number, number] | null => {
             const dep = findAirport(f.departure);
             const arr = findAirport(f.arrival);
@@ -522,6 +522,8 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   // Mappa
   const [selectedFlightForMap, setSelectedFlightForMap] = useState<any | null>(null);
   const [isMapZoomed, setIsMapZoomed] = useState(false);
+  const [rosterHubFilter, setRosterHubFilter] = useState<string>('ALL');
+  const [rosterRankFilter, setRosterRankFilter] = useState<string>('ALL');
   const [mapMode, setMapMode] = useState<'network' | 'flight'>('network');
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
@@ -595,6 +597,56 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const currentBaseCity = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.city
     ?? profile?.latestFlight?.arrival ?? currentBase;
   const currentHubRole = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.role ?? null;
+
+  // ── Generazione Roster Combinato (User + NPCs) ───────────────────────────
+  const fullRoster = useMemo(() => {
+    if (!profile) return [];
+    
+    // 1. Dati Utente (Andrea)
+    const userPilot = {
+      id: "VLR-A01",
+      name: pilotName || "Comandante Andrea",
+      rank: profile.currentRank.name,
+      base: currentBase,
+      totalFlights: profile.totalFlights,
+      totalHours: profile.totalHours,
+      isUser: true
+    };
+
+    // 2. Dati NPCs (con simulazione FH deterministica basata sul rank)
+    const npcList = npcRoster.map(npc => {
+      let baseHours = 0;
+      if (npc.rank.includes('Chief')) baseHours = 5000;
+      else if (npc.rank.includes('Senior')) baseHours = 2500;
+      else if (npc.rank.includes('Captain')) baseHours = 1000;
+      else if (npc.rank.includes('First Officer')) baseHours = 300;
+      else baseHours = 100;
+
+      const seed = (npc.id.split('-')[1] || "0").split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+      const randomVariante = (seed % 500);
+      
+      return {
+        ...npc,
+        totalFlights: Math.floor((baseHours + randomVariante) / 1.5),
+        totalHours: baseHours + randomVariante,
+        isUser: false
+      };
+    });
+
+    const combined = [userPilot, ...npcList];
+
+    // 3. Filtraggio
+    let filtered = combined;
+    if (rosterHubFilter !== 'ALL') {
+      filtered = filtered.filter(p => p.base === rosterHubFilter);
+    }
+    if (rosterRankFilter !== 'ALL') {
+      filtered = filtered.filter(p => p.rank === rosterRankFilter);
+    }
+
+    // 4. Ordinamento DESC per ore
+    return filtered.sort((a, b) => b.totalHours - a.totalHours);
+  }, [profile, npcRoster, pilotName, currentBase, rosterHubFilter, rosterRankFilter]);
 
   // ── Carica piano operativo e Roster ─────────────────────────────────────────
   useEffect(() => {
@@ -1114,7 +1166,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
 
         <nav className={styles.sidebarNav}>
-          {(['chat', 'overview', 'schedule', 'fleet', 'network'] as ViewState[]).map(v => (
+          {(['chat', 'overview', 'schedule', 'fleet', 'network', 'roster'] as ViewState[]).map(v => (
             <button 
               key={v} 
               onClick={() => setView(v)}
@@ -1125,6 +1177,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               {v === 'schedule' && <Calendar className={styles.sidebarBtnIcon} />}
               {v === 'fleet' && <Plane className={styles.sidebarBtnIcon} />}
               {v === 'network' && <Activity className={styles.sidebarBtnIcon} />}
+              {v === 'roster' && <Users className={styles.sidebarBtnIcon} />}
               <span style={{ textTransform: 'capitalize' }}>{v}</span>
               {view === v && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
             </button>
@@ -1498,7 +1551,6 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               </div>
             </div>
           )}
-
           {/* 📡 NETWORK VIEW */}
           {view === 'network' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -1562,6 +1614,112 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                           <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: 'var(--color-primary)' }} />
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
+
+          {/* 👥 ROSTER VIEW */}
+          {view === 'roster' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '18px' }}>Pilot Roster</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                      Classifica piloti Velar per ore di volo effettive.
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Filtra Hub</span>
+                      <select 
+                        value={rosterHubFilter} 
+                        onChange={(e) => setRosterHubFilter(e.target.value)}
+                        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', color: 'var(--color-text-primary)' }}
+                      >
+                        <option value="ALL">TUTTI GLI HUB</option>
+                        {opsPlan?.hubs.map(h => <option key={h.icao} value={h.icao}>{h.icao} - {h.city}</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Filtra Rating</span>
+                      <select 
+                        value={rosterRankFilter} 
+                        onChange={(e) => setRosterRankFilter(e.target.value)}
+                        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', color: 'var(--color-text-primary)' }}
+                      >
+                        <option value="ALL">TUTTI I RATING</option>
+                        <option value="Chief Pilot">Chief Pilot</option>
+                        <option value="Senior Captain">Senior Captain</option>
+                        <option value="Captain">Captain</option>
+                        <option value="Senior First Officer">Senior First Officer</option>
+                        <option value="First Officer">First Officer</option>
+                        <option value="Second Officer">Second Officer</option>
+                      </select>
+                    </div>
+                  </div>
+               </div>
+
+               <div className={styles.flightGrid}>
+                  {fullRoster.map((pilot, index) => (
+                    <div 
+                      key={pilot.id} 
+                      className={`${styles.card} ${pilot.isUser ? styles.userPilotCard : ''}`}
+                      style={{ 
+                        position: 'relative',
+                        border: pilot.isUser ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                        background: pilot.isUser ? 'rgba(var(--color-primary-rgb), 0.05)' : 'var(--color-surface)'
+                      }}
+                    >
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '20px', fontWeight: 900, opacity: 0.1, fontStyle: 'italic' }}>
+                        #{index + 1}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div className={styles.ariaAvatar} style={{ 
+                          width: '48px', 
+                          height: '48px', 
+                          fontSize: '18px',
+                          background: pilot.isUser ? 'var(--color-primary)' : 'var(--color-background)',
+                          color: pilot.isUser ? 'white' : 'var(--color-text-primary)',
+                          border: pilot.isUser ? 'none' : '1px solid var(--color-border)'
+                        }}>
+                          {pilot.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '16px', fontWeight: 700 }}>{pilot.name}</span>
+                            {pilot.isUser && (
+                              <span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-primary)', color: 'white', borderRadius: '4px', fontWeight: 800 }}>YOU</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-hint)', fontWeight: 600 }}>{pilot.id} • {pilot.rank}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Hub</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>{pilot.base}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Voli</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>{pilot.totalFlights}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Ore</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)' }}>{Math.floor(pilot.totalHours)}h</span>
+                        </div>
+                      </div>
+
+                      {pilot.isUser && (
+                        <div style={{ marginTop: '12px', padding: '8px', borderRadius: '4px', background: 'rgba(var(--color-primary-rgb), 0.1)', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>
+                          POSIZIONE ATTUALE NELLA TOP CREW: #{index + 1}
                         </div>
                       )}
                     </div>

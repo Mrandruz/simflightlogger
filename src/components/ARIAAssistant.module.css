@@ -529,3 +529,21 @@
 .fleetMaintDanger {
     background: var(--color-danger);
 }
+
+.userPilotCard {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 4px 20px rgba(var(--color-primary-rgb), 0.15) !important;
+    background: linear-gradient(to bottom right, rgba(var(--color-primary-rgb), 0.05), transparent) !important;
+}
+
+.userPilotCard::after {
+    content: 'TOP CREW';
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 9px;
+    font-weight: 900;
+    color: var(--color-primary);
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+}
