@@ -26,7 +26,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { sendOperationalAlert } from '../utils/discord';
-import { fetchNpcRoster, calculateNetworkState, NetworkFlight, NpcPilot } from '../utils/networkSimulator';
+import { fetchNpcRoster, calculateNetworkState, NetworkFlight, NpcPilot, assignPilot, parseTime, parseBlock } from '../utils/networkSimulator';
 import { findAirport } from '../utils/airportUtils';
 import { 
   MessageSquare, 
@@ -598,11 +598,20 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     ?? profile?.latestFlight?.arrival ?? currentBase;
   const currentHubRole = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.role ?? null;
 
-  // ── Generazione Roster Combinato (User + NPCs) ───────────────────────────
+  // ── Generazione Roster Combinato (User + NPCs) con Live Sync ──────────────
   const fullRoster = useMemo(() => {
-    if (!profile) return [];
+    if (!profile || !opsPlan) return [];
     
-    // 1. Dati Utente (Andrea)
+    // 1. Data di riferimento: 01 Gennaio 2026
+    const startDate = new Date('2026-01-01T00:00:00Z').getTime();
+    const now = Date.now();
+    const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    
+    // Calcolo minuti UTC correnti dall'inizio della giornata
+    const d = new Date();
+    const currentMinsUtc = d.getUTCHours() * 60 + d.getUTCMinutes();
+
+    // 1. Dati Utente (Andrea) - REALI da Firestore
     const userPilot = {
       id: "VLR-A01",
       name: pilotName || "Comandante Andrea",
@@ -613,22 +622,52 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
       isUser: true
     };
 
-    // 2. Dati NPCs (con simulazione FH deterministica basata sul rank)
+    // 2. Dati NPCs (con simulazione FH dinamica e sincrona)
     const npcList = npcRoster.map(npc => {
-      let baseHours = 0;
-      if (npc.rank.includes('Chief')) baseHours = 5000;
-      else if (npc.rank.includes('Senior')) baseHours = 2500;
-      else if (npc.rank.includes('Captain')) baseHours = 1000;
-      else if (npc.rank.includes('First Officer')) baseHours = 300;
-      else baseHours = 100;
+      // A. ORE STORICHE (Dall'inizio al giorno precedente)
+      let avgDailyHours = 0;
+      if (npc.rank.includes('Chief')) avgDailyHours = 4.5;
+      else if (npc.rank.includes('Senior')) avgDailyHours = 3.5;
+      else if (npc.rank.includes('Captain')) avgDailyHours = 3.0;
+      else if (npc.rank.includes('First Officer')) avgDailyHours = 2.5;
+      else avgDailyHours = 1.5;
 
+      const historicalHours = daysSinceStart * avgDailyHours;
       const seed = (npc.id.split('-')[1] || "0").split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      const randomVariante = (seed % 500);
-      
+      const randomVariante = (seed % 200); // Variante fissa per pilota per differenziare l'anzianità
+
+      // B. ORE ODIERNE (Sincronizzate con il network live oggi)
+      let todayHours = 0;
+      opsPlan.hubs.forEach((hub: any) => {
+        hub.routes?.forEach((route: any) => {
+          route.legs?.forEach((leg: any, idx: number) => {
+            const depTime = parseTime(leg.dep_utc);
+            const blockMins = parseBlock(leg.block);
+            const arrTime = depTime + blockMins;
+            const legId = `${leg.flight}-${idx}`;
+
+            // Identifichiamo se questo volo è assegnato a questo NPC
+            const pilotOnThisFlight = assignPilot(legId, route.aircraft, depTime, npcRoster, hub.icao);
+            
+            if (pilotOnThisFlight.id === npc.id) {
+              if (currentMinsUtc >= arrTime) {
+                // Volo già completato oggi
+                todayHours += (blockMins / 60);
+              } else if (currentMinsUtc >= depTime) {
+                // Volo attualmente "In Corso" - aggiungiamo il progresso reale
+                todayHours += ((currentMinsUtc - depTime) / 60);
+              }
+            }
+          });
+        });
+      });
+
+      const totalHours = historicalHours + randomVariante + todayHours;
+
       return {
         ...npc,
-        totalFlights: Math.floor((baseHours + randomVariante) / 1.5),
-        totalHours: baseHours + randomVariante,
+        totalFlights: Math.floor(totalHours / 1.5),
+        totalHours: totalHours,
         isUser: false
       };
     });
@@ -646,7 +685,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
     // 4. Ordinamento DESC per ore
     return filtered.sort((a, b) => b.totalHours - a.totalHours);
-  }, [profile, npcRoster, pilotName, currentBase, rosterHubFilter, rosterRankFilter]);
+  }, [profile, npcRoster, pilotName, currentBase, rosterHubFilter, rosterRankFilter, opsPlan]);
 
   // ── Carica piano operativo e Roster ─────────────────────────────────────────
   useEffect(() => {

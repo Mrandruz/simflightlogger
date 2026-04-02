@@ -38,7 +38,7 @@ export function parseBlock(blockStr: string): number {
 }
 
 // Assegna proceduralmente un pilota limitando al rank corretto e alla BASE di appartenenza
-function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[], base: string): NpcPilot {
+export function assignPilot(flightNumber: string, aircraft: string, time: number, roster: NpcPilot[], base: string): NpcPilot {
   if (!roster || roster.length === 0) return { id: 'N/A', name: 'Unknown', rank: 'Captain', base: 'N/A' };
   
   // Seed deterministico più granulare: numero volo + orario + prima lettera targa 
