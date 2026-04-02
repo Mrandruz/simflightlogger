@@ -832,6 +832,12 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
   const [discordTesting, setDiscordTesting] = useState(false);
+
+  // Stato riga espansa per le quattro list views
+  const [expandedScheduleId, setExpandedScheduleId] = useState<number | null>(null);
+  const [expandedFleetId, setExpandedFleetId] = useState<string | null>(null);
+  const [expandedNetworkId, setExpandedNetworkId] = useState<string | null>(null);
+  const [expandedRosterId, setExpandedRosterId] = useState<string | null>(null);
   
   // Refs per prevenire double-counting e sincronizzare Cloud
     const networkFlightsRef = useRef<NetworkFlight[]>([]);
@@ -1186,7 +1192,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     // 1. Dati Utente (Andrea) - REALI da Firestore
     const userPilot = {
       id: "VLR-A01",
-      name: pilotName || "Comandante Andrea",
+      name: pilotName || "Andrea Lana",
       rank: profile.currentRank.name,
       base: currentBase,
       totalFlights: profile.totalFlights,
@@ -1295,7 +1301,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
           // Sincronizziamo Firestore se vuoto o se sono tutti a zero (migrazione a dati reali)
           const snap = await getDocs(collection(db, 'fleet'));
-          const cloudFleet = snap.docs.map(d => d.data());
+          const cloudFleet = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
           const totalCloudHours = cloudFleet.reduce((acc: number, val: any) => acc + (val.totalFlightHours || 0), 0);
 
           if (snap.empty || totalCloudHours < 1) {
@@ -1304,6 +1310,27 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
                await setDoc(doc(db, 'fleet', ac.id), ac, { merge: true });
             }
             console.log('[ARIA Ops] Cloud popolato con successo.');
+          } else {
+            // MIGRATION: ripristina gli aerei erroneamente in AOG per la vecchia soglia 500h.
+            // Un aereo è davvero AOG solo se (totalFlightHours - lastMaintenanceHour) >= MAINTENANCE_CYCLE_HOURS.
+            const fixedAircraft: string[] = [];
+            for (const ac of cloudFleet) {
+              const cycleHours = (ac.totalFlightHours || 0) - (ac.lastMaintenanceHour || 0);
+              const isReallyAog = cycleHours >= MAINTENANCE_CYCLE_HOURS;
+              const isMarkedAog = ac.status === 'AOG' || ac.isAOG;
+              if (isMarkedAog && !isReallyAog) {
+                // Aereo marcato AOG con vecchia soglia — ripristina
+                await updateDoc(doc(db, 'fleet', ac.id), {
+                  status: 'Idle',
+                  isAOG: false,
+                  aogUntilTimeMs: 0,
+                });
+                fixedAircraft.push(ac.id);
+              }
+            }
+            if (fixedAircraft.length > 0) {
+              console.log('[ARIA Migration] Ripristinati', fixedAircraft.length, 'aerei da AOG (soglia aggiornata a', MAINTENANCE_CYCLE_HOURS, 'h):', fixedAircraft.join(', '));
+            }
           }
         }
       } catch (err) {
@@ -1875,10 +1902,10 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         {profile && (
           <div className={styles.pilotInfo}>
             <div className={styles.pilotAvatar}>
-              {pilotName ? pilotName.charAt(0).toUpperCase() : 'P'}
+              {pilotName ? pilotName.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className={styles.pilotText}>
-              <span className={styles.pilotName}>{pilotName || 'Comandante'}</span>
+              <span className={styles.pilotName}>{pilotName || 'Andrea Lana'}</span>
               <span className={styles.pilotRank}>{profile.currentRank.name}</span>
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
@@ -2091,67 +2118,159 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               </div>
 
               {scheduleTab === 'mine' && (
-                <div className={styles.flightGrid}>
-                  {schedule.length > 0 ? (
-                    schedule.map((f, i) => (
-                      <div 
-                        key={i} 
-                        className={`${styles.card} ${styles.flightCard} ${selectedFlight === f ? styles.flightCardSelected : ''}`} 
-                        onClick={() => { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <span className={styles.sectionTitle}>{f.day} • {f.flightNumber}</span>
-                            <div style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0' }}>
-                              {f.departure} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({f.departureTime || '--:--'})</span> 
-                              {" → "}
-                              {f.arrival} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({f.arrivalTime || '--:--'})</span>
-                            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {/* Header colonne */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '80px 1fr 180px 90px 100px 28px',
+                    gap: '0 12px',
+                    padding: '6px 16px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--color-text-hint)',
+                    borderBottom: '1px solid var(--color-border)',
+                  }}>
+                    <span>Giorno</span>
+                    <span>Rotta</span>
+                    <span>Aeromobile</span>
+                    <span>Distanza</span>
+                    <span>Durata</span>
+                    <span />
+                  </div>
+
+                  {schedule.length > 0 ? schedule.map((f, i) => {
+                    const isOpen = expandedScheduleId === i;
+                    return (
+                      <div key={i} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        {/* Riga principale */}
+                        <div
+                          onClick={() => {
+                            const next = isOpen ? null : i;
+                            setExpandedScheduleId(next);
+                            if (next !== null) { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }
+                          }}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '80px 1fr 180px 90px 100px 28px',
+                            gap: '0 12px',
+                            padding: '11px 16px',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : 'transparent',
+                            transition: 'background 0.15s',
+                          }}
+                        >
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-hint)' }}>{f.day}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{f.flightNumber}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {f.departure}
+                              <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.departureTime || '--:--'}</span>
+                              {' → '}
+                              {f.arrival}
+                              <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.arrivalTime || '--:--'}</span>
+                            </span>
                           </div>
-                          <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>{f.aircraft}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.aircraft}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.distance}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.estimatedDuration}</span>
+                          <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                           <span>{f.distance}</span>
-                           <span>{f.estimatedDuration}</span>
-                        </div>
-                        {selectedFlight === f && (
-                          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
-                            <p style={{ margin: '0 0 12px' }}>{f.reason}</p>
-                            <a href={buildSimbriefUrl(f)} target="_blank" rel="noopener noreferrer" className={styles.sendBtn} style={{ width: '100%', height: '36px', fontSize: '13px', textDecoration: 'none', gap: '8px' }}>
-                              <ExternalLink size={14} /> Briefing in SimBrief
+
+                        {/* Pannello espanso */}
+                        {isOpen && (
+                          <div style={{ padding: '12px 16px 16px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5', fontStyle: 'italic' }}>{f.reason}</p>
+                            <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                              <span>Partenza: <strong style={{ color: 'var(--color-text-primary)' }}>{f.departureCity}</strong></span>
+                              <span>Arrivo: <strong style={{ color: 'var(--color-text-primary)' }}>{f.arrivalCity}</strong></span>
+                            </div>
+                            <a
+                              href={buildSimbriefUrl(f)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.sendBtn}
+                              style={{ alignSelf: 'flex-start', padding: '0 16px', height: '32px', fontSize: '12px', textDecoration: 'none', gap: '6px' }}
+                            >
+                              <ExternalLink size={13} /> Briefing SimBrief
                             </a>
                           </div>
                         )}
                       </div>
-                    ))
-                  ) : (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--color-text-hint)' }}>
-                       <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
-                       <p>Nessun volo programmato. Genera una nuova schedule settimanale.</p>
-                       <button onClick={generateSchedule} className={styles.sendBtn} style={{ width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
+                    );
+                  }) : (
+                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--color-text-hint)' }}>
+                      <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
+                      <p>Nessun volo programmato. Genera una nuova schedule settimanale.</p>
+                      <button onClick={generateSchedule} className={styles.sendBtn} style={{ width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
                     </div>
                   )}
                 </div>
               )}
 
               {scheduleTab === 'crew' && (
-                <div className={styles.flightGrid}>
-                  {Array.from(new Map(networkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => (
-                    <div key={nf.id} className={styles.card}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div className={styles.ariaAvatar}>{(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}</div>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: 600 }}>{nf.pilot.name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>{nf.pilot.rank} • {nf.pilot.base}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {/* Header colonne */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '44px 1fr 160px 120px 28px',
+                    gap: '0 12px',
+                    padding: '6px 16px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--color-text-hint)',
+                    borderBottom: '1px solid var(--color-border)',
+                  }}>
+                    <span />
+                    <span>Pilota</span>
+                    <span>Volo / Rotta</span>
+                    <span>Stato</span>
+                    <span />
+                  </div>
+                  {Array.from(new Map(networkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => {
+                    const isOpen = expandedNetworkId === nf.id + '-crew';
+                    return (
+                      <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <div
+                          onClick={() => setExpandedNetworkId(isOpen ? null : nf.id + '-crew')}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '44px 1fr 160px 120px 28px',
+                            gap: '0 12px',
+                            padding: '9px 16px',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : 'transparent',
+                          }}
+                        >
+                          <div className={styles.ariaAvatar} style={{ width: '28px', height: '28px', fontSize: '11px' }}>
+                            {(nf.pilot.name || 'CM').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nf.pilot.name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>{nf.pilot.rank} · {nf.pilot.base}</div>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{nf.flightNumber}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginLeft: '6px' }}>{nf.departure}→{nf.arrival}</span>
+                          </div>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)' }}>{nf.status.toUpperCase()}</span>
+                          <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                         </div>
+                        {isOpen && (
+                          <div style={{ padding: '10px 16px 14px 72px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '24px', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                            <span>Aeromobile: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.aircraft}</strong></span>
+                            <span>Partenza: <strong style={{ color: 'var(--color-text-primary)' }}>{formatMinutesToTime(nf.departureTime)}</strong></span>
+                            <span>Arrivo: <strong style={{ color: 'var(--color-text-primary)' }}>{formatMinutesToTime(nf.arrivalTime)}</strong></span>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-mono)', fontWeight: 600 }}>{nf.flightNumber}</span>
-                        <span style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: 600 }}>{nf.status.toUpperCase()}</span>
-                      </div>
-                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{nf.departure} → {nf.arrival}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2172,72 +2291,117 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 </div>
               </div>
 
-              <div className={styles.flightGrid}>
+              {/* Lista flotta espandibile */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                {/* Header colonne */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '110px 160px 1fr 120px 130px 28px',
+                  gap: '0 12px',
+                  padding: '6px 16px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--color-text-hint)',
+                  background: 'var(--color-background)',
+                  borderBottom: '1px solid var(--color-border)',
+                }}>
+                  <span>Targa</span>
+                  <span>Tipo</span>
+                  <span>Manutenzione</span>
+                  <span>Ore Totali</span>
+                  <span>Stato</span>
+                  <span />
+                </div>
+
                 {fleetState.map((ac) => {
                   const activeFlight = networkFlights.find(nf => nf.tailNumber === ac.id);
                   const isFlying = activeFlight && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(activeFlight.status);
-                  const liveStatus = isFlying ? activeFlight.status.toUpperCase() : ac.status;
-                  
+
+                  // GUARD: ricalcola AOG dalla soglia reale, non dal campo status Firestore
+                  // che potrebbe essere stantio dalla vecchia soglia 500h
+                  const cycleHoursLive = (ac.totalFlightHours || 0) - (ac.lastMaintenanceHour || 0);
+                  const isReallyAog = (ac.status === 'AOG' || ac.isAOG) && cycleHoursLive >= MAINTENANCE_CYCLE_HOURS;
+
+                  const liveStatus = isFlying ? activeFlight.status.toUpperCase() : (isReallyAog ? 'AOG' : (ac.status === 'AOG' ? 'Idle' : ac.status));
                   const maintProgress = (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS) / MAINTENANCE_CYCLE_HOURS;
                   const hoursUntilCheck = MAINTENANCE_CYCLE_HOURS - (ac.totalFlightHours % MAINTENANCE_CYCLE_HOURS);
-                  
-                  // FIX 8: statusColor derivato da liveStatus (stato effettivo visualizzato),
-                  // non da ac.status (Firestore) che può essere stantio rispetto al network live
                   const liveStatusLower = liveStatus?.toString().toLowerCase() || '';
                   const statusColor = liveStatusLower === 'aog' ? 'var(--color-danger)' :
-                                     (isFlying || liveStatusLower === 'en route' || liveStatusLower === 'approach' || liveStatusLower === 'taxi out' || liveStatusLower === 'pushback' || liveStatusLower === 'boarding') ? 'var(--color-primary)' : 'var(--color-success)';
-                  
-                  const progressColor = ac.status === 'AOG' ? 'var(--color-danger)' : 
+                                     (isFlying || ['en route','approach','taxi out','pushback','boarding'].includes(liveStatusLower)) ? 'var(--color-primary)' : 'var(--color-success)';
+                  const progressColor = isReallyAog ? 'var(--color-danger)' :
                                        (hoursUntilCheck < 50) ? 'var(--color-danger)' :
                                        (hoursUntilCheck < 150) ? 'var(--color-warning)' : 'var(--color-primary)';
+                  const isOpen = expandedFleetId === ac.id;
+                  const isAog = isReallyAog && ac.aogUntilTimeMs > Date.now();
 
-                   return (
-                    <div key={ac.id} className={styles.card}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-family-mono)' }}>{ac.id}</span>
-                        <span style={{ 
-                          fontSize: '10px', 
-                          padding: '2px 8px', 
-                          borderRadius: '4px', 
-                          background: `${statusColor}22`, 
-                          color: statusColor, 
-                          fontWeight: 700,
-                          border: `1px solid ${statusColor}44`
-                        }}>
-                          {liveStatus}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{ac.type}</div>
-                      
-                      <div style={{ marginTop: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-hint)', marginBottom: '5px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{ac.totalFlightHours.toFixed(1)}h</span>
-                            <span>totali</span>
+                  return (
+                    <div key={ac.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      {/* Riga compatta */}
+                      <div
+                        onClick={() => setExpandedFleetId(isOpen ? null : ac.id)}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '110px 160px 1fr 120px 130px 28px',
+                          gap: '0 12px',
+                          padding: '10px 16px',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : isAog ? 'rgba(239,68,68,0.03)' : 'transparent',
+                          transition: 'background 0.15s',
+                        }}
+                      >
+                        {/* Targa */}
+                        <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: isAog ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{ac.id}</span>
+                        {/* Tipo */}
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ac.type}</span>
+                        {/* Barra manutenzione inline */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          <div style={{ flex: 1, height: '5px', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${maintProgress * 100}%`, background: progressColor, transition: 'width 0.5s ease' }} />
                           </div>
-                          <span style={{ fontWeight: 600, color: hoursUntilCheck < 50 ? 'var(--color-danger)' : 'inherit' }}>
-                            Next Check: {hoursUntilCheck.toFixed(1)}h
+                          <span style={{ fontSize: '11px', color: hoursUntilCheck < 50 ? 'var(--color-danger)' : 'var(--color-text-hint)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {hoursUntilCheck.toFixed(0)}h al check
                           </span>
                         </div>
-                        <div style={{ height: '6px', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ 
-                            height: '100%', 
-                            width: `${maintProgress * 100}%`, 
-                            background: progressColor,
-                            transition: 'width 0.5s ease'
-                          }} />
-                        </div>
+                        {/* Ore totali */}
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{ac.totalFlightHours.toFixed(1)}h</span>
+                        {/* Status badge */}
+                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: `${statusColor}22`, color: statusColor, fontWeight: 700, border: `1px solid ${statusColor}44`, whiteSpace: 'nowrap' }}>
+                          {liveStatus}
+                        </span>
+                        <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                       </div>
-                      
-                      {isFlying && (
-                        <div style={{ marginTop: '10px', padding: '6px', borderRadius: '6px', background: 'var(--color-primary-light)', fontSize: '10px' }}>
-                          <span style={{ fontWeight: 600 }}>{activeFlight?.flightNumber}</span>: {activeFlight?.departure} → {activeFlight?.arrival}
-                        </div>
-                      )}
-                      {(ac.status === 'AOG' || ac.isAOG) && ac.aogUntilTimeMs > Date.now() && (
-                        <div style={{ marginTop: '10px', padding: '6px 8px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '10px', color: 'var(--color-danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={10} />
-                          AOG fino a {new Date(ac.aogUntilTimeMs).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+
+                      {/* Pannello espanso */}
+                      {isOpen && (
+                        <div style={{ padding: '12px 16px 14px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: 'var(--color-text-hint)', flexWrap: 'wrap' }}>
+                            <span>Ore totali: <strong style={{ color: 'var(--color-text-primary)' }}>{ac.totalFlightHours.toFixed(1)}h</strong></span>
+                            <span>Ultimo check a: <strong style={{ color: 'var(--color-text-primary)' }}>{ac.lastMaintenanceHour?.toFixed(0) || '0'}h</strong></span>
+                            <span>Prossimo check tra: <strong style={{ color: progressColor }}>{hoursUntilCheck.toFixed(1)}h</strong></span>
+                            {ac.base && <span>Base: <strong style={{ color: 'var(--color-text-primary)' }}>{ac.base}</strong></span>}
+                          </div>
+                          {isFlying && activeFlight && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', padding: '6px 10px', borderRadius: '6px', background: 'rgba(var(--color-primary-rgb), 0.08)' }}>
+                              <Plane size={12} style={{ color: 'var(--color-primary)' }} />
+                              <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{activeFlight.flightNumber}</span>
+                              <span style={{ color: 'var(--color-text-secondary)' }}>{activeFlight.departure} → {activeFlight.arrival}</span>
+                              {activeFlight.progressPercent > 0 && activeFlight.progressPercent < 100 && (
+                                <div style={{ flex: 1, height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden', minWidth: '60px' }}>
+                                  <div style={{ height: '100%', width: `${activeFlight.progressPercent}%`, background: 'var(--color-primary)' }} />
+                                </div>
+                              )}
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-hint)', whiteSpace: 'nowrap' }}>{activeFlight.progressPercent.toFixed(0)}%</span>
+                            </div>
+                          )}
+                          {isAog && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-danger)', fontWeight: 600, padding: '6px 10px', borderRadius: '6px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                              <Clock size={11} />
+                              AOG fino a {new Date(ac.aogUntilTimeMs).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -2270,53 +2434,106 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   </div>
                </div>
 
-               <div className={styles.flightGrid}>
-                  {[...networkFlights].sort((a, b) => {
-                    const statusPrio: Record<string, number> = {
-                      'En Route': 100,
-                      'Approach': 90,
-                      'Taxi Out': 80,
-                      'Pushback': 70,
-                      'Boarding': 60,
-                      'Taxi In': 50,
-                      'Arrived': 40,
-                      'Turnaround': 30,
-                      'Scheduled': 20,
-                      'AOG/Cancel': 10
-                    };
-                    const pa = statusPrio[a.status] || 0;
-                    const pb = statusPrio[b.status] || 0;
-                    if (pa !== pb) return pb - pa;
-                    return a.departureTime - b.departureTime;
-                  }).map((nf) => (
-                    <div 
-                      key={nf.id} 
-                      className={styles.card} 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => { setSelectedFlightForMap(nf); setIsMapZoomed(true); }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{nf.flightNumber}</div>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: nf.status === 'En Route' ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
-                      </div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, margin: '4px 0' }}>
-                        {nf.departure} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({(nf.departureTime !== undefined && nf.departureTime !== null) ? formatMinutesToTime(nf.departureTime) : '--:--'})</span>
-                        {" → "}
-                        {nf.arrival} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}>({(nf.arrivalTime !== undefined && nf.arrivalTime !== null) ? formatMinutesToTime(nf.arrivalTime) : '--:--'})</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-hint)' }}>
-                        <span>Cmdt. {nf.pilot.name}</span>
-                        <span>{nf.aircraft} ({nf.tailNumber})</span>
-                      </div>
-                      {nf.progressPercent > 0 && nf.progressPercent < 100 && (
-                        <div style={{ marginTop: '12px' }}>
-                          <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: 'var(--color-primary)' }} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                 {/* Header colonne */}
+                 <div style={{
+                   display: 'grid',
+                   gridTemplateColumns: '90px 200px 1fr 130px 60px 28px',
+                   gap: '0 12px',
+                   padding: '6px 16px',
+                   fontSize: '10px',
+                   fontWeight: 700,
+                   textTransform: 'uppercase',
+                   letterSpacing: '0.06em',
+                   color: 'var(--color-text-hint)',
+                   background: 'var(--color-background)',
+                   borderBottom: '1px solid var(--color-border)',
+                 }}>
+                   <span>Volo</span>
+                   <span>Rotta</span>
+                   <span>Pilota / Aereo</span>
+                   <span>Stato</span>
+                   <span>Prog.</span>
+                   <span />
+                 </div>
+
+                 {[...networkFlights].sort((a, b) => {
+                   const statusPrio: Record<string, number> = {
+                     'En Route': 100, 'Approach': 90, 'Taxi Out': 80,
+                     'Pushback': 70, 'Boarding': 60, 'Taxi In': 50,
+                     'Arrived': 40, 'Turnaround': 30, 'Scheduled': 20, 'AOG/Cancel': 10
+                   };
+                   const pa = statusPrio[a.status] || 0;
+                   const pb = statusPrio[b.status] || 0;
+                   if (pa !== pb) return pb - pa;
+                   return a.departureTime - b.departureTime;
+                 }).map((nf) => {
+                   const isOpen = expandedNetworkId === nf.id;
+                   const statusActive = nf.status === 'En Route' || nf.status === 'Approach';
+                   return (
+                     <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                       {/* Riga compatta */}
+                       <div
+                         onClick={() => {
+                           const next = isOpen ? null : nf.id;
+                           setExpandedNetworkId(next);
+                           if (next !== null) { setSelectedFlightForMap(nf); setIsMapZoomed(true); }
+                         }}
+                         style={{
+                           display: 'grid',
+                           gridTemplateColumns: '90px 200px 1fr 130px 60px 28px',
+                           gap: '0 12px',
+                           padding: '10px 16px',
+                           alignItems: 'center',
+                           cursor: 'pointer',
+                           background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : 'transparent',
+                           transition: 'background 0.15s',
+                         }}
+                       >
+                         <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{nf.flightNumber}</span>
+                         <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                           {nf.departure}
+                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.departureTime)}</span>
+                           {' → '}
+                           {nf.arrival}
+                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.arrivalTime)}</span>
+                         </span>
+                         <div style={{ minWidth: 0 }}>
+                           <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                             {nf.pilot.name} · {nf.aircraft}
+                             {nf.tailNumber && nf.tailNumber !== 'Generic' && <span style={{ color: 'var(--color-text-hint)' }}> ({nf.tailNumber})</span>}
+                           </span>
+                         </div>
+                         <span style={{ fontSize: '11px', fontWeight: 700, color: statusActive ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
+                         {/* Progress inline */}
+                         {nf.progressPercent > 0 && nf.progressPercent < 100 ? (
+                           <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
+                             <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: 'var(--color-primary)' }} />
+                           </div>
+                         ) : (
+                           <span style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>—</span>
+                         )}
+                         <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                       </div>
+
+                       {/* Pannello espanso */}
+                       {isOpen && (
+                         <div style={{ padding: '10px 16px 14px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                           <span>Comandante: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.name}</strong></span>
+                           <span>Rank: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.rank}</strong></span>
+                           <span>Base: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.base}</strong></span>
+                           <span>Aeromobile: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.aircraft}</strong></span>
+                           {nf.tailNumber && nf.tailNumber !== 'Generic' && (
+                             <span>Targa: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.tailNumber}</strong></span>
+                           )}
+                           {nf.progressPercent > 0 && nf.progressPercent < 100 && (
+                             <span>Progresso: <strong style={{ color: 'var(--color-primary)' }}>{nf.progressPercent.toFixed(1)}%</strong></span>
+                           )}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
                </div>
             </div>
           )}
@@ -2352,7 +2569,6 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         onChange={(e) => setRosterRankFilter(e.target.value)}
                         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', color: 'var(--color-text-primary)' }}
                       >
-                        {/* FIX 9: opzioni allineate ai rank reali del roster (Chief Captain, Junior First Officer, ecc.) */}
                         <option value="ALL">TUTTI I RATING</option>
                         <option value="Chief Captain">Chief Captain</option>
                         <option value="Senior Captain">Senior Captain</option>
@@ -2364,68 +2580,132 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                   </div>
                </div>
 
-               <div className={styles.flightGrid}>
-                  {fullRoster.map((pilot, index) => (
-                    <div 
-                      key={pilot.id} 
-                      className={`${styles.card} ${pilot.isUser ? styles.userPilotCard : ''}`}
-                      style={{ 
-                        position: 'relative',
-                        border: pilot.isUser ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                        background: pilot.isUser ? 'rgba(var(--color-primary-rgb), 0.05)' : 'var(--color-surface)'
-                      }}
-                    >
-                      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '20px', fontWeight: 900, opacity: 0.1, fontStyle: 'italic' }}>
-                        #{index + 1}
-                      </div>
+               {/* Lista espandibile */}
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                 {/* Header colonne */}
+                 <div style={{
+                   display: 'grid',
+                   gridTemplateColumns: '40px 44px 1fr 80px 100px 80px 80px 28px',
+                   gap: '0 12px',
+                   padding: '6px 16px',
+                   fontSize: '10px',
+                   fontWeight: 700,
+                   textTransform: 'uppercase',
+                   letterSpacing: '0.06em',
+                   color: 'var(--color-text-hint)',
+                   background: 'var(--color-background)',
+                   borderBottom: '1px solid var(--color-border)',
+                 }}>
+                   <span>#</span>
+                   <span />
+                   <span>Pilota</span>
+                   <span>Hub</span>
+                   <span>Rating</span>
+                   <span style={{ textAlign: 'right' }}>Voli</span>
+                   <span style={{ textAlign: 'right' }}>Ore</span>
+                   <span />
+                 </div>
 
-                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <div className={styles.ariaAvatar} style={{ 
-                          width: '48px', 
-                          height: '48px', 
-                          fontSize: '18px',
-                          background: pilot.isUser ? 'var(--color-primary)' : 'var(--color-background)',
-                          color: pilot.isUser ? 'white' : 'var(--color-text-primary)',
-                          border: pilot.isUser ? 'none' : '1px solid var(--color-border)'
-                        }}>
-                          {pilot.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '16px', fontWeight: 700 }}>{pilot.name}</span>
-                            {pilot.isUser && (
-                              <span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-primary)', color: 'white', borderRadius: '4px', fontWeight: 800 }}>YOU</span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-hint)', fontWeight: 600 }}>{pilot.id} • {pilot.rank}</div>
-                        </div>
-                      </div>
+                 {fullRoster.map((pilot, index) => {
+                   const isOpen = expandedRosterId === pilot.id;
+                   const initials = pilot.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                   return (
+                     <div
+                       key={pilot.id}
+                       style={{
+                         borderBottom: '1px solid var(--color-border)',
+                         background: pilot.isUser
+                           ? isOpen ? 'rgba(var(--color-primary-rgb), 0.08)' : 'rgba(var(--color-primary-rgb), 0.04)'
+                           : isOpen ? 'rgba(var(--color-primary-rgb), 0.02)' : 'transparent',
+                       }}
+                     >
+                       {/* Riga compatta */}
+                       <div
+                         onClick={() => setExpandedRosterId(isOpen ? null : pilot.id)}
+                         style={{
+                           display: 'grid',
+                           gridTemplateColumns: '40px 44px 1fr 80px 100px 80px 80px 28px',
+                           gap: '0 12px',
+                           padding: '9px 16px',
+                           alignItems: 'center',
+                           cursor: 'pointer',
+                           transition: 'background 0.15s',
+                         }}
+                       >
+                         {/* Posizione */}
+                         <span style={{
+                           fontSize: '12px',
+                           fontWeight: pilot.isUser ? 800 : 500,
+                           color: pilot.isUser ? 'var(--color-primary)' : 'var(--color-text-hint)',
+                           fontStyle: pilot.isUser ? 'normal' : 'italic',
+                         }}>
+                           #{index + 1}
+                         </span>
 
-                      <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Hub</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700 }}>{pilot.base}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Voli</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700 }}>{pilot.totalFlights}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Ore</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary)' }}>{Math.floor(pilot.totalHours)}h</span>
-                        </div>
-                      </div>
+                         {/* Avatar */}
+                         <div className={styles.ariaAvatar} style={{
+                           width: '28px',
+                           height: '28px',
+                           fontSize: '11px',
+                           background: pilot.isUser ? 'var(--color-primary)' : 'var(--color-background)',
+                           color: pilot.isUser ? 'white' : 'var(--color-text-primary)',
+                           border: pilot.isUser ? 'none' : '1px solid var(--color-border)',
+                           flexShrink: 0,
+                         }}>
+                           {initials}
+                         </div>
 
-                      {pilot.isUser && (
-                        <div style={{ marginTop: '12px', padding: '8px', borderRadius: '4px', background: 'rgba(var(--color-primary-rgb), 0.1)', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>
-                          {/* FIX 10: posizione contestualizzata al filtro attivo */}
-                          {rosterHubFilter !== 'ALL' || rosterRankFilter !== 'ALL'
-                            ? `POSIZIONE NELLA SELEZIONE ATTIVA: #${index + 1}`
-                            : `POSIZIONE ATTUALE NELLA TOP CREW: #${index + 1}`}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                         {/* Nome + badge YOU */}
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                           <span style={{
+                             fontSize: '13px',
+                             fontWeight: pilot.isUser ? 700 : 500,
+                             color: pilot.isUser ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                             overflow: 'hidden',
+                             textOverflow: 'ellipsis',
+                             whiteSpace: 'nowrap',
+                           }}>
+                             {pilot.name}
+                           </span>
+                           {pilot.isUser && (
+                             <span style={{ fontSize: '9px', padding: '1px 5px', background: 'var(--color-primary)', color: 'white', borderRadius: '3px', fontWeight: 800, flexShrink: 0 }}>YOU</span>
+                           )}
+                         </div>
+
+                         {/* Hub */}
+                         <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-family-mono)' }}>{pilot.base}</span>
+
+                         {/* Rating */}
+                         <span style={{ fontSize: '11px', color: 'var(--color-text-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pilot.rank}</span>
+
+                         {/* Voli */}
+                         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'right' }}>{pilot.totalFlights}</span>
+
+                         {/* Ore */}
+                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)', textAlign: 'right' }}>{Math.floor(pilot.totalHours)}h</span>
+
+                         <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                       </div>
+
+                       {/* Pannello espanso */}
+                       {isOpen && (
+                         <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-text-hint)', alignItems: 'center' }}>
+                           <span>ID: <strong style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)' }}>{pilot.id}</strong></span>
+                           <span>Ore totali: <strong style={{ color: 'var(--color-primary)' }}>{pilot.totalHours.toFixed(1)}h</strong></span>
+                           <span>Voli completati: <strong style={{ color: 'var(--color-text-primary)' }}>{pilot.totalFlights}</strong></span>
+                           <span>Hub: <strong style={{ color: 'var(--color-text-primary)' }}>{pilot.base}</strong></span>
+                           {pilot.isUser && (
+                             <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)' }}>
+                               {rosterHubFilter !== 'ALL' || rosterRankFilter !== 'ALL'
+                                 ? `Posizione nella selezione: #${index + 1}`
+                                 : `Posizione globale: #${index + 1}`}
+                             </span>
+                           )}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
                </div>
             </div>
           )}
