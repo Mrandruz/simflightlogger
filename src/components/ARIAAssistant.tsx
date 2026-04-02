@@ -1091,9 +1091,16 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
 
     const hubs = opsPlan.hubs.map((hub: VelarHub) => {
       const activeAtHub = networkFlights.filter(
-        f => f.departure === hub.icao && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
+        f => (f.departure === hub.icao || f.arrival === hub.icao) && 
+             !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
       ).length;
-      const paxToday = Math.round(activeAtHub * avgCapacity * 0.82);
+      
+      // Calcoliamo i passeggeri solo sui voli in PARTENZA per il totale finanziario del singolo hub,
+      // ma usiamo il totale globale per la dashboard.
+      const paxFromHub = networkFlights.filter(
+        f => f.departure === hub.icao && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
+      ).length * avgCapacity * 0.82;
+
       return {
         icao: hub.icao,
         role: hub.role,
@@ -1101,12 +1108,12 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
         status: aogCount > 2 ? 'Reduced' : 'Operational',
         activeFlights: activeAtHub,
         routeCount: hub.routes.length,
-        paxToday,
+        paxToday: Math.round(paxFromHub),
         alertMessage: aogCount > 2 ? `${aogCount} AOG — rotazioni ridotte` : null,
       };
     });
 
-    const totalPaxToday = hubs.reduce((acc: number, h: any) => acc + h.paxToday, 0);
+    const totalPaxToday = Math.round(activeVols * avgCapacity * 0.82);
     const briefingStatus = aogCount === 0
       ? 'Tutti i sistemi operativi. Flotta al 100%.'
       : `${aogCount} aeromobile${aogCount > 1 ? 'i' : ''} in manutenzione AOG. Rotazioni sostitutive attive.`;
