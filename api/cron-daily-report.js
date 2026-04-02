@@ -1,5 +1,4 @@
-// api/cron-daily-report.js
-import fetch from 'node-fetch';
+// Utilizza il fetch globale nativo di Node.js (Vercel supporta Node 18+)
 
 export default async function handler(req, res) {
   // Protezione opzionale: Vercel imposta questo header per i cron job
