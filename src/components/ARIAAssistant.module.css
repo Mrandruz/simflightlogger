@@ -547,3 +547,14 @@
     letter-spacing: 0.1em;
     opacity: 0.8;
 }
+
+/* Data Overrides & Utilities */
+.textSuccess { color: var(--color-success) !important; }
+.textDanger { color: var(--color-danger) !important; }
+.textWarning { color: var(--color-warning) !important; }
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}

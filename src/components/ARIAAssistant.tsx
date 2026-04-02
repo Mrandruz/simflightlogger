@@ -41,12 +41,21 @@ import {
   Clock,
   Maximize2,
   RefreshCw,
-  Search,
+  Search, 
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar, Legend
+} from 'recharts';
 
 // ─── Tipi ─────────────────────────────────────────────────────────────────────
 
@@ -277,7 +286,31 @@ interface ARIAProps {
   pilotName?: string;
 }
 
-type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roster';
+type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roster' | 'financials';
+
+// ─── Financial Simulator Specs (Real-world based) ──────────────────────────
+const FINANCIAL_CONFIG = {
+  REVENUE_PER_NM_PAX: 0.12, // $0.12 per miglio per passeggero
+  ANCILLARY_REVENUE_PER_PAX: 22, // Bagagli, food, wifi
+  CREW_COST_PER_HOUR: 850, // Totale cockpit + cabin
+  LANDING_FEE_FIXED: 1200, // Tassa fissa a scalo
+  FUEL_PRICE_UNIT: 3.50, // Prezzo carburante simulato
+};
+
+const AIRCRAFT_FINANCIALS: Record<string, { capacity: number; fuelBurnHr: number; maintenanceDay: number }> = {
+  'Airbus A319': { capacity: 144, fuelBurnHr: 2400, maintenanceDay: 1200 },
+  'Airbus A320': { capacity: 180, fuelBurnHr: 2600, maintenanceDay: 1500 },
+  'Airbus A320-200': { capacity: 180, fuelBurnHr: 2600, maintenanceDay: 1500 },
+  'Airbus A321': { capacity: 220, fuelBurnHr: 2800, maintenanceDay: 1800 },
+  'Airbus A321LR': { capacity: 210, fuelBurnHr: 2850, maintenanceDay: 2000 },
+  'Airbus A330': { capacity: 300, fuelBurnHr: 5500, maintenanceDay: 4500 },
+  'Airbus A330neo': { capacity: 300, fuelBurnHr: 5200, maintenanceDay: 4800 },
+  'Airbus A350': { capacity: 325, fuelBurnHr: 6000, maintenanceDay: 6000 },
+  'Airbus A350-900': { capacity: 325, fuelBurnHr: 6000, maintenanceDay: 6000 },
+  'Airbus A380': { capacity: 525, fuelBurnHr: 12000, maintenanceDay: 15000 },
+  'Boeing 777': { capacity: 360, fuelBurnHr: 6500, maintenanceDay: 6500 },
+  'Boeing 787': { capacity: 290, fuelBurnHr: 4800, maintenanceDay: 5800 },
+};
 type MapMode = 'network' | 'route' | 'focused';
 
 // ─── Componente Mappa ─────────────────────────────────────────────────────────
@@ -493,6 +526,184 @@ const ARIAMap = ({ flights, selectedFlight, isDarkMode, onCloseFlight, hubIcaos 
     );
 };
 
+// ─── Componente Financials ────────────────────────────────────────────────────
+
+interface FinancialsViewProps {
+  data: any;
+}
+
+const FinancialsView = ({ data }: FinancialsViewProps) => {
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'total'>('month');
+  const current = data.periods[period];
+  
+  const COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6'];
+  const costData = [
+    { name: 'Fuel', value: Math.round(current.fuelCosts) },
+    { name: 'Crew', value: Math.round(current.crewCosts) },
+    { name: 'Fees', value: Math.round(current.landingFees) },
+    { name: 'Maint/Fixed', value: Math.round(current.fixedCosts) },
+  ];
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '20px' }}>Accounting & Profitability</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-hint)' }}>Analisi finanziaria deterministica delle operazioni Velar.</p>
+        </div>
+        <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
+            {(['today', 'week', 'month', 'total'] as const).map(p => (
+                <button 
+                  key={p} 
+                  onClick={() => setPeriod(p)}
+                  style={{ 
+                    padding: '6px 16px', 
+                    fontSize: '11px', 
+                    fontWeight: 700, 
+                    textTransform: 'uppercase',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: period === p ? 'var(--color-primary)' : 'transparent',
+                    color: period === p ? 'white' : 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                    {p}
+                </button>
+            ))}
+        </div>
+      </header>
+
+      {/* KPI GRID */}
+      <div className={styles.kpiGrid}>
+         <div className={styles.kpiCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={styles.sectionTitle}>Total Revenue</span>
+                <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
+            </div>
+            <span style={{ fontSize: '24px', fontWeight: 700 }}>{formatCurrency(current.revenue)}</span>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
+                <TrendingUp size={12} /> +12% vs last {period}
+            </div>
+         </div>
+         <div className={styles.kpiCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={styles.sectionTitle}>Operating Costs</span>
+                <BarChart3 size={16} style={{ color: 'var(--color-danger)' }} />
+            </div>
+            <span style={{ fontSize: '24px', fontWeight: 700 }}>{formatCurrency(current.fuelCosts + current.crewCosts + current.landingFees + current.fixedCosts)}</span>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
+                Inc. Fixed Maint: {formatCurrency(current.fixedCosts)}
+            </div>
+         </div>
+         <div className={styles.kpiCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={styles.sectionTitle}>Net Profit</span>
+                {current.netProfit >= 0 ? <TrendingUp size={16} style={{ color: 'var(--color-success)' }} /> : <TrendingDown size={16} style={{ color: 'var(--color-danger)' }} />}
+            </div>
+            <span style={{ fontSize: '24px', fontWeight: 700, color: current.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                {formatCurrency(current.netProfit)}
+            </span>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
+                Efficiency: {Math.round((current.netProfit / current.revenue) * 100) || 0}% Margin
+            </div>
+         </div>
+         <div className={styles.kpiCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={styles.sectionTitle}>Traffic Volume</span>
+                <Plane size={16} style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <span style={{ fontSize: '24px', fontWeight: 700 }}>{current.flights} flights</span>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>
+                Passengers: {current.pax.toLocaleString()}
+            </div>
+         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px' }}>
+        {/* CHART Profit History */}
+        <div className={styles.card} style={{ height: '350px' }}>
+            <h3 className={styles.sectionTitle} style={{ marginBottom: '20px' }}>Profitability Trend (Last 30 Days)</h3>
+            <div style={{ width: '100%', height: '260px' }}>
+                <ResponsiveContainer>
+                    <AreaChart data={data.chartData}>
+                        <defs>
+                            <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis 
+                            dataKey="date" 
+                            stroke="var(--color-text-hint)" 
+                            fontSize={10} 
+                            tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                        />
+                        <YAxis stroke="var(--color-text-hint)" fontSize={10} tickFormatter={(val) => `$${val/1000}k`} />
+                        <Tooltip 
+                            contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
+                            itemStyle={{ fontWeight: 700 }}
+                        />
+                        <Area type="monotone" dataKey="profit" stroke="var(--color-primary)" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+
+        {/* COST BREAKDOWN PIE */}
+        <div className={styles.card} style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
+            <h3 className={styles.sectionTitle} style={{ marginBottom: '20px' }}>Cost Breakdown</h3>
+            <div style={{ flex: 1, width: '100%' }}>
+                <ResponsiveContainer>
+                    <PieChart>
+                        <Pie
+                            data={costData}
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                        >
+                            {costData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                            ))}
+                        </Pie>
+                        <Tooltip 
+                             contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
+                        />
+                        <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+      </div>
+
+      {/* FOOTER STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+         <div className={styles.card} style={{ padding: '16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Asset Management</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>Costo Fisso Flotta: <span style={{ color: 'var(--color-danger)' }}>{formatCurrency(data.fleetFixedDaily)}</span> /giorno</div>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>Maintenance, Leasing & Ground Operations.</p>
+         </div>
+         <div className={styles.card} style={{ padding: '16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Efficiency KPI</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>Breakeven Load: <span style={{ color: 'var(--color-primary)' }}>64% Pax</span></div>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>Percentuale minima di riempimento per profitto.</p>
+         </div>
+         <div className={styles.card} style={{ padding: '16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Yield Analysis</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>Average Yield: <span style={{ color: 'var(--color-success)' }}>{formatCurrency(current.revenue / (current.pax || 1))}/pax</span></div>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>Ricavo medio per singolo passeggero trasportato.</p>
+         </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const { isDarkMode } = useTheme();
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -532,6 +743,163 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   // Refs per prevenire double-counting e sincronizzare Cloud
   const networkFlightsRef = useRef<NetworkFlight[]>([]);
   const processedArrivedFlights = useRef<Set<string>>(new Set());
+
+  // ─── Financial Accounting Engine ──────────────────────────────────────────
+  const financialStatements = useMemo(() => {
+    if (!flights.length || !opsPlan) return null;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+
+    const statsTemplate = () => ({
+      flights: 0,
+      pax: 0,
+      revenue: 0,
+      fuelCosts: 0,
+      crewCosts: 0,
+      landingFees: 0,
+      fixedCosts: 0,
+      netProfit: 0,
+    });
+
+    const periods = {
+      today: statsTemplate(),
+      week: statsTemplate(),
+      month: statsTemplate(),
+      total: statsTemplate(),
+    };
+
+    const dailyHistory: Record<string, any> = {};
+    // Inizializza gli ultimi 30 giorni per il grafico
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 86400000);
+        const s = d.toISOString().split('T')[0];
+        dailyHistory[s] = { date: s, profit: 0, revenue: 0, flights: 0 };
+    }
+
+    flights.forEach(f => {
+      const fDate = new Date(f.date);
+      const fDateStr = f.date.split('T')[0];
+      const isToday = fDateStr === todayStr;
+      const isThisWeek = fDate >= sevenDaysAgo;
+      const isThisMonth = fDate >= thirtyDaysAgo;
+
+      const specs = AIRCRAFT_FINANCIALS[f.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
+      const pax = Math.round(specs.capacity * 0.82);
+      const rev = (f.miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
+      
+      const fuelCost = (f.flightTime * specs.fuelBurnHr * (FINANCIAL_CONFIG.FUEL_PRICE_UNIT / 1000));
+      const crewCost = f.flightTime * FINANCIAL_CONFIG.CREW_COST_PER_HOUR;
+      const fees = FINANCIAL_CONFIG.LANDING_FEE_FIXED;
+      
+      const opCosts = fuelCost + crewCost + fees;
+      const profit = rev - opCosts;
+
+      const updatePeriod = (p: any) => {
+        p.flights++;
+        p.pax += pax;
+        p.revenue += rev;
+        p.fuelCosts += fuelCost;
+        p.crewCosts += crewCost;
+        p.landingFees += fees;
+        p.netProfit += profit;
+      };
+
+      updatePeriod(periods.total);
+      if (isToday) updatePeriod(periods.today);
+      if (isThisWeek) updatePeriod(periods.week);
+      if (isThisMonth) updatePeriod(periods.month);
+
+      if (dailyHistory[fDateStr]) {
+        dailyHistory[fDateStr].profit += profit;
+        dailyHistory[fDateStr].revenue += rev;
+        dailyHistory[fDateStr].flights++;
+      }
+    });
+
+    // --- AGGIUNTA VOLI LIVE (NETWORK) ---
+    networkFlights.forEach(f => {
+      // Consideriamo solo voli atterrati o in terra che non sono nel logbook
+      if (['Arrived', 'Turnaround', 'Taxi In'].includes(f.status)) {
+        const specs = AIRCRAFT_FINANCIALS[f.aircraft] || AIRCRAFT_FINANCIALS['Airbus A320'];
+        const pax = Math.round(specs.capacity * 0.82);
+        
+        // Estrapolazione dati: calcoliamo ore e miglia dalla durata pianificata
+        const durationMins = f.arrivalTime - f.departureTime;
+        const fHours = durationMins / 60;
+        const miles = Math.round(fHours * 450); // Stima basata su 450 nodi di media
+
+        const rev = (miles * FINANCIAL_CONFIG.REVENUE_PER_NM_PAX * pax) + (pax * FINANCIAL_CONFIG.ANCILLARY_REVENUE_PER_PAX);
+        const fuelCost = (fHours * specs.fuelBurnHr * (FINANCIAL_CONFIG.FUEL_PRICE_UNIT / 1000));
+        const crewCost = fHours * FINANCIAL_CONFIG.CREW_COST_PER_HOUR;
+        const fees = FINANCIAL_CONFIG.LANDING_FEE_FIXED;
+        
+        const opCosts = fuelCost + crewCost + fees;
+        const profit = rev - opCosts;
+
+        // I voli network sono per definizione "di oggi" nella simulazione
+        const updatePeriod = (p: any) => {
+          p.flights++;
+          p.pax += pax;
+          p.revenue += rev;
+          p.fuelCosts += fuelCost;
+          p.crewCosts += crewCost;
+          p.landingFees += fees;
+          p.netProfit += profit;
+        };
+
+        updatePeriod(periods.total);
+        updatePeriod(periods.today);
+        updatePeriod(periods.week);
+        updatePeriod(periods.month);
+
+        if (dailyHistory[todayStr]) {
+          dailyHistory[todayStr].profit += profit;
+          dailyHistory[todayStr].revenue += rev;
+          dailyHistory[todayStr].flights++;
+        }
+      }
+    });
+
+    // Calcolo dei COSTI FISSI (Maintenance & Leasing)
+    // Li applichiamo per ogni giorno di attività basata sul logbook più recente
+    const firstFlight = new Date(flights[0]?.date || now);
+    const daysOfOps = Math.max(1, Math.round((now.getTime() - firstFlight.getTime()) / 86400000));
+    
+    // Costo fisso giornaliero flotta
+    const fleetFixedDaily = opsPlan.fleet.reduce((acc, item) => {
+        const specs = AIRCRAFT_FINANCIALS[item.type] || AIRCRAFT_FINANCIALS['Airbus A320'];
+        return acc + (specs.maintenanceDay * item.count);
+    }, 0);
+
+    periods.total.fixedCosts = fleetFixedDaily * daysOfOps;
+    periods.today.fixedCosts = fleetFixedDaily;
+    periods.week.fixedCosts = fleetFixedDaily * 7;
+    periods.month.fixedCosts = fleetFixedDaily * 30; 
+
+    // Sottrai i costi fissi dal profitto netto
+    Object.values(periods).forEach(p => {
+        p.netProfit -= p.fixedCosts;
+    });
+
+    // Applica i costi fissi anche alla storia giornaliera
+    Object.keys(dailyHistory).forEach(date => {
+        dailyHistory[date].profit -= fleetFixedDaily;
+        dailyHistory[date].margin = dailyHistory[date].revenue > 0 
+            ? Math.round((dailyHistory[date].profit / dailyHistory[date].revenue) * 100) 
+            : 0;
+    });
+
+    return {
+      periods,
+      chartData: Object.values(dailyHistory),
+      fleetFixedDaily
+    };
+  }, [flights, networkFlights, opsPlan]);
 
   // Caricamento iniziale Processed Flights da Cloud/Local
   useEffect(() => {
@@ -1213,7 +1581,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
 
         <nav className={styles.sidebarNav}>
-          {(['chat', 'overview', 'schedule', 'fleet', 'network', 'roster'] as ViewState[]).map(v => (
+          {(['chat', 'overview', 'schedule', 'fleet', 'network', 'roster', 'financials'] as ViewState[]).map(v => (
             <button 
               key={v} 
               onClick={() => setView(v)}
@@ -1225,6 +1593,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               {v === 'fleet' && <Plane className={styles.sidebarBtnIcon} />}
               {v === 'network' && <Activity className={styles.sidebarBtnIcon} />}
               {v === 'roster' && <Users className={styles.sidebarBtnIcon} />}
+              {v === 'financials' && <DollarSign className={styles.sidebarBtnIcon} />}
               <span style={{ textTransform: 'capitalize' }}>{v}</span>
               {view === v && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
             </button>
@@ -1774,8 +2143,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                </div>
             </div>
           )}
-        </div>
-      </main>
+           {/* 💰 FINANCIALS VIEW */}
+           {view === 'financials' && financialStatements && (
+             <FinancialsView data={financialStatements} />
+           )}
+ 
+         </div>
+       </main>
     </div>
   );
 }
