@@ -19,7 +19,7 @@
     },
     {
       "src": "/api/cron-daily-report",
-      "dest": "/api/cron-daily-report.js"
+      "dest": "/api/cron-daily-report/index.js"
     },
     {
       "src": "/api/(.*)",

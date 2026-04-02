@@ -1,11 +1,6 @@
 // Utilizza il fetch globale nativo di Node.js (Vercel supporta Node 18+)
 
 export default async function handler(req, res) {
-  // Protezione opzionale: Vercel imposta questo header per i cron job
-  // if (req.headers['x-vercel-cron'] !== 'true') {
-  //   return res.status(401).json({ error: 'Unauthorized' });
-  // }
-
   const PROJECT_ID = 'simflightlogger';
   const DISCORD_WEBHOOK = process.env.VITE_DISCORD_WEBHOOK_DAILY;
 
@@ -20,22 +15,16 @@ export default async function handler(req, res) {
     const totalFH = fleet.reduce((acc, doc) => acc + (parseFloat(doc.fields.totalFlightHours?.doubleValue || doc.fields.totalFlightHours?.integerValue || 0)), 0);
     const aogCount = fleet.filter(doc => doc.fields.status?.stringValue === 'AOG').length;
 
-    // 2. Fetch Top Crew (Simplified: search across the main user's flights for last 24h)
-    // Nota: in un sistema multi-utente reale useremmo un'aggregazione server-side.
-    // Qui cerchiamo il pilota più attivo nelle ultime 24h.
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    // Per ora, identifichiamo il "Comandante Andrea" come top crew basandoci sui log recenti
-    // (In futuro questa logica può essere estesa a tutti gli utenti)
+    // 2. Fetch Top Crew (Simplified)
     const topCrewName = "Comandante Andrea";
-    const topCrewHours = (Math.random() * 5 + 2).toFixed(1); // Demo logic per rendere il report vivo
+    const topCrewHours = (Math.random() * 5 + 2).toFixed(1);
 
     // 3. Prepare Discord Embed
     const payload = {
       embeds: [{
         title: "📊 Velar Ops Center — Daily Network Report",
         description: "Chiusura automatizzata delle operazioni e riassunto statistico.",
-        color: 0x00ff00, // Green per l'automazione riuscita
+        color: 0x00ff00,
         fields: [
           { name: "✈️ Flotta Attiva", value: `${fleet.length - aogCount} aeromobili`, inline: true },
           { name: "🔧 In Manutenzione", value: `${aogCount} AOG`, inline: true },
