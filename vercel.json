@@ -21,7 +21,7 @@
       "destination": "/checklists/:file*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
