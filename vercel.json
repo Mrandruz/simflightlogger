@@ -4,29 +4,32 @@
       "runtime": "nodejs18.x"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/metar",
-      "destination": "https://aviationweather.gov/api/data/metar"
+      "src": "/api/metar",
+      "dest": "https://aviationweather.gov/api/data/metar"
     },
     {
-      "source": "/api/taf",
-      "destination": "https://aviationweather.gov/api/data/taf"
+      "src": "/api/taf",
+      "dest": "https://aviationweather.gov/api/data/taf"
     },
     {
-      "source": "/api/aviationstack/:path*",
-      "destination": "https://api.aviationstack.com/v1/:path*"
+      "src": "/api/aviationstack/(.*)",
+      "dest": "https://api.aviationstack.com/v1/$1"
     },
     {
-      "handle": "filesystem"
+      "src": "/api/cron-daily-report",
+      "dest": "/api/cron-daily-report.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
-  "cleanUrls": true,
-  "trailingSlash": false,
   "crons": [
     {
       "path": "/api/cron-daily-report",
