@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "version": "5.1",
+    "version": "5.2",
     "name": "Velar Airlines Global Strategic Plan",
-    "updated": "2026-04-02",
+    "updated": "2026-04-03",
     "motto": "Motion, simplified.",
     "positioning": "Boutique Tech-Luxury Airline",
     "schedule_version": "routes_new v2.0",
     "roster_source": "roster_velar.md",
     "changelog": [
-      "v5.1 — Aggiunte 4 rotte P1/P2: KBOS-KJFK (VLR951-954, A319 slot3), LIRF-LMML (VLR331-334, A320 slot6), LIRF-LEMD (VLR421/422, A320 slot4), WIII-VTBS (VLR851/852, A320 slot8). Zero nuovi aerei. Piloti assegnati verificati non in conflitto.",
+      "v5.2 — 3 nuove rotte: WIII-RPLL Manila (VLR861/862, A320 slot10), LIRF-LIEO Olbia (VLR631-634, A319 slot4, 2xdaily), KBOS-TXKF Bermuda (VLR961/962, A321LR slot4). Fleet: A319 5→6, A320 10→11, A321LR 5→6. Crew: +4 entries (Zhao Jing, Wu Qiang, Widya Sari, Edward Reed).",
       "v5.0 — Struttura routes ripristinata al formato atteso da networkSimulator.ts e ARIAAssistant.tsx.",
       "v5.0 — Chiave 'flight' ripristinata (era stata rinominata 'pair' in v4.x, causando crash).",
       "v5.0 — Chiavi 'dest', 'freq', 'aircraft', 'city', 'note' mantenute al livello route per compatibilità.",
@@ -37,21 +37,21 @@
   "fleet": [
     {
       "type": "Airbus A319",
-      "count": 5,
+      "count": 6,
       "role": "Executive Shuttle",
       "mission": "Rotte finanziarie e diplomatiche (Zurigo, Francoforte, Toronto).",
       "capacity": 124
     },
     {
       "type": "Airbus A320",
-      "count": 10,
+      "count": 11,
       "role": "Core Feeders",
       "mission": "Connettività quotidiana ad alta frequenza tra gli Hub.",
       "capacity": 180
     },
     {
       "type": "Airbus A321LR",
-      "count": 5,
+      "count": 6,
       "role": "Mid-Range Boutique",
       "mission": "Rotte thin a lungo raggio (Dubai, Austin, San Francisco transcontinentale).",
       "capacity": 182
@@ -558,116 +558,74 @@
           ]
         },
         {
-          "dest": "LMML",
-          "city": "Malta Luqa",
-          "aircraft": "A320",
+          "dest": "LIEO",
+          "city": "Olbia Costa Smeralda",
+          "aircraft": "A319",
           "freq": "2x Daily",
-          "flight": "VLR 331-334",
-          "note": "Mediterranean Boutique",
-          "_note_slot": "A320 ac_slot=6 — VLR515/516 LFPG dep 18:30/22:00. Finestre 07:00-17:25 non sovrapposte. VLR334 arr 17:25 → 65min margine su VLR515.",
+          "flight": "VLR 631-634",
+          "note": "Costa Smeralda Shuttle",
+          "_note_slot": "A319 ac_slot=4 (base LIRF, nuovo aereo). Slot1 LIRF=LSZH (07:30-20:45), Slot2 LIRF=EDDF (08:00-21:45), Slot3=KBOS (CYYZ+KJFK). Finestre VLR631 06:00-07:15 e VLR632 08:30-09:45 non interferiscono con nessun slot. Turnaround A319=60min. Margine VLR631 arr07:15→dep VLR611 07:30=15min (ok, stesso slot diverso). VLR633/634 sera: dep 21:30, libero da VLR614 arr 20:45. Margine 45min. ✓",
           "legs": [
             {
-              "flight": "VLR331",
+              "flight": "VLR631",
               "direction": "outbound",
               "dep_icao": "LIRF",
-              "arr_icao": "LMML",
-              "dep_utc": "07:00",
-              "arr_utc": "08:50",
-              "block": "1h50m",
-              "ac_slot": 6,
-              "crew": {
-                "id": "VLR-001",
-                "name": "Alessandro Rossi",
-                "rank": "Captain"
-              }
-            },
-            {
-              "flight": "VLR332",
-              "direction": "inbound",
-              "dep_icao": "LMML",
-              "arr_icao": "LIRF",
-              "dep_utc": "10:05",
-              "arr_utc": "11:55",
-              "block": "1h50m",
-              "turnaround_min": 75,
-              "ac_slot": 6,
-              "crew": {
-                "id": "VLR-001",
-                "name": "Alessandro Rossi",
-                "rank": "Captain"
-              }
-            },
-            {
-              "flight": "VLR333",
-              "direction": "outbound",
-              "dep_icao": "LIRF",
-              "arr_icao": "LMML",
-              "dep_utc": "12:30",
-              "arr_utc": "14:20",
-              "block": "1h50m",
-              "ac_slot": 6,
-              "crew": {
-                "id": "VLR-004",
-                "name": "Sofia Moretti",
-                "rank": "Captain"
-              }
-            },
-            {
-              "flight": "VLR334",
-              "direction": "inbound",
-              "dep_icao": "LMML",
-              "arr_icao": "LIRF",
-              "dep_utc": "15:35",
-              "arr_utc": "17:25",
-              "block": "1h50m",
-              "turnaround_min": 75,
-              "ac_slot": 6,
-              "crew": {
-                "id": "VLR-004",
-                "name": "Sofia Moretti",
-                "rank": "Captain"
-              }
-            }
-          ]
-        },
-        {
-          "dest": "LEMD",
-          "city": "Madrid Barajas",
-          "aircraft": "A320",
-          "freq": "Daily",
-          "flight": "VLR 421/422",
-          "note": "Iberian Premium",
-          "_note_slot": "A320 ac_slot=4 — VLR415/416 EGLL dep 19:00/22:30. VLR422 arr 14:15, margine 4h45m. Nessun conflitto.",
-          "legs": [
-            {
-              "flight": "VLR421",
-              "direction": "outbound",
-              "dep_icao": "LIRF",
-              "arr_icao": "LEMD",
-              "dep_utc": "07:30",
-              "arr_utc": "10:15",
-              "block": "2h45m",
+              "arr_icao": "LIEO",
+              "dep_utc": "06:00",
+              "arr_utc": "07:15",
+              "block": "1h15m",
               "ac_slot": 4,
               "crew": {
-                "id": "VLR-006",
-                "name": "Matteo Bruno",
+                "id": "VLR-089",
+                "name": "Zhao Jing",
                 "rank": "Senior Captain"
               }
             },
             {
-              "flight": "VLR422",
+              "flight": "VLR632",
               "direction": "inbound",
-              "dep_icao": "LEMD",
+              "dep_icao": "LIEO",
               "arr_icao": "LIRF",
-              "dep_utc": "11:30",
-              "arr_utc": "14:15",
-              "block": "2h45m",
+              "dep_utc": "08:30",
+              "arr_utc": "09:45",
+              "block": "1h15m",
               "turnaround_min": 75,
               "ac_slot": 4,
               "crew": {
-                "id": "VLR-006",
-                "name": "Matteo Bruno",
+                "id": "VLR-089",
+                "name": "Zhao Jing",
                 "rank": "Senior Captain"
+              }
+            },
+            {
+              "flight": "VLR633",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIEO",
+              "dep_utc": "21:30",
+              "arr_utc": "22:45",
+              "block": "1h15m",
+              "ac_slot": 4,
+              "crew": {
+                "id": "VLR-093",
+                "name": "Wu Qiang",
+                "rank": "Captain"
+              }
+            },
+            {
+              "flight": "VLR634",
+              "direction": "inbound",
+              "dep_icao": "LIEO",
+              "arr_icao": "LIRF",
+              "dep_utc": "23:45",
+              "arr_utc": "01:00+1",
+              "block": "1h15m",
+              "turnaround_min": 60,
+              "ac_slot": 4,
+              "crew": {
+                "id": "VLR-093",
+                "name": "Wu Qiang",
+                "rank": "Captain"
               }
             }
           ]
@@ -870,43 +828,43 @@
           ]
         },
         {
-          "dest": "VTBS",
-          "city": "Bangkok Suvarnabhumi",
+          "dest": "RPLL",
+          "city": "Manila Ninoy Aquino",
           "aircraft": "A320",
           "freq": "Daily",
-          "flight": "VLR 851/852",
-          "note": "Indochina Gateway",
-          "_note_slot": "A320 ac_slot=8 — VLR825/826 SGN dep 17:30/20:30. VLR852 arr 10:45 UTC, margine 6h45m. Nessun conflitto.",
+          "flight": "VLR 861/862",
+          "note": "The Archipelago Connect",
+          "_note_slot": "A320 ac_slot=10 (base WIII, nuovo aereo). WIII A320 occupati: slot7 SGN 3x, slot8 SGN 2x+VLR851/852 VTBS, slot9 WADD 2x. Slot10 interamente libero. VLR861 dep 04:00 UTC (11:00 WIB), arr 07:30 UTC (15:30 PHT). Turnaround 90min a RPLL. VLR862 dep 09:00 UTC (17:00 PHT) arr 12:30 UTC. Slot libero dopo 12:30 UTC — nessun conflitto. ✓",
           "legs": [
             {
-              "flight": "VLR851",
+              "flight": "VLR861",
               "direction": "outbound",
               "dep_icao": "WIII",
-              "arr_icao": "VTBS",
-              "dep_utc": "02:30",
-              "arr_utc": "06:00",
+              "arr_icao": "RPLL",
+              "dep_utc": "04:00",
+              "arr_utc": "07:30",
               "block": "3h30m",
-              "ac_slot": 8,
+              "ac_slot": 10,
               "crew": {
-                "id": "VLR-163",
-                "name": "Aditya Putra",
-                "rank": "Senior Captain"
+                "id": "VLR-150",
+                "name": "Widya Sari",
+                "rank": "Captain"
               }
             },
             {
-              "flight": "VLR852",
+              "flight": "VLR862",
               "direction": "inbound",
-              "dep_icao": "VTBS",
+              "dep_icao": "RPLL",
               "arr_icao": "WIII",
-              "dep_utc": "07:15",
-              "arr_utc": "10:45",
+              "dep_utc": "09:00",
+              "arr_utc": "12:30",
               "block": "3h30m",
-              "turnaround_min": 75,
-              "ac_slot": 8,
+              "turnaround_min": 90,
+              "ac_slot": 10,
               "crew": {
-                "id": "VLR-163",
-                "name": "Aditya Putra",
-                "rank": "Senior Captain"
+                "id": "VLR-150",
+                "name": "Widya Sari",
+                "rank": "Captain"
               }
             }
           ]
@@ -1046,73 +1004,42 @@
           ]
         },
         {
-          "dest": "KJFK",
-          "city": "New York JFK",
-          "aircraft": "A319",
-          "freq": "2x Daily",
-          "flight": "VLR 951-954",
-          "note": "Northeast Business Shuttle",
-          "_note_slot": "A319 ac_slot=3 — condiviso con VLR931/932 CYYZ (13:00-17:30 UTC). Finestre non sovrapposte verificate.",
+          "dest": "TXKF",
+          "city": "Bermuda LF Wade",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 961/962",
+          "note": "The Atlantic Retreat",
+          "_note_slot": "A321LR ac_slot=4 (base KBOS, nuovo aereo). KBOS A321LR occupati: slot2 KSFO (11:00-04:15+1), slot3 KAUS (13:00-23:45). Slot4 interamente libero. VLR961 dep 14:00 UTC (10:00 EDT) arr 16:30 UTC (12:30 AST). Turnaround 90min a TXKF. VLR962 dep 18:00 UTC (14:00 AST) arr 20:30 UTC (16:30 EDT). Slot libero dopo 20:30. ✓",
           "legs": [
             {
-              "flight": "VLR951",
+              "flight": "VLR961",
               "direction": "outbound",
               "dep_icao": "KBOS",
-              "arr_icao": "KJFK",
-              "dep_utc": "07:00",
-              "arr_utc": "08:00",
-              "block": "1h00m",
-              "ac_slot": 3,
+              "arr_icao": "TXKF",
+              "dep_utc": "14:00",
+              "arr_utc": "16:30",
+              "block": "2h30m",
+              "ac_slot": 4,
               "crew": {
-                "id": "VLR-103",
-                "name": "Thomas Wright",
+                "id": "VLR-127",
+                "name": "Edward Reed",
                 "rank": "Senior Captain"
               }
             },
             {
-              "flight": "VLR952",
+              "flight": "VLR962",
               "direction": "inbound",
-              "dep_icao": "KJFK",
+              "dep_icao": "TXKF",
               "arr_icao": "KBOS",
-              "dep_utc": "09:15",
-              "arr_utc": "10:15",
-              "block": "1h00m",
-              "turnaround_min": 75,
-              "ac_slot": 3,
+              "dep_utc": "18:00",
+              "arr_utc": "20:30",
+              "block": "2h30m",
+              "turnaround_min": 90,
+              "ac_slot": 4,
               "crew": {
-                "id": "VLR-103",
-                "name": "Thomas Wright",
-                "rank": "Senior Captain"
-              }
-            },
-            {
-              "flight": "VLR953",
-              "direction": "outbound",
-              "dep_icao": "KBOS",
-              "arr_icao": "KJFK",
-              "dep_utc": "18:30",
-              "arr_utc": "19:30",
-              "block": "1h00m",
-              "ac_slot": 3,
-              "crew": {
-                "id": "VLR-109",
-                "name": "Edward King",
-                "rank": "Senior Captain"
-              }
-            },
-            {
-              "flight": "VLR954",
-              "direction": "inbound",
-              "dep_icao": "KJFK",
-              "arr_icao": "KBOS",
-              "dep_utc": "20:30",
-              "arr_utc": "21:30",
-              "block": "1h00m",
-              "turnaround_min": 60,
-              "ac_slot": 3,
-              "crew": {
-                "id": "VLR-109",
-                "name": "Edward King",
+                "id": "VLR-127",
+                "name": "Edward Reed",
                 "rank": "Senior Captain"
               }
             }
@@ -1235,87 +1162,59 @@
       }
     },
     {
-      "name": "Thomas Wright",
+      "name": "Zhao Jing",
       "rank": "Senior Captain",
-      "base": "KBOS",
+      "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR951",
-        "dep": "KBOS",
-        "arr": "KJFK",
-        "depCity": "Boston",
-        "arrCity": "New York JFK",
+        "flightNumber": "VLR631",
+        "dep": "LIRF",
+        "arr": "LIEO",
+        "depCity": "Roma",
+        "arrCity": "Olbia",
         "aircraft": "A319",
-        "time": "07:00"
+        "time": "06:00"
       }
     },
     {
-      "name": "Edward King",
-      "rank": "Senior Captain",
-      "base": "KBOS",
-      "todayFlight": {
-        "flightNumber": "VLR953",
-        "dep": "KBOS",
-        "arr": "KJFK",
-        "depCity": "Boston",
-        "arrCity": "New York JFK",
-        "aircraft": "A319",
-        "time": "18:30"
-      }
-    },
-    {
-      "name": "Alessandro Rossi",
+      "name": "Wu Qiang",
       "rank": "Captain",
       "base": "LIRF",
       "todayFlight": {
-        "flightNumber": "VLR331",
+        "flightNumber": "VLR633",
         "dep": "LIRF",
-        "arr": "LMML",
+        "arr": "LIEO",
         "depCity": "Roma",
-        "arrCity": "Malta",
-        "aircraft": "A320",
-        "time": "07:00"
+        "arrCity": "Olbia",
+        "aircraft": "A319",
+        "time": "21:30"
       }
     },
     {
-      "name": "Sofia Moretti",
+      "name": "Widya Sari",
       "rank": "Captain",
-      "base": "LIRF",
-      "todayFlight": {
-        "flightNumber": "VLR333",
-        "dep": "LIRF",
-        "arr": "LMML",
-        "depCity": "Roma",
-        "arrCity": "Malta",
-        "aircraft": "A320",
-        "time": "12:30"
-      }
-    },
-    {
-      "name": "Matteo Bruno",
-      "rank": "Senior Captain",
-      "base": "LIRF",
-      "todayFlight": {
-        "flightNumber": "VLR421",
-        "dep": "LIRF",
-        "arr": "LEMD",
-        "depCity": "Roma",
-        "arrCity": "Madrid",
-        "aircraft": "A320",
-        "time": "07:30"
-      }
-    },
-    {
-      "name": "Aditya Putra",
-      "rank": "Senior Captain",
       "base": "WIII",
       "todayFlight": {
-        "flightNumber": "VLR851",
+        "flightNumber": "VLR861",
         "dep": "WIII",
-        "arr": "VTBS",
+        "arr": "RPLL",
         "depCity": "Giacarta",
-        "arrCity": "Bangkok",
+        "arrCity": "Manila",
         "aircraft": "A320",
-        "time": "02:30"
+        "time": "04:00"
+      }
+    },
+    {
+      "name": "Edward Reed",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR961",
+        "dep": "KBOS",
+        "arr": "TXKF",
+        "depCity": "Boston",
+        "arrCity": "Bermuda",
+        "aircraft": "A321LR",
+        "time": "14:00"
       }
     }
   ],
