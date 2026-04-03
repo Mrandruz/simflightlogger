@@ -1189,10 +1189,18 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     const d = new Date();
     const currentMinsUtc = d.getUTCHours() * 60 + d.getUTCMinutes();
 
-    // 1. Dati Utente (Andrea) - REALI da Firestore
+    // 1. Dati Utente (Andrea Lana) - REALI da Firestore
+    // pilotName potrebbe contenere solo il first name (es. "Andrea" da Firebase displayName).
+    // Se ha una sola parola, aggiungiamo il cognome Lana.
+    const fullDisplayName = (() => {
+      if (!pilotName || !pilotName.trim()) return 'Andrea Lana';
+      const trimmed = pilotName.trim();
+      return trimmed.includes(' ') ? trimmed : `${trimmed} Lana`;
+    })();
+
     const userPilot = {
       id: "VLR-A01",
-      name: pilotName || "Andrea Lana",
+      name: fullDisplayName,
       rank: profile.currentRank.name,
       base: currentBase,
       totalFlights: profile.totalFlights,
@@ -1905,7 +1913,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               {pilotName ? pilotName.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className={styles.pilotText}>
-              <span className={styles.pilotName}>{pilotName || 'Andrea Lana'}</span>
+              <span className={styles.pilotName}>
+                {(() => {
+                  if (!pilotName || !pilotName.trim()) return 'Andrea Lana';
+                  const t = pilotName.trim();
+                  return t.includes(' ') ? t : `${t} Lana`;
+                })()}
+              </span>
               <span className={styles.pilotRank}>{profile.currentRank.name}</span>
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
