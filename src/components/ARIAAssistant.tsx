@@ -2223,13 +2223,27 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     <button
                       onClick={generateSchedule}
                       disabled={scheduleLoading}
-                      className={styles.sendBtn}
-                      style={{ height: '36px', padding: '0 20px', fontSize: '12px', gap: '6px', flexShrink: 0, opacity: scheduleLoading ? 0.6 : 1 }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        height: '38px',
+                        padding: '0 18px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: scheduleLoading ? 'var(--color-border)' : 'var(--color-primary)',
+                        color: 'white',
+                        cursor: scheduleLoading ? 'not-allowed' : 'pointer',
+                        opacity: scheduleLoading ? 0.7 : 1,
+                        transition: 'opacity 0.15s, background 0.15s',
+                      }}
                     >
-                      {scheduleLoading
-                        ? <><RefreshCw size={13} className={styles.spin} /> Generazione...</>
-                        : <><RefreshCw size={13} /> {schedule.length > 0 ? 'Rigenera' : 'Genera schedule'}</>
-                      }
+                      <RefreshCw size={13} className={scheduleLoading ? styles.spin : undefined} />
+                      {scheduleLoading ? 'Generazione...' : schedule.length > 0 ? 'Rigenera' : 'Genera schedule'}
                     </button>
                   </div>
 
