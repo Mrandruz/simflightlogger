@@ -1818,7 +1818,7 @@ REGOLE:
       long: {
         label: 'Long Haul',
         instruction: 'MODALITÀ LONG HAUL (≥ 3.000 nm): usa SOLO A330neo o A350-900. '
-          + '1 leg al giorno. Il giorno successivo al lungo raggio parte dall'aeroporto di arrivo (layover realistico). '
+          + "1 leg al giorno. Il giorno successivo al lungo raggio parte dall'aeroporto di arrivo (layover realistico). "
           + 'Totale legs settimana: 5-7. NO rotte domestiche.',
       },
     };
