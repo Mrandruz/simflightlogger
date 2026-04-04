@@ -113,6 +113,13 @@ interface ScheduledFlight {
   departureTime: string;
   arrivalTime: string;
   reason: string;
+  legIndex?: number; // posizione del leg nel giorno (0-based)
+}
+
+// Struttura per giorni con più legs (turnaround)
+interface ScheduleDay {
+  day: string;
+  legs: ScheduledFlight[];
 }
 
 interface ChatMessage {
@@ -928,6 +935,8 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
 
   const [schedule, setSchedule] = useState<ScheduledFlight[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleAccepted, setScheduleAccepted] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<ScheduledFlight | null>(null);
   const [selectedHub, setSelectedHub] = useState<string | null>(null);
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'total'>('month');
@@ -1757,42 +1766,60 @@ REGOLE:
     }
   }, [input, profile, isTyping, messages, buildSystemPrompt]);
 
-  // ── Genera schedule ───────────────────────────────────────────────────────
+  // ── Carica schedule salvata da Firestore ────────────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    const loadSavedSchedule = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'users', userId, 'schedule'), limit(1)));
+        if (!snap.empty) {
+          const saved = snap.docs[0].data();
+          if (saved.flights && Array.isArray(saved.flights) && saved.flights.length > 0) {
+            setSchedule(saved.flights);
+            setScheduleAccepted(true);
+            if (saved.scheduleType) setScheduleType(saved.scheduleType);
+            console.log('[ARIA Schedule] Schedule caricata da Cloud:', saved.flights.length, 'legs');
+          }
+        }
+      } catch (err) {
+        console.warn('[ARIA Schedule] Caricamento schedule fallito:', err);
+      }
+    };
+    loadSavedSchedule();
+  }, [userId]);
   const generateSchedule = useCallback(async () => {
     if (!profile) return;
     setScheduleLoading(true);
     setSchedule([]);
+    setScheduleAccepted(false);
+    setExpandedScheduleId(null);
 
-    // Base attuale del pilota = ultimo arrivo logbook
     const pilotBase = profile.latestFlight?.arrival?.toUpperCase() || 'LIRF';
     const pilotBaseHub = opsPlan?.hubs.find(h => h.icao === pilotBase);
     const isLongHaulQualified = ['Captain', 'Senior Captain', 'Chief Captain'].includes(profile.currentRank.name);
 
-    // Vincoli per tipo di schedule
     const scheduleConstraints = {
       short: {
         label: 'Short Haul',
-        maxNm: 1500,
-        aircraft: ['Airbus A319', 'Airbus A320', 'Airbus A320-200'],
-        instruction: 'MODALITÀ SHORT HAUL: seleziona SOLO rotte con distanza ≤ 1.500 nm. '
-          + 'Preferire rotte domestiche e intra-europee/regionali (es. LIML, EGLL, LFPG, LSZH, EDDF, LIEO, LMML, WSSS, WADD, CYYZ, KAUS). '
-          + 'Usa SOLO A319 o A320. NO intercontinentali, NO transatlantiche, NO Pacific.',
+        instruction: 'MODALITÀ SHORT HAUL (≤ 1.500 nm): usa SOLO A319/A320. '
+          + 'Genera 2-4 legs al giorno con turnaround realistico: un pilota di linea short-haul '
+          + 'fa andata+ritorno o più rotazioni nella stessa giornata. '
+          + 'Esempio giorno: LIRF→LIML (mattina) + LIML→LIRF (tarda mattina) + LIRF→EGLL (pomeriggio). '
+          + 'Usa gli orari reali del piano operativo. Totale legs settimana: 10-18. '
+          + 'NO intercontinentali, NO transatlantiche.',
       },
       medium: {
         label: 'Medium Haul',
-        maxNm: 4000,
-        aircraft: ['Airbus A320', 'Airbus A321LR', 'Airbus A330neo'],
-        instruction: 'MODALITÀ MEDIUM HAUL: seleziona rotte con distanza tra 1.000 e 4.000 nm. '
-          + 'Preferire rotte regionali-continentali (es. OMDB, KJFK, KSFO KAUS, KBOS, EGLL, RPLL, VTBS, RJTT, YSSY). '
-          + 'Usa A321LR o A330neo. Evita rotte ultra-long (>10h block) e rotte domestiche brevi (<45 min).',
+        instruction: 'MODALITÀ MEDIUM HAUL (1.000–4.000 nm): usa A321LR o A330neo. '
+          + 'Genera 1-2 legs al giorno. Su rotte ≤2.500nm puoi fare andata+ritorno nello stesso giorno. '
+          + 'Su rotte più lunghe (es. LIRF→OMDB) il ritorno è il giorno dopo. '
+          + 'Totale legs settimana: 7-12. NO ultra-long (>10h block).',
       },
       long: {
         label: 'Long Haul',
-        minNm: 3000,
-        aircraft: ['Airbus A330neo', 'Airbus A350-900'],
-        instruction: 'MODALITÀ LONG HAUL: seleziona SOLO rotte con distanza ≥ 3.000 nm. '
-          + 'Preferire rotte intercontinentali e transoceanic (es. LIRF-KBOS, LIRF-KSFO, LIRF-WIII, WIII-YSSY, KBOS-EGLL). '
-          + 'Usa SOLO A330neo o A350-900. NO rotte domestiche o corto raggio.',
+        instruction: 'MODALITÀ LONG HAUL (≥ 3.000 nm): usa SOLO A330neo o A350-900. '
+          + '1 leg al giorno. Il giorno successivo al lungo raggio parte dall'aeroporto di arrivo (layover realistico). '
+          + 'Totale legs settimana: 5-7. NO rotte domestiche.',
       },
     };
 
@@ -1804,52 +1831,52 @@ Sei ARIA, il sistema di pianificazione voli di Velar Virtual Airline.
 ${opsPlan ? `PIANO OPERATIVO v${opsPlan._meta.version}:
 ${opsPlan.hubs.map(h =>
   h.icao + ' ' + h.city + ':\n' +
-  h.routes.map(r => '  ' + r.flight + ' ' + h.icao + '→' + r.dest + ' ' + r.aircraft + ' ' + r.freq).join('\n')
+  h.routes.map(r => '  ' + r.flight + ' ' + h.icao + '→' + r.dest + ' ' + r.aircraft + ' ' + r.freq + (r.note ? ' [' + r.note + ']' : '')).join('\n')
 ).join('\n')}` : 'Piano non disponibile'}
 
 PILOTA: ${pilotName || 'Comandante'} — Rank: ${profile.currentRank.name} — Ore totali: ${profile.totalHours.toFixed(0)}h
-BASE ATTUALE: ${pilotBase} (${pilotBaseHub?.city || pilotBase}) — ${pilotBaseHub?.role || 'Hub'}
-ABILITAZIONE LUNGO RAGGIO: ${isLongHaulQualified ? 'SÌ (A350-900 disponibile)' : 'NO (solo A320-200 feeder)'}
-AEROMOBILI ABILITATI PER IL RANK: ${opsPlan?.aria_ops.rank_progression.find(r => r.name === profile.currentRank.name)?.aircraft.join(', ') || 'A320'}
+BASE ATTUALE: ${pilotBase} (${pilotBaseHub?.city || pilotBase})
+ABILITAZIONE LUNGO RAGGIO: ${isLongHaulQualified ? 'SÌ (A350-900 disponibile)' : 'NO'}
+AEROMOBILI ABILITATI: ${opsPlan?.aria_ops.rank_progression.find(r => r.name === profile.currentRank.name)?.aircraft.join(', ') || 'A320'}
 
 ⚠️ ${constraint.instruction}
 
-Genera la schedule settimanale (Lunedì → Domenica, 7 voli) rispettando RIGOROSAMENTE queste regole:
-1. Il PRIMO volo DEVE partire da ${pilotBase} — base corrente del pilota
-2. Ogni volo successivo parte dall'arrivo del volo precedente (catena geografica coerente)
-3. Usa SOLO le rotte del piano operativo che partono dalla base corrente o dagli hub raggiunti
-4. Usa SOLO aeromobili abilitati per il rank del pilota E coerenti con la modalità ${constraint.label}
-5. Il campo "reason" deve spiegare la scelta operativa (stile ARIA Ops, conciso) e citare la modalità ${constraint.label}
-6. IMPORTANTE: Ogni volo DEVE includere i campi "departureTime" e "arrivalTime" nel formato "HH:MM" (UTC).
+REGOLE TURNAROUND OBBLIGATORIE:
+1. Il PRIMO leg di lunedì DEVE partire da ${pilotBase}
+2. Ogni leg parte ESATTAMENTE dall'arrivo del leg precedente (catena geografica continua)
+3. Turnaround minimo a destinazione: 60 min (narrowbody), 90 min (widebody)
+4. Non sovrapporre orari: arrTime di un leg + turnaround ≤ departureTime del leg successivo
+5. Usa SOLO rotte del piano operativo Velar
+6. Usa SOLO aeromobili abilitati per rank e modalità ${constraint.label}
+7. Il campo "reason" spiega la scelta operativa in stile ARIA Ops, conciso
 
-Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
-[
-  {
-    "day": "Lunedì",
-    "flightNumber": "VLR101",
-    "departure": "LIRF",
-    "arrival": "KBOS",
-    "departureCity": "Roma Fiumicino",
-    "arrivalCity": "Boston Logan",
-    "aircraft": "Airbus A350-900",
-    "estimatedDuration": "9h 30m",
-    "distance": "4,232 nm",
-    "departureTime": "10:30",
-    "arrivalTime": "13:00",
-    "reason": "Apertura settimana sul flagship intercontinentale. The First Port."
-  }
-]
+Rispondi SOLO con un array JSON flat di tutti i legs (non raggruppati per giorno).
+Ogni elemento ha questi campi obbligatori:
+{
+  "day": "Lunedì",
+  "flightNumber": "VLR311",
+  "departure": "LIRF",
+  "arrival": "LIML",
+  "departureCity": "Roma Fiumicino",
+  "arrivalCity": "Milano Linate",
+  "aircraft": "Airbus A320",
+  "estimatedDuration": "1h 15m",
+  "distance": "298 nm",
+  "departureTime": "08:15",
+  "arrivalTime": "09:30",
+  "reason": "Apertura settimana. Rotazione domestica."
+}
+
+Nessun testo aggiuntivo, nessun markdown, solo JSON valido.
 `.trim();
 
     try {
       const res = await fetch('/api/aria-proxy', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
@@ -1858,13 +1885,42 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
       const jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
       const clean = jsonMatch ? jsonMatch[0] : raw.replace(/```json|```/g, '').trim();
       const parsed: ScheduledFlight[] = JSON.parse(clean);
-      setSchedule(parsed);
+      // Aggiungi legIndex per ogni giorno (0-based)
+      const dayCounts: Record<string, number> = {};
+      const withIndex = parsed.map((f: ScheduledFlight) => {
+        dayCounts[f.day] = (dayCounts[f.day] ?? -1) + 1;
+        return { ...f, legIndex: dayCounts[f.day] };
+      });
+      setSchedule(withIndex);
     } catch (e) {
       console.error('Schedule generation error:', e);
+      toast.error('Errore nella generazione schedule. Riprova.');
     } finally {
       setScheduleLoading(false);
     }
   }, [profile, pilotName, opsPlan, scheduleType]);
+
+  // ── Accetta e salva schedule su Firestore ────────────────────────────────
+  const acceptSchedule = useCallback(async () => {
+    if (!schedule.length || !userId) return;
+    setScheduleSaving(true);
+    try {
+      await setDoc(doc(db, 'users', userId, 'schedule', 'active'), {
+        flights: schedule,
+        scheduleType,
+        savedAt: Date.now(),
+        pilotBase: profile?.latestFlight?.arrival?.toUpperCase() || 'LIRF',
+        totalLegs: schedule.length,
+      });
+      setScheduleAccepted(true);
+      toast.success(`Schedule accettata — ${schedule.length} legs salvati`);
+    } catch (err) {
+      console.error('[ARIA Schedule] Salvataggio fallito:', err);
+      toast.error('Errore nel salvataggio. Riprova.');
+    } finally {
+      setScheduleSaving(false);
+    }
+  }, [schedule, userId, scheduleType, profile]);
 
   // ── Test Discord ────────────────────────────────────────────────────────
   const testDiscord = async () => {
@@ -2561,37 +2617,56 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                       </div>
                     </div>
 
-                    <button
-                      onClick={generateSchedule}
-                      disabled={scheduleLoading}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '7px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        height: '38px',
-                        padding: '0 18px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        border: 'none',
-                        borderRadius: '8px',
-                        background: scheduleLoading ? 'var(--color-border)' : 'var(--color-primary)',
-                        color: 'white',
-                        cursor: scheduleLoading ? 'not-allowed' : 'pointer',
-                        opacity: scheduleLoading ? 0.7 : 1,
-                        transition: 'opacity 0.15s, background 0.15s',
-                      }}
-                    >
-                      <RefreshCw size={13} className={scheduleLoading ? styles.spin : undefined} />
-                      {scheduleLoading ? 'Generazione...' : schedule.length > 0 ? 'Rigenera' : 'Genera schedule'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                      {/* Accetta Schedule */}
+                      {schedule.length > 0 && !scheduleAccepted && (
+                        <button
+                          onClick={acceptSchedule}
+                          disabled={scheduleSaving}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '7px',
+                            whiteSpace: 'nowrap', height: '38px', padding: '0 18px',
+                            fontSize: '13px', fontWeight: 600, border: 'none', borderRadius: '8px',
+                            background: 'var(--color-success)', color: 'white',
+                            cursor: scheduleSaving ? 'not-allowed' : 'pointer',
+                            opacity: scheduleSaving ? 0.7 : 1,
+                          }}
+                        >
+                          {scheduleSaving
+                            ? <><RefreshCw size={13} className={styles.spin} /> Salvataggio...</>
+                            : <><Check size={13} /> Accetta Schedule</>}
+                        </button>
+                      )}
+                      {scheduleAccepted && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 12px', height: '38px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                          <Check size={13} /> Salvata
+                        </div>
+                      )}
+                      {/* Genera / Rigenera */}
+                      <button
+                        onClick={generateSchedule}
+                        disabled={scheduleLoading}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '7px',
+                          whiteSpace: 'nowrap', height: '38px', padding: '0 18px',
+                          fontSize: '13px', fontWeight: 600, border: 'none', borderRadius: '8px',
+                          background: scheduleLoading ? 'var(--color-border)' : 'var(--color-primary)',
+                          color: 'white',
+                          cursor: scheduleLoading ? 'not-allowed' : 'pointer',
+                          opacity: scheduleLoading ? 0.7 : 1,
+                          transition: 'opacity 0.15s, background 0.15s',
+                        }}
+                      >
+                        <RefreshCw size={13} className={scheduleLoading ? styles.spin : undefined} />
+                        {scheduleLoading ? 'Generazione...' : schedule.length > 0 ? 'Rigenera' : 'Genera schedule'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Header colonne */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '80px 1fr 180px 90px 100px 28px',
+                    gridTemplateColumns: '20px 1fr 180px 90px 100px 28px',
                     gap: '0 12px',
                     padding: '6px 16px',
                     fontSize: '10px',
@@ -2601,7 +2676,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     color: 'var(--color-text-hint)',
                     borderBottom: '1px solid var(--color-border)',
                   }}>
-                    <span>Giorno</span>
+                    <span>#</span>
                     <span>Rotta</span>
                     <span>Aeromobile</span>
                     <span>Distanza</span>
@@ -2609,81 +2684,119 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     <span />
                   </div>
 
-                  {schedule.length > 0 ? schedule.map((f, i) => {
-                    const isOpen = expandedScheduleId === i;
-                    return (
-                      <div key={i} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        {/* Riga principale */}
-                        <div
-                          onClick={() => {
-                            const next = isOpen ? null : i;
-                            setExpandedScheduleId(next);
-                            if (next !== null) { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }
-                          }}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '80px 1fr 180px 90px 100px 28px',
-                            gap: '0 12px',
-                            padding: '11px 16px',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : 'transparent',
-                            transition: 'background 0.15s',
-                          }}
-                        >
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-hint)' }}>{f.day}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                            <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{f.flightNumber}</span>
-                            <span style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {f.departure}
-                              <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.departureTime || '--:--'}</span>
-                              {' → '}
-                              {f.arrival}
-                              <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.arrivalTime || '--:--'}</span>
-                            </span>
-                          </div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.aircraft}</span>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.distance}</span>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.estimatedDuration}</span>
-                          <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
-                        </div>
+                  {schedule.length > 0 ? (() => {
+                    // Raggruppa legs per giorno mantenendo l'ordine
+                    const orderedDays = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+                    const byDay: Record<string, ScheduledFlight[]> = {};
+                    schedule.forEach(f => {
+                      if (!byDay[f.day]) byDay[f.day] = [];
+                      byDay[f.day].push(f);
+                    });
+                    const days = orderedDays.filter(d => byDay[d]);
 
-                        {/* Pannello espanso */}
-                        {isOpen && (
-                          <div style={{ padding: '12px 16px 16px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5', fontStyle: 'italic' }}>{f.reason}</p>
-                            <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: 'var(--color-text-hint)' }}>
-                              <span>Partenza: <strong style={{ color: 'var(--color-text-primary)' }}>{f.departureCity}</strong></span>
-                              <span>Arrivo: <strong style={{ color: 'var(--color-text-primary)' }}>{f.arrivalCity}</strong></span>
+                    return days.map(day => {
+                      const legs = byDay[day];
+                      const dayTotalMins = legs.reduce((acc, f) => {
+                        const match = f.estimatedDuration.match(/(\d+)h\s*(\d+)m/);
+                        return acc + (match ? parseInt(match[1]) * 60 + parseInt(match[2]) : 0);
+                      }, 0);
+                      const dayTotalStr = dayTotalMins > 0
+                        ? `${Math.floor(dayTotalMins/60)}h ${dayTotalMins%60}m`
+                        : '';
+
+                      return (
+                        <div key={day}>
+                          {/* Day header */}
+                          <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '8px 16px',
+                            background: 'var(--color-background)',
+                            borderBottom: '1px solid var(--color-border)',
+                            borderTop: '1px solid var(--color-border)',
+                          }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {day}
+                            </span>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>
+                                {legs.length} {legs.length === 1 ? 'leg' : 'legs'}
+                              </span>
+                              {dayTotalStr && (
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-family-mono)' }}>
+                                  {dayTotalStr} totali
+                                </span>
+                              )}
                             </div>
-                            <a
-                              href={buildSimbriefUrl(f)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                alignSelf: 'flex-start',
-                                padding: '0 16px',
-                                height: '32px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                borderRadius: '8px',
-                                background: 'var(--color-primary)',
-                                color: 'white',
-                                textDecoration: 'none',
-                                whiteSpace: 'nowrap',
-                                border: 'none',
-                              }}
-                            >
-                              <ExternalLink size={13} /> Briefing SimBrief
-                            </a>
                           </div>
-                        )}
-                      </div>
-                    );
-                  }) : (
+
+                          {/* Legs for this day */}
+                          {legs.map((f, legIdx) => {
+                            const globalIdx = schedule.indexOf(f);
+                            const isOpen = expandedScheduleId === globalIdx;
+                            return (
+                              <div key={`${day}-${legIdx}`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                <div
+                                  onClick={() => {
+                                    const next = isOpen ? null : globalIdx;
+                                    setExpandedScheduleId(next);
+                                    if (next !== null) { setSelectedFlight(f); setSelectedFlightForMap(f); setIsMapZoomed(true); }
+                                  }}
+                                  style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '20px 1fr 180px 90px 100px 28px',
+                                    gap: '0 12px',
+                                    padding: '10px 16px',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : legs.length > 1 ? 'rgba(0,0,0,0.01)' : 'transparent',
+                                    transition: 'background 0.15s',
+                                  }}
+                                >
+                                  {/* Leg number indicator (solo se più di 1 leg nel giorno) */}
+                                  {legs.length > 1
+                                    ? <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-text-hint)', textAlign: 'center' }}>L{legIdx+1}</span>
+                                    : <span />
+                                  }
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{f.flightNumber}</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                      {f.departure}
+                                      <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.departureTime || '--:--'}</span>
+                                      {' → '}
+                                      {f.arrival}
+                                      <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {f.arrivalTime || '--:--'}</span>
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.aircraft}</span>
+                                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.distance}</span>
+                                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{f.estimatedDuration}</span>
+                                  <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+                                </div>
+
+                                {isOpen && (
+                                  <div style={{ padding: '12px 16px 16px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5', fontStyle: 'italic' }}>{f.reason}</p>
+                                    <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                                      <span>Partenza: <strong style={{ color: 'var(--color-text-primary)' }}>{f.departureCity}</strong></span>
+                                      <span>Arrivo: <strong style={{ color: 'var(--color-text-primary)' }}>{f.arrivalCity}</strong></span>
+                                    </div>
+                                    <a
+                                      href={buildSimbriefUrl(f)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start', padding: '0 16px', height: '32px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', background: 'var(--color-primary)', color: 'white', textDecoration: 'none', whiteSpace: 'nowrap', border: 'none' }}
+                                    >
+                                      <ExternalLink size={13} /> Briefing SimBrief
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                  })() : (
                     <div style={{ textAlign: 'center', padding: '48px 60px', color: 'var(--color-text-hint)' }}>
                       <Calendar size={40} style={{ marginBottom: '12px', opacity: 0.2 }} />
                       <p style={{ margin: 0, fontSize: '14px' }}>
