@@ -1825,50 +1825,64 @@ REGOLE:
 
     const constraint = scheduleConstraints[scheduleType];
 
+    const shortHaulExample = `[
+  {"day":"Lunedì","flightNumber":"VLR311","departure":"LIRF","arrival":"LIML","departureCity":"Roma","arrivalCity":"Milano Linate","aircraft":"Airbus A320","estimatedDuration":"1h 15m","distance":"298 nm","departureTime":"07:00","arrivalTime":"08:15","reason":"Apertura settimana, rotazione domestica mattutina."},
+  {"day":"Lunedì","flightNumber":"VLR312","departure":"LIML","arrival":"LIRF","departureCity":"Milano Linate","arrivalCity":"Roma","aircraft":"Airbus A320","estimatedDuration":"1h 15m","distance":"298 nm","departureTime":"09:30","arrivalTime":"10:45","reason":"Ritorno hub LIRF dopo turnaround 75 min."},
+  {"day":"Lunedì","flightNumber":"VLR411","departure":"LIRF","arrival":"EGLL","departureCity":"Roma","arrivalCity":"Londra Heathrow","aircraft":"Airbus A320","estimatedDuration":"2h 45m","distance":"895 nm","departureTime":"12:00","arrivalTime":"14:45","reason":"Secondo blocco giornaliero, rotta premium pomeridiana."},
+  {"day":"Martedì","flightNumber":"VLR412","departure":"EGLL","arrival":"LIRF","departureCity":"Londra Heathrow","arrivalCity":"Roma","aircraft":"Airbus A320","estimatedDuration":"2h 45m","distance":"895 nm","departureTime":"08:00","arrivalTime":"11:45","reason":"Ritorno da Londra dopo layover. Rientro hub principale."}
+]`;
+
+    const mediumHaulExample = `[
+  {"day":"Lunedì","flightNumber":"VLR211","departure":"LIRF","arrival":"OMDB","departureCity":"Roma","arrivalCity":"Dubai","aircraft":"Airbus A321LR","estimatedDuration":"5h 30m","distance":"2847 nm","departureTime":"10:00","arrivalTime":"20:30","reason":"Apertura settimana verso Middle East hub. Rotta premium."},
+  {"day":"Martedì","flightNumber":"VLR212","departure":"OMDB","arrival":"LIRF","departureCity":"Dubai","arrivalCity":"Roma","aircraft":"Airbus A321LR","estimatedDuration":"6h 30m","distance":"2847 nm","departureTime":"08:00","arrivalTime":"12:30","reason":"Ritorno da Dubai dopo layover overnight. Rientro LIRF."}
+]`;
+
+    const longHaulExample = `[
+  {"day":"Lunedì","flightNumber":"VLR101","departure":"LIRF","arrival":"KBOS","departureCity":"Roma","arrivalCity":"Boston","aircraft":"Airbus A350-900","estimatedDuration":"9h 30m","distance":"4232 nm","departureTime":"10:30","arrivalTime":"14:00","reason":"Apertura settimana transatlantica. The First Port."},
+  {"day":"Martedì","flightNumber":"VLR102","departure":"KBOS","arrival":"LIRF","departureCity":"Boston","arrivalCity":"Roma","aircraft":"Airbus A350-900","estimatedDuration":"8h 15m","distance":"4232 nm","departureTime":"18:00","arrivalTime":"08:15","reason":"Ritorno da Boston dopo layover. Rientro LIRF."}
+]`;
+
+    const exampleForType = scheduleType === 'short' ? shortHaulExample : scheduleType === 'medium' ? mediumHaulExample : longHaulExample;
+
     const prompt = `
 Sei ARIA, il sistema di pianificazione voli di Velar Virtual Airline.
+Devi generare una schedule settimanale REALISTICA con turnaround, non un solo volo al giorno.
 
-${opsPlan ? `PIANO OPERATIVO v${opsPlan._meta.version}:
-${opsPlan.hubs.map(h =>
+PIANO OPERATIVO v${opsPlan?._meta?.version || '5.2'} — rotte disponibili:
+${opsPlan ? opsPlan.hubs.map((h: VelarHub) =>
   h.icao + ' ' + h.city + ':\n' +
-  h.routes.map(r => '  ' + r.flight + ' ' + h.icao + '→' + r.dest + ' ' + r.aircraft + ' ' + r.freq + (r.note ? ' [' + r.note + ']' : '')).join('\n')
-).join('\n')}` : 'Piano non disponibile'}
+  h.routes.map((r: VelarRoute) => '  ' + r.flight + ' ' + h.icao + '→' + r.dest + ' (' + r.aircraft + ') ' + r.freq).join('\n')
+).join('\n') : 'Piano non disponibile'}
 
-PILOTA: ${pilotName || 'Comandante'} — Rank: ${profile.currentRank.name} — Ore totali: ${profile.totalHours.toFixed(0)}h
-BASE ATTUALE: ${pilotBase} (${pilotBaseHub?.city || pilotBase})
-ABILITAZIONE LUNGO RAGGIO: ${isLongHaulQualified ? 'SÌ (A350-900 disponibile)' : 'NO'}
-AEROMOBILI ABILITATI: ${opsPlan?.aria_ops.rank_progression.find(r => r.name === profile.currentRank.name)?.aircraft.join(', ') || 'A320'}
+PILOTA: ${pilotName || 'Comandante'} | Rank: ${profile.currentRank.name} | Ore: ${profile.totalHours.toFixed(0)}h
+BASE PARTENZA LUNEDÌ: ${pilotBase} — il primo leg DEVE decollare da qui
 
-⚠️ ${constraint.instruction}
+MODALITÀ: ${constraint.label.toUpperCase()}
+${constraint.instruction}
 
-REGOLE TURNAROUND OBBLIGATORIE:
-1. Il PRIMO leg di lunedì DEVE partire da ${pilotBase}
-2. Ogni leg parte ESATTAMENTE dall'arrivo del leg precedente (catena geografica continua)
-3. Turnaround minimo a destinazione: 60 min (narrowbody), 90 min (widebody)
-4. Non sovrapporre orari: arrTime di un leg + turnaround ≤ departureTime del leg successivo
-5. Usa SOLO rotte del piano operativo Velar
-6. Usa SOLO aeromobili abilitati per rank e modalità ${constraint.label}
-7. Il campo "reason" spiega la scelta operativa in stile ARIA Ops, conciso
+═══ REGOLE FONDAMENTALI (NON NEGOZIABILI) ═══
+R1. TURNAROUND OBBLIGATORIO: dopo ogni leg verso una destinazione, DEVI inserire il volo di ritorno
+    (o un leg verso un altro hub raggiungibile) nello stesso giorno o il giorno successivo.
+    NON puoi avere giorni con un solo volo in partenza senza ritorno, salvo layover esplicito.
+R2. CATENA GEOGRAFICA: ogni leg parte dall'arrivo del leg precedente.
+    Se lunedì arrivi a LIML, martedì o lo stesso giorno devi ripartire da LIML.
+R3. TEMPI TURNAROUND MINIMI: 60 min narrowbody (A319/A320/A321LR), 90 min widebody (A330neo/A350).
+R4. USA SOLO rotte presenti nel piano operativo sopra.
+R5. Usa SOLO aeromobili compatibili con il rank: ${opsPlan?.aria_ops?.rank_progression?.find((r: RankDef) => r.name === profile.currentRank.name)?.aircraft?.join(', ') || 'A320'}
 
-Rispondi SOLO con un array JSON flat di tutti i legs (non raggruppati per giorno).
-Ogni elemento ha questi campi obbligatori:
-{
-  "day": "Lunedì",
-  "flightNumber": "VLR311",
-  "departure": "LIRF",
-  "arrival": "LIML",
-  "departureCity": "Roma Fiumicino",
-  "arrivalCity": "Milano Linate",
-  "aircraft": "Airbus A320",
-  "estimatedDuration": "1h 15m",
-  "distance": "298 nm",
-  "departureTime": "08:15",
-  "arrivalTime": "09:30",
-  "reason": "Apertura settimana. Rotazione domestica."
-}
+═══ FORMATO OUTPUT ═══
+Rispondi ESCLUSIVAMENTE con un array JSON valido (nessun testo, nessun markdown).
+Ogni elemento rappresenta UN singolo leg con questi campi:
+"day" (giorno della settimana in italiano), "flightNumber", "departure", "arrival",
+"departureCity", "arrivalCity", "aircraft", "estimatedDuration", "distance",
+"departureTime" (HH:MM UTC), "arrivalTime" (HH:MM UTC), "reason"
 
-Nessun testo aggiuntivo, nessun markdown, solo JSON valido.
+═══ ESEMPIO OUTPUT CORRETTO per ${constraint.label} ═══
+${exampleForType}
+
+Genera ora la schedule COMPLETA da Lunedì a Domenica rispettando tutte le regole.
 `.trim();
+
 
     try {
       const res = await fetch('/api/aria-proxy', {
