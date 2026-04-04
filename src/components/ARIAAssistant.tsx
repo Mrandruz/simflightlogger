@@ -952,6 +952,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [npcRoster, setNpcRoster] = useState<NpcPilot[]>([]);
   const [fleetState, setFleetState] = useState<any[]>([]);
   const [networkFlights, setNetworkFlights] = useState<NetworkFlight[]>([]);
+  const [userLiveFlight, setUserLiveFlight] = useState<(NetworkFlight & { isUserFlight?: boolean; telemetry?: any }) | null>(null);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date>(new Date());
   
   // Mappa
@@ -1322,6 +1323,14 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     }).then(() => toast.success('Daily Report inviato su #daily-reports ✅'));
   }, [networkFlights, fleetState]);
 
+  // ── Merge voli NPC + volo live utente ────────────────────────────────────
+  const allNetworkFlights = useMemo(() => {
+    if (!userLiveFlight) return networkFlights;
+    // Rimuovi eventuali versioni precedenti del volo utente e inserisci in cima
+    const withoutUser = networkFlights.filter(f => f.id !== 'user-live');
+    return [userLiveFlight as NetworkFlight, ...withoutUser];
+  }, [networkFlights, userLiveFlight]);
+
   // ── Base attuale del pilota (dall'ultimo arrivo nel logbook) ───────────────
   const currentBase = profile?.latestFlight?.arrival?.toUpperCase() ?? 'LIRF';
   const currentBaseCity = opsPlan?.hubs.find((h: VelarHub) => h.icao === currentBase)?.city
@@ -1637,6 +1646,29 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
     const interval = setInterval(tick, 30000); 
     return () => clearInterval(interval);
   }, [opsPlan, npcRoster, fleetState]);
+
+  // ── Listener volo live utente (Volanta Bridge → Firestore) ──────────────
+  useEffect(() => {
+    if (!userId) return;
+    const liveRef = doc(db, 'users', userId, 'live_flight', 'active');
+    const unsub = onSnapshot(liveRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as NetworkFlight & { isUserFlight?: boolean; telemetry?: any };
+        // Valida che i dati abbiano i campi minimi necessari
+        if (data.departure && data.arrival && data.flightNumber) {
+          setUserLiveFlight({ ...data, isUserFlight: true });
+          console.log('[ARIA Live] Volo Volanta ricevuto:', data.flightNumber, data.status);
+        }
+      } else {
+        // Documento rimosso = volo terminato
+        setUserLiveFlight(null);
+        console.log('[ARIA Live] Volo Volanta terminato.');
+      }
+    }, (err) => {
+      console.warn('[ARIA Live] Errore listener live_flight:', err);
+    });
+    return () => unsub();
+  }, [userId]);
 
   // ── Carica voli da Firestore ──────────────────────────────────────────────
   useEffect(() => {
@@ -1973,12 +2005,12 @@ Genera ora la schedule COMPLETA da Lunedì a Domenica rispettando tutte le regol
 
     const aogCount = fleetState.filter(ac => ac.status === 'AOG' || ac.isAOG).length;
     const operationalCount = fleetState.length - aogCount;
-    const activeVols = networkFlights.filter(f =>
+    const activeVols = allNetworkFlights.filter(f =>
       !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
     ).length;
-    const totalFlights = networkFlights.length;
+    const totalFlights = allNetworkFlights.length;
     // FIX 11: on-time calcolato solo su voli con status operativo (non Scheduled/AOG)
-    const operatedFlights = networkFlights.filter(f =>
+    const operatedFlights = allNetworkFlights.filter(f =>
       !['Scheduled', 'AOG/Cancel'].includes(f.status)
     );
     const onTimeFlights = operatedFlights.filter(f => f.status !== 'AOG/Cancel').length;
@@ -1993,14 +2025,14 @@ Genera ora la schedule COMPLETA da Lunedì a Domenica rispettando tutte le regol
       : 180;
 
     const hubs = opsPlan.hubs.map((hub: VelarHub) => {
-      const activeAtHub = networkFlights.filter(
+      const activeAtHub = allNetworkFlights.filter(
         f => (f.departure === hub.icao || f.arrival === hub.icao) && 
              !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
       ).length;
       
       // Calcoliamo i passeggeri solo sui voli in PARTENZA per il totale finanziario del singolo hub,
       // ma usiamo il totale globale per la dashboard.
-      const paxAtHub = networkFlights.filter(
+      const paxAtHub = allNetworkFlights.filter(
         f => (f.departure === hub.icao || f.arrival === hub.icao) && 
              !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)
       ).length * avgCapacity * 0.82;
@@ -2035,14 +2067,14 @@ Genera ora la schedule COMPLETA da Lunedì a Domenica rispettando tutte le regol
       hubs,
       passengerSummary: { totalPaxToday, avgLoadFactor: 82 },
     });
-  }, [profile, pilotName, opsPlan, fleetState, networkFlights]);
+  }, [profile, pilotName, opsPlan, fleetState, allNetworkFlights]);
 
 
   useEffect(() => {
     if (view === 'overview' && profile && opsPlan) {
       generateOverview();
     }
-  }, [view, profile, opsPlan, networkFlights, fleetState, generateOverview]);
+  }, [view, profile, opsPlan, allNetworkFlights, fleetState, generateOverview]);
 
   // ── Genera briefing flotta ────────────────────────────────────────────────
   const generateFleetBriefing = useCallback(async () => {
@@ -2399,7 +2431,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         {/* MAPPA IN ALTO */}
         <div className={styles.mapWrapper}>
           <ARIAMap 
-            flights={networkFlights} 
+            flights={allNetworkFlights} 
             selectedFlight={selectedFlightForMap} 
             isDarkMode={isDarkMode} 
             onCloseFlight={() => { setSelectedFlightForMap(null); setMapMode('network'); }}
@@ -2408,7 +2440,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
           <div className={styles.mapOverlay}>
             <div className={styles.mapBadge}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', animation: 'pulse 2s infinite' }} />
-                LIVE NETWORK: {networkFlights.length} VOLI
+                LIVE NETWORK: {allNetworkFlights.length} VOLI
             </div>
             <div className={styles.mapBadge}>
                 <Clock size={12} />
@@ -2498,7 +2530,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                  </div>
                  <div className={styles.kpiCard}>
                     <span className={styles.sectionTitle}>Network Traffic</span>
-                    <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-success)' }}>{networkFlights.length}</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-success)' }}>{allNetworkFlights.length}</span>
                  </div>
               </div>
 
@@ -2849,7 +2881,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                     <span>Stato</span>
                     <span />
                   </div>
-                  {Array.from(new Map(networkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => {
+                  {Array.from(new Map(allNetworkFlights.filter(f => !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(f.status)).map(f => [f.pilot.id, f])).values()).map((nf: any) => {
                     const isOpen = expandedNetworkId === nf.id + '-crew';
                     return (
                       <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -2934,7 +2966,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                 </div>
 
                 {fleetState.map((ac) => {
-                  const activeFlight = networkFlights.find(nf => nf.tailNumber === ac.id);
+                  const activeFlight = allNetworkFlights.find(nf => nf.tailNumber === ac.id);
                   const isFlying = activeFlight && !['Arrived', 'Turnaround', 'Scheduled', 'AOG/Cancel'].includes(activeFlight.status);
 
                   // GUARD: ricalcola AOG dalla soglia reale, non dal campo status Firestore
@@ -3075,7 +3107,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                    <span />
                  </div>
 
-                 {[...networkFlights].sort((a, b) => {
+                 {[...allNetworkFlights].sort((a, b) => {
                    const statusPrio: Record<string, number> = {
                      'En Route': 100, 'Approach': 90, 'Taxi Out': 80,
                      'Pushback': 70, 'Boarding': 60, 'Taxi In': 50,
@@ -3088,6 +3120,87 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                  }).map((nf) => {
                    const isOpen = expandedNetworkId === nf.id;
                    const statusActive = nf.status === 'En Route' || nf.status === 'Approach';
+                   const isUser = (nf as any).isUserFlight === true;
+                   const telemetry = (nf as any).telemetry;
+                   return (
+                     <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)', background: isUser ? 'rgba(var(--color-primary-rgb), 0.03)' : 'transparent' }}>
+                       {/* Riga compatta */}
+                       <div
+                         onClick={() => {
+                           const next = isOpen ? null : nf.id;
+                           setExpandedNetworkId(next);
+                           if (next !== null) { setSelectedFlightForMap(nf); setIsMapZoomed(true); }
+                         }}
+                         style={{
+                           display: 'grid',
+                           gridTemplateColumns: '90px 200px 1fr 130px 60px 28px',
+                           gap: '0 12px',
+                           padding: '10px 16px',
+                           alignItems: 'center',
+                           cursor: 'pointer',
+                           transition: 'background 0.15s',
+                           background: isOpen ? 'rgba(var(--color-primary-rgb), 0.06)' : 'transparent',
+                         }}
+                       >
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                           <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{nf.flightNumber}</span>
+                           {isUser && <span style={{ fontSize: '9px', padding: '1px 5px', background: 'var(--color-primary)', color: 'white', borderRadius: '3px', fontWeight: 800, flexShrink: 0 }}>YOU</span>}
+                         </div>
+                         <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                           {nf.departure}
+                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.departureTime)}</span>
+                           {' → '}
+                           {nf.arrival}
+                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.arrivalTime)}</span>
+                         </span>
+                         <div style={{ minWidth: 0 }}>
+                           <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                             {isUser ? 'Cmdt. Andrea Lana (Volanta)' : `${nf.pilot.name} · ${nf.aircraft}`}
+                             {!isUser && nf.tailNumber && nf.tailNumber !== 'Generic' && <span style={{ color: 'var(--color-text-hint)' }}> ({nf.tailNumber})</span>}
+                           </span>
+                         </div>
+                         <span style={{ fontSize: '11px', fontWeight: 700, color: statusActive || isUser ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
+                         {nf.progressPercent > 0 && nf.progressPercent < 100 ? (
+                           <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
+                             <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: isUser ? 'var(--color-success)' : 'var(--color-primary)' }} />
+                           </div>
+                         ) : (
+                           <span style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>—</span>
+                         )}
+                         <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                       </div>
+
+                       {/* Pannello espanso */}
+                       {isOpen && (
+                         <div style={{ padding: '10px 16px 14px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                           {isUser && telemetry ? (
+                             <>
+                               <span>Altitudine: <strong style={{ color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>FL{Math.round((telemetry.altitude || 0) / 100)}</strong></span>
+                               <span>GS: <strong style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)' }}>{Math.round(telemetry.groundSpeed || 0)} kt</strong></span>
+                               <span>HDG: <strong style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)' }}>{Math.round(telemetry.heading || 0)}°</strong></span>
+                               <span>VS: <strong style={{ color: (telemetry.verticalSpeed || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontFamily: 'var(--font-family-mono)' }}>{(telemetry.verticalSpeed || 0) >= 0 ? '+' : ''}{Math.round(telemetry.verticalSpeed || 0)} fpm</strong></span>
+                               <span>Aeromobile: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.aircraft}</strong></span>
+                               <span>Progresso: <strong style={{ color: 'var(--color-primary)' }}>{nf.progressPercent.toFixed(1)}%</strong></span>
+                             </>
+                           ) : (
+                             <>
+                               <span>Comandante: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.name}</strong></span>
+                               <span>Rank: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.rank}</strong></span>
+                               <span>Base: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.base}</strong></span>
+                               <span>Aeromobile: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.aircraft}</strong></span>
+                               {nf.tailNumber && nf.tailNumber !== 'Generic' && (
+                                 <span>Targa: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.tailNumber}</strong></span>
+                               )}
+                               {nf.progressPercent > 0 && nf.progressPercent < 100 && (
+                                 <span>Progresso: <strong style={{ color: 'var(--color-primary)' }}>{nf.progressPercent.toFixed(1)}%</strong></span>
+                               )}
+                             </>
+                           )}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
                    return (
                      <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                        {/* Riga compatta */}
