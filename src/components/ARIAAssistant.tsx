@@ -813,6 +813,7 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'total'>('month');
   const processedArrivedFlights = useRef<Set<string>>(new Set());
   const [scheduleTab, setScheduleTab] = useState<'mine' | 'crew'>('mine');
+  const [scheduleType, setScheduleType] = useState<'short' | 'medium' | 'long'>('medium');
 
   const [fleetBriefing, setFleetBriefing] = useState('');
   const [fleetBriefingLoading, setFleetBriefingLoading] = useState(false);
@@ -1626,6 +1627,36 @@ REGOLE:
     const pilotBaseHub = opsPlan?.hubs.find(h => h.icao === pilotBase);
     const isLongHaulQualified = ['Captain', 'Senior Captain', 'Chief Captain'].includes(profile.currentRank.name);
 
+    // Vincoli per tipo di schedule
+    const scheduleConstraints = {
+      short: {
+        label: 'Short Haul',
+        maxNm: 1500,
+        aircraft: ['Airbus A319', 'Airbus A320', 'Airbus A320-200'],
+        instruction: 'MODALITÀ SHORT HAUL: seleziona SOLO rotte con distanza ≤ 1.500 nm. '
+          + 'Preferire rotte domestiche e intra-europee/regionali (es. LIML, EGLL, LFPG, LSZH, EDDF, LIEO, LMML, WSSS, WADD, CYYZ, KAUS). '
+          + 'Usa SOLO A319 o A320. NO intercontinentali, NO transatlantiche, NO Pacific.',
+      },
+      medium: {
+        label: 'Medium Haul',
+        maxNm: 4000,
+        aircraft: ['Airbus A320', 'Airbus A321LR', 'Airbus A330neo'],
+        instruction: 'MODALITÀ MEDIUM HAUL: seleziona rotte con distanza tra 1.000 e 4.000 nm. '
+          + 'Preferire rotte regionali-continentali (es. OMDB, KJFK, KSFO KAUS, KBOS, EGLL, RPLL, VTBS, RJTT, YSSY). '
+          + 'Usa A321LR o A330neo. Evita rotte ultra-long (>10h block) e rotte domestiche brevi (<45 min).',
+      },
+      long: {
+        label: 'Long Haul',
+        minNm: 3000,
+        aircraft: ['Airbus A330neo', 'Airbus A350-900'],
+        instruction: 'MODALITÀ LONG HAUL: seleziona SOLO rotte con distanza ≥ 3.000 nm. '
+          + 'Preferire rotte intercontinentali e transoceanic (es. LIRF-KBOS, LIRF-KSFO, LIRF-WIII, WIII-YSSY, KBOS-EGLL). '
+          + 'Usa SOLO A330neo o A350-900. NO rotte domestiche o corto raggio.',
+      },
+    };
+
+    const constraint = scheduleConstraints[scheduleType];
+
     const prompt = `
 Sei ARIA, il sistema di pianificazione voli di Velar Virtual Airline.
 
@@ -1640,12 +1671,14 @@ BASE ATTUALE: ${pilotBase} (${pilotBaseHub?.city || pilotBase}) — ${pilotBaseH
 ABILITAZIONE LUNGO RAGGIO: ${isLongHaulQualified ? 'SÌ (A350-900 disponibile)' : 'NO (solo A320-200 feeder)'}
 AEROMOBILI ABILITATI PER IL RANK: ${opsPlan?.aria_ops.rank_progression.find(r => r.name === profile.currentRank.name)?.aircraft.join(', ') || 'A320'}
 
+⚠️ ${constraint.instruction}
+
 Genera la schedule settimanale (Lunedì → Domenica, 7 voli) rispettando RIGOROSAMENTE queste regole:
 1. Il PRIMO volo DEVE partire da ${pilotBase} — base corrente del pilota
 2. Ogni volo successivo parte dall'arrivo del volo precedente (catena geografica coerente)
 3. Usa SOLO le rotte del piano operativo che partono dalla base corrente o dagli hub raggiunti
-4. Usa SOLO aeromobili abilitati per il rank del pilota
-5. Il campo "reason" deve spiegare la scelta operativa (stile ARIA Ops, conciso)
+4. Usa SOLO aeromobili abilitati per il rank del pilota E coerenti con la modalità ${constraint.label}
+5. Il campo "reason" deve spiegare la scelta operativa (stile ARIA Ops, conciso) e citare la modalità ${constraint.label}
 6. IMPORTANTE: Ogni volo DEVE includere i campi "departureTime" e "arrivalTime" nel formato "HH:MM" (UTC).
 
 Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
@@ -1674,7 +1707,6 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // FIX 5: allineato al modello usato nel resto del componente
           model: 'claude-sonnet-4-20250514',
           max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }],
@@ -1682,7 +1714,6 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
       });
       const data = await res.json();
       const raw = data.content?.[0]?.text || '[]';
-      // Estrai JSON anche se il modello aggiunge testo prima/dopo
       const jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
       const clean = jsonMatch ? jsonMatch[0] : raw.replace(/```json|```/g, '').trim();
       const parsed: ScheduledFlight[] = JSON.parse(clean);
@@ -1692,7 +1723,7 @@ Rispondi SOLO con JSON valido, nessun testo aggiuntivo, nessun markdown:
     } finally {
       setScheduleLoading(false);
     }
-  }, [profile, pilotName, opsPlan]); // FIX 5: aggiunto opsPlan per evitare chiusura su null
+  }, [profile, pilotName, opsPlan, scheduleType]);
 
   // ── Test Discord ────────────────────────────────────────────────────────
   const testDiscord = async () => {
@@ -2133,6 +2164,75 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
               {scheduleTab === 'mine' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+
+                  {/* Selettore tipo schedule + controlli */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: 'var(--color-background)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-hint)' }}>
+                        Tipologia schedule
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {([
+                          { key: 'short',  label: 'Short Haul',  sub: '≤ 1.500 nm',  icon: '✦' },
+                          { key: 'medium', label: 'Medium Haul', sub: '1.000–4.000 nm', icon: '✦✦' },
+                          { key: 'long',   label: 'Long Haul',   sub: '≥ 3.000 nm',  icon: '✦✦✦' },
+                        ] as const).map(({ key, label, sub, icon }) => {
+                          const active = scheduleType === key;
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => {
+                                setScheduleType(key);
+                                setSchedule([]);
+                                setExpandedScheduleId(null);
+                              }}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: '2px',
+                                padding: '8px 14px',
+                                border: active ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                borderRadius: '8px',
+                                background: active ? 'rgba(var(--color-primary-rgb), 0.07)' : 'var(--color-surface)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: active ? 'var(--color-primary)' : 'var(--color-text-primary)' }}>
+                                {label}
+                              </span>
+                              <span style={{ fontSize: '10px', color: 'var(--color-text-hint)' }}>{sub}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={generateSchedule}
+                      disabled={scheduleLoading}
+                      className={styles.sendBtn}
+                      style={{ height: '36px', padding: '0 20px', fontSize: '12px', gap: '6px', flexShrink: 0, opacity: scheduleLoading ? 0.6 : 1 }}
+                    >
+                      {scheduleLoading
+                        ? <><RefreshCw size={13} className={styles.spin} /> Generazione...</>
+                        : <><RefreshCw size={13} /> {schedule.length > 0 ? 'Rigenera' : 'Genera schedule'}</>
+                      }
+                    </button>
+                  </div>
+
                   {/* Header colonne */}
                   <div style={{
                     display: 'grid',
@@ -2215,10 +2315,11 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                       </div>
                     );
                   }) : (
-                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--color-text-hint)' }}>
-                      <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
-                      <p>Nessun volo programmato. Genera una nuova schedule settimanale.</p>
-                      <button onClick={generateSchedule} className={styles.sendBtn} style={{ width: 'auto', padding: '0 24px', margin: '16px auto' }}>Genera Schedule</button>
+                    <div style={{ textAlign: 'center', padding: '48px 60px', color: 'var(--color-text-hint)' }}>
+                      <Calendar size={40} style={{ marginBottom: '12px', opacity: 0.2 }} />
+                      <p style={{ margin: 0, fontSize: '14px' }}>
+                        Seleziona una tipologia e premi <strong>Genera schedule</strong> per pianificare la settimana.
+                      </p>
                     </div>
                   )}
                 </div>
