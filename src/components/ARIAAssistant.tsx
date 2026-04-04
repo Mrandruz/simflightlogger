@@ -2607,8 +2607,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                               key={key}
                               onClick={() => {
                                 setScheduleType(key);
-                                setSchedule([]);
-                                setExpandedScheduleId(null);
+                                // Svuota la schedule solo se non è ancora stata accettata/salvata.
+                                // Se è salvata, cambiare tipo serve solo a indicare la modalità
+                                // per la prossima rigenerazione — non cancella quella attiva.
+                                if (!scheduleAccepted) {
+                                  setSchedule([]);
+                                  setExpandedScheduleId(null);
+                                }
                               }}
                               style={{
                                 display: 'flex',
