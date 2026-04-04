@@ -48,7 +48,17 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  Tablet,
+  Fuel,
+  Wind,
+  Gauge,
+  ArrowUp,
+  Route,
+  Copy,
+  Check,
+  FileText,
+  Weight
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -286,7 +296,7 @@ interface ARIAProps {
   pilotName?: string;
 }
 
-type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roster' | 'financials';
+type ViewState = 'chat' | 'overview' | 'schedule' | 'fleet' | 'network' | 'roster' | 'financials' | 'efb';
 
 // ─── Financial Simulator Specs (Real-world based) ──────────────────────────
 const FINANCIAL_CONFIG = {
@@ -833,6 +843,14 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [isStandbyActive, setIsStandbyActive] = useState(false);
   const [standbyAlerts, setStandbyAlerts] = useState<any[]>([]);
   const [discordTesting, setDiscordTesting] = useState(false);
+
+  // ── EFB State ──────────────────────────────────────────────────────────────
+  const [efbData, setEfbData] = useState<any>(null);
+  const [efbLoading, setEfbLoading] = useState(false);
+  const [efbError, setEfbError] = useState<string | null>(null);
+  const [efbRouteCopied, setEfbRouteCopied] = useState(false);
+  const [efbSection, setEfbSection] = useState<'dispatch' | 'weights' | 'wind' | 'route'>('dispatch');
+  const SIMBRIEF_USERNAME = 'mrandruz';
 
   // Stato riga espansa per le quattro list views
   const [expandedScheduleId, setExpandedScheduleId] = useState<number | null>(null);
@@ -1887,7 +1905,145 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
     }
   }, [view, profile, fleetBriefing, fleetBriefingLoading, generateFleetBriefing]);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ── EFB: carica dati SimBrief ─────────────────────────────────────────────
+  // Parsing speculare a simbriefService.js per garantire compatibilità con l'API
+  const loadEfbData = useCallback(async () => {
+    setEfbLoading(true);
+    setEfbError(null);
+    try {
+      const res = await fetch(`/api/simbrief?username=${SIMBRIEF_USERNAME}`);
+      if (!res.ok) throw new Error('SimBrief non raggiungibile');
+      const raw = await res.json();
+      if (raw.fetch?.status === 'error') throw new Error(raw.fetch.message || 'Piano non trovato');
+
+      // ── Helpers (speculari a simbriefService.js) ──────────────────────────
+      const safeFloat = (v: any) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+      // IMPORTANT: SimBrief usa pos_long (con la g) come campo primario per longitudine
+      const getLat = (o: any) => safeFloat(o?.pos_lat ?? o?.latitude ?? o?.lat_deg ?? o?.lat ?? 0);
+      const getLon = (o: any) => safeFloat(o?.pos_long ?? o?.pos_lon ?? o?.longitude ?? o?.lon_deg ?? o?.lon ?? o?.lng ?? o?.long ?? 0);
+
+      // Duration: supporta HH:MM:SS, HH:MM, secondi, ore decimali
+      const fmtDur = (v: any) => {
+        if (!v) return 'N/D';
+        const s = String(v).trim();
+        const hms = s.match(/^(\d+):(\d{2}):(\d{2})$/);
+        if (hms) return `${parseInt(hms[1])}h ${parseInt(hms[2])}m`;
+        const hm = s.match(/^(\d+):(\d{2})$/);
+        if (hm) return `${parseInt(hm[1])}h ${parseInt(hm[2])}m`;
+        const sec = parseInt(v);
+        if (!isNaN(sec) && sec > 60) return `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+        return 'N/D';
+      };
+
+      const fmtZulu = (v: any) => {
+        if (!v) return '--:--z';
+        if (!isNaN(Number(v)) && String(v).length >= 10) {
+          const d = new Date(Number(v) * 1000);
+          return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}z`;
+        }
+        const d = new Date(v);
+        if (!isNaN(d.getTime())) return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}z`;
+        const str = String(v).replace(':','');
+        if (str.length === 4 && !isNaN(Number(str))) return `${str.slice(0,2)}:${str.slice(2,4)}z`;
+        return '--:--z';
+      };
+
+      // ── Airline name (stesso dizionario di simbriefService.js) ────────────
+      const AIRLINE_NAMES: Record<string, string> = {
+        'VLR': 'Velar Airlines', 'DLH': 'Lufthansa', 'KLM': 'KLM',
+        'AZA': 'ITA Airways', 'BAW': 'British Airways', 'AFR': 'Air France',
+        'UAL': 'United Airlines', 'AAL': 'American Airlines', 'DAL': 'Delta Air Lines',
+        'RYR': 'Ryanair', 'EZY': 'EasyJet', 'UAE': 'Emirates', 'QTR': 'Qatar Airways',
+        'SWR': 'Swiss International Air Lines', 'THY': 'Turkish Airlines',
+        'IBE': 'Iberia', 'TAP': 'TAP Air Portugal', 'FIN': 'Finnair',
+        'ACA': 'Air Canada', 'ANA': 'All Nippon Airways', 'JAL': 'Japan Airlines',
+        'QFA': 'Qantas', 'WZZ': 'Wizz Air', 'EIN': 'Aer Lingus',
+      };
+      const callsign = raw.atc?.callsign || 'N/A';
+      const callsignPrefix = callsign !== 'N/A' ? callsign.replace(/\d.*$/, '').toUpperCase() : '';
+      const airlineIcaoFromGeneral = (raw.general?.icao_airline || '').toUpperCase();
+      // Il prefisso callsign è più affidabile di icao_airline (vedi simbriefService.js)
+      const airlineIcao = (callsignPrefix && callsignPrefix !== airlineIcaoFromGeneral)
+        ? callsignPrefix : airlineIcaoFromGeneral;
+      const airline = AIRLINE_NAMES[airlineIcao] || airlineIcao || 'Velar Airlines';
+
+      // ── Durata ────────────────────────────────────────────────────────────
+      const rawDur = raw.times?.est_time_enroute || raw.times?.enroute_time
+        || raw.times?.ete || raw.params?.time_enroute
+        || raw.general?.est_time_enroute || null;
+
+      // ── Waypoints (tutti e tre i fallback di simbriefService.js) ─────────
+      let waypointsRaw: any[] = [];
+      if (Array.isArray(raw.navlog)) waypointsRaw = raw.navlog;
+      else if (raw.navlog?.fix) waypointsRaw = Array.isArray(raw.navlog.fix) ? raw.navlog.fix : [raw.navlog.fix];
+      else if (raw.navlog?.waypoint) waypointsRaw = Array.isArray(raw.navlog.waypoint) ? raw.navlog.waypoint : [raw.navlog.waypoint];
+
+      const waypoints = waypointsRaw
+        .map((f: any) => ({
+          id:   f.ident || f.name || '?',
+          lat:  getLat(f),
+          lon:  getLon(f),
+          alt:  f.altitude_feet || f.altitude || '',
+          wind: (f.wind_dir && f.wind_spd) ? `${f.wind_dir}°/${f.wind_spd}kt` : '',
+        }))
+        .filter((w: any) => w.lat !== 0 || w.lon !== 0);
+
+      // ── OFP URL ──────────────────────────────────────────────────────────
+      const ofpUrl = (() => {
+        const dir = raw.files?.directory || 'https://www.simbrief.com/ofp/flightplans/';
+        const base = dir.endsWith('/') ? dir : dir + '/';
+        const pdf  = raw.files?.pdf?.link || raw.files?.html?.link || null;
+        return pdf ? (pdf.startsWith('http') ? pdf : base + pdf) : null;
+      })();
+
+      setEfbData({
+        origin:      { icao: raw.origin?.icao_code || '---', name: raw.origin?.name || '', lat: getLat(raw.origin), lon: getLon(raw.origin) },
+        destination: { icao: raw.destination?.icao_code || '---', name: raw.destination?.name || '', lat: getLat(raw.destination), lon: getLon(raw.destination) },
+        callsign,
+        airline,
+        aircraft:  raw.aircraft?.icaocode || 'N/A',
+        route:     raw.general?.route || 'N/A',
+        cruiseFl:  Math.round(safeFloat(raw.general?.initial_altitude) / 100),
+        distance:  safeFloat(raw.general?.air_distance),
+        duration:  fmtDur(rawDur),
+        passengers: raw.general?.passengers || '0',
+        costIndex:  raw.general?.costindex || '0',
+        sid:    raw.general?.sid || '--',
+        star:   raw.general?.star || '--',
+        depRwy: raw.origin?.plan_rwy || '--',
+        arrRwy: raw.destination?.plan_rwy || '--',
+        depTime: fmtZulu(raw.times?.est_off || raw.times?.sched_off || raw.params?.time_off),
+        arrTime: fmtZulu(raw.times?.est_on  || raw.times?.sched_on  || raw.params?.time_on),
+        // Fuel breakdown (speculare a simbriefService.js)
+        fuelBlock:       safeFloat(raw.fuel?.plan_ramp),
+        fuelTrip:        safeFloat(raw.fuel?.plan_trip),
+        fuelAlternate:   safeFloat(raw.fuel?.alternate),
+        fuelReserve:     safeFloat(raw.fuel?.reserve),
+        fuelContingency: safeFloat(raw.fuel?.contingency),
+        fuelExtra:       safeFloat(raw.fuel?.extra),
+        // Weights
+        zfw: safeFloat(raw.weights?.est_zfw), maxZfw: safeFloat(raw.weights?.max_zfw),
+        tow: safeFloat(raw.weights?.est_tow), maxTow: safeFloat(raw.weights?.max_tow),
+        ldw: safeFloat(raw.weights?.est_ldw), maxLdw: safeFloat(raw.weights?.max_ldw),
+        // Wind & step climbs
+        avgWindDir:  raw.general?.avg_wind_dir  || null,
+        avgWindSpd:  raw.general?.avg_wind_spd  || null,
+        avgWindComp: raw.general?.avg_wind_comp || null,
+        stepclimb:   raw.general?.stepclimb_string || null,
+        waypoints,
+        ofpUrl,
+      });
+    } catch (err: any) {
+      setEfbError(err.message || 'Errore connessione SimBrief');
+    } finally {
+      setEfbLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (view === 'efb' && !efbData && !efbLoading) loadEfbData();
+  }, [view, efbData, efbLoading, loadEfbData]);
 
   if (loading) {
     return (
@@ -1919,7 +2075,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
         </div>
 
         <nav className={styles.sidebarNav}>
-          {(['chat', 'overview', 'schedule', 'fleet', 'network', 'roster', 'financials'] as ViewState[]).map(v => (
+          {(['chat', 'overview', 'schedule', 'fleet', 'network', 'roster', 'financials', 'efb'] as ViewState[]).map(v => (
             <button 
               key={v} 
               onClick={() => setView(v)}
@@ -1932,7 +2088,8 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
               {v === 'network' && <Activity className={styles.sidebarBtnIcon} />}
               {v === 'roster' && <Users className={styles.sidebarBtnIcon} />}
               {v === 'financials' && <DollarSign className={styles.sidebarBtnIcon} />}
-              <span style={{ textTransform: 'capitalize' }}>{v}</span>
+              {v === 'efb' && <Tablet className={styles.sidebarBtnIcon} />}
+              <span style={{ textTransform: 'capitalize' }}>{v === 'efb' ? 'EFB' : v}</span>
               {view === v && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
             </button>
           ))}
@@ -2319,8 +2476,22 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                               href={buildSimbriefUrl(f)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={styles.sendBtn}
-                              style={{ alignSelf: 'flex-start', padding: '0 16px', height: '32px', fontSize: '12px', textDecoration: 'none', gap: '6px' }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                alignSelf: 'flex-start',
+                                padding: '0 16px',
+                                height: '32px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                borderRadius: '8px',
+                                background: 'var(--color-primary)',
+                                color: 'white',
+                                textDecoration: 'none',
+                                whiteSpace: 'nowrap',
+                                border: 'none',
+                              }}
                             >
                               <ExternalLink size={13} /> Briefing SimBrief
                             </a>
@@ -2848,6 +3019,279 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                       setPeriod={setPeriod}
                     />
                 )}
+
+          {/* 🖥️ EFB VIEW */}
+          {view === 'efb' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Tablet size={18} style={{ color: 'var(--color-primary)' }} /> Electronic Flight Bag
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                    Ultimo piano SimBrief · {SIMBRIEF_USERNAME}
+                  </p>
+                </div>
+                <button
+                  onClick={loadEfbData}
+                  disabled={efbLoading}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 16px', height: '34px', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-surface)', cursor: efbLoading ? 'not-allowed' : 'pointer', color: 'var(--color-text-secondary)' }}
+                >
+                  <RefreshCw size={13} className={efbLoading ? styles.spin : undefined} />
+                  {efbLoading ? 'Caricamento...' : 'Aggiorna OFP'}
+                </button>
+              </div>
+
+              {/* Error state */}
+              {efbError && !efbData && (
+                <div style={{ padding: '24px', textAlign: 'center', border: '1px dashed var(--color-border)', borderRadius: '8px', color: 'var(--color-text-hint)' }}>
+                  <AlertCircle size={32} style={{ marginBottom: '12px', opacity: 0.4, color: 'var(--color-danger)' }} />
+                  <p style={{ margin: '0 0 12px', fontSize: '13px' }}>{efbError}</p>
+                  <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--color-text-hint)' }}>
+                    Assicurati di aver pianificato un volo su SimBrief con l'account <strong>{SIMBRIEF_USERNAME}</strong>
+                  </p>
+                  <button onClick={loadEfbData} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 20px', height: '36px', fontSize: '13px', fontWeight: 600, border: 'none', borderRadius: '8px', background: 'var(--color-primary)', color: 'white', cursor: 'pointer' }}>
+                    <RefreshCw size={13} /> Riprova
+                  </button>
+                </div>
+              )}
+
+              {/* Loading skeleton */}
+              {efbLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[80, 100, 60, 120].map((w, i) => (
+                    <div key={i} style={{ height: '16px', borderRadius: '6px', background: 'var(--color-border)', opacity: 0.4, width: `${w}%` }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Main EFB content */}
+              {efbData && !efbLoading && (() => {
+                const d = efbData;
+
+                // Section tabs
+                const sections = [
+                  { key: 'dispatch', label: 'Dispatch', icon: FileText },
+                  { key: 'weights',  label: 'Pesi & Fuel', icon: Fuel },
+                  { key: 'wind',     label: 'Vento & Profilo', icon: Wind },
+                  { key: 'route',    label: 'Rotta ATC', icon: Route },
+                ] as const;
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                    {/* Hero card */}
+                    <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden' }}>
+                      {/* Route header */}
+                      <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Origine</div>
+                            <div style={{ fontSize: '32px', fontWeight: 300, lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--color-text-primary)' }}>{d.origin.icao}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '2px' }}>{d.origin.name}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', marginTop: '6px', fontFamily: 'var(--font-family-mono)' }}>{d.depTime}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '2px' }}>RWY {d.depRwy} · {d.sid}</div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--color-text-hint)', gap: '4px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 500 }}>{d.duration}</span>
+                            <div style={{ width: '80px', height: '1px', background: 'var(--color-border)', position: 'relative' }}>
+                              <Plane size={12} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--color-surface)', padding: '0 3px', color: 'var(--color-primary)' }} />
+                            </div>
+                            <span style={{ fontSize: '11px' }}>{d.distance} nm</span>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-danger)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Destinazione</div>
+                            <div style={{ fontSize: '32px', fontWeight: 300, lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--color-text-primary)' }}>{d.destination.icao}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '2px' }}>{d.destination.name}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', marginTop: '6px', fontFamily: 'var(--font-family-mono)' }}>{d.arrTime}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '2px' }}>RWY {d.arrRwy} · {d.star}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-family-mono)' }}>{d.callsign}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{d.aircraft} · {d.airline}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '4px' }}>FL{d.cruiseFl} · CI {d.costIndex} · {d.passengers} pax</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section tabs */}
+                    <div style={{ display: 'flex', gap: '4px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
+                      {sections.map(({ key, label, icon: Icon }) => (
+                        <button
+                          key={key}
+                          onClick={() => setEfbSection(key as any)}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            padding: '7px 12px', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '6px',
+                            background: efbSection === key ? 'var(--color-primary)' : 'transparent',
+                            color: efbSection === key ? 'white' : 'var(--color-text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <Icon size={13} /> {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* DISPATCH section */}
+                    {efbSection === 'dispatch' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                        {[
+                          { label: 'Block Fuel', value: `${d.fuelBlock.toLocaleString()} kg`, icon: Fuel, color: 'var(--color-primary)' },
+                          { label: 'Trip Fuel', value: `${d.fuelTrip.toLocaleString()} kg`, icon: Fuel, color: 'var(--color-text-secondary)' },
+                          { label: 'Alternate', value: `${d.fuelAlternate.toLocaleString()} kg`, icon: Fuel, color: 'var(--color-text-secondary)' },
+                          { label: 'Reserve', value: `${d.fuelReserve.toLocaleString()} kg`, icon: Fuel, color: 'var(--color-text-secondary)' },
+                          { label: 'Contingency', value: `${d.fuelContingency.toLocaleString()} kg`, icon: Fuel, color: 'var(--color-warning)' },
+                          { label: 'Cruise FL', value: `FL${d.cruiseFl}`, icon: ArrowUp, color: 'var(--color-primary)' },
+                          { label: 'SID', value: d.sid, icon: Navigation, color: 'var(--color-text-secondary)' },
+                          { label: 'STAR', value: d.star, icon: Navigation, color: 'var(--color-text-secondary)' },
+                        ].map(({ label, value, icon: Icon, color }) => (
+                          <div key={label} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(var(--color-primary-rgb),0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Icon size={15} style={{ color }} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{label}</div>
+                              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-family-mono)' }}>{value}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* WEIGHTS section */}
+                    {efbSection === 'weights' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {[
+                          { label: 'Zero Fuel Weight (ZFW)', est: d.zfw, max: d.maxZfw },
+                          { label: 'Takeoff Weight (TOW)',   est: d.tow, max: d.maxTow },
+                          { label: 'Landing Weight (LDW)',   est: d.ldw, max: d.maxLdw },
+                        ].map(({ label, est, max }) => {
+                          const pct = max > 0 ? Math.round((est / max) * 100) : 0;
+                          const barColor = pct > 95 ? 'var(--color-danger)' : pct > 85 ? 'var(--color-warning)' : 'var(--color-success)';
+                          return (
+                            <div key={label} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>{label}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: barColor }}>{pct}% max</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-primary)' }}>{est.toLocaleString()} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-hint)' }}>kg</span></span>
+                                <span style={{ fontSize: '12px', color: 'var(--color-text-hint)' }}>max {Number(max).toLocaleString()} kg</span>
+                              </div>
+                              <div style={{ height: '6px', background: 'var(--color-background)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: barColor, transition: 'width 0.5s ease' }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* WIND section */}
+                    {efbSection === 'wind' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {d.avgWindDir && (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                            {[
+                              { label: 'Dir. Media', value: `${d.avgWindDir}°` },
+                              { label: 'Velocità Media', value: `${d.avgWindSpd} kt` },
+                              { label: 'Componente', value: (() => {
+                                const c = Number(d.avgWindComp);
+                                if (isNaN(c)) return '—';
+                                return c >= 0
+                                  ? <span style={{ color: 'var(--color-success)' }}>+{c} kt ↑ Coda</span>
+                                  : <span style={{ color: 'var(--color-danger)' }}>{c} kt ↓ Frontale</span>;
+                              })() },
+                            ].map(({ label, value }) => (
+                              <div key={label} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Wind size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                                <div>
+                                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{label}</div>
+                                  <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{value}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {d.stepclimb && (
+                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '16px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Step Climbs</div>
+                            <div style={{ fontSize: '13px', fontFamily: 'var(--font-family-mono)', color: 'var(--color-text-primary)', background: 'var(--color-background)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--color-border)', lineHeight: 1.5 }}>
+                              {d.stepclimb}
+                            </div>
+                          </div>
+                        )}
+                        {d.waypoints.length > 0 && (
+                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              Waypoints ({d.waypoints.length})
+                            </div>
+                            <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                              {d.waypoints.map((w: any, i: number) => (
+                                <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: '8px', padding: '8px 16px', borderBottom: '1px solid var(--color-border)', fontSize: '12px', background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }}>
+                                  <span style={{ fontFamily: 'var(--font-family-mono)', fontWeight: 700, color: 'var(--color-primary)' }}>{w.id}</span>
+                                  <span style={{ color: 'var(--color-text-secondary)' }}>{w.alt ? `FL${Math.round(Number(w.alt)/100)}` : '--'}</span>
+                                  <span style={{ color: 'var(--color-text-hint)' }}>{w.wind || ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {!d.avgWindDir && !d.stepclimb && d.waypoints.length === 0 && (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-hint)', fontSize: '13px' }}>Dati vento non disponibili per questo piano.</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ROUTE section */}
+                    {efbSection === 'route' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rotta ATC</span>
+                            <button
+                              onClick={() => {
+                                if (d.route) navigator.clipboard.writeText(d.route).then(() => { setEfbRouteCopied(true); setTimeout(() => setEfbRouteCopied(false), 2000); });
+                              }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, border: '1px solid var(--color-border)', borderRadius: '6px', background: efbRouteCopied ? 'var(--color-success)' : 'var(--color-surface)', color: efbRouteCopied ? 'white' : 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all 0.15s' }}
+                            >
+                              {efbRouteCopied ? <><Check size={11} /> Copiato</> : <><Copy size={11} /> Copia</>}
+                            </button>
+                          </div>
+                          <div style={{ padding: '16px', fontFamily: 'var(--font-family-mono)', fontSize: '13px', lineHeight: 1.7, wordBreak: 'break-all', color: 'var(--color-text-primary)', background: 'var(--color-background)' }}>
+                            {d.route}
+                          </div>
+                        </div>
+                        {d.ofpUrl && (
+                          <a
+                            href={d.ofpUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 18px', height: '38px', fontSize: '13px', fontWeight: 600, border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-surface)', color: 'var(--color-text-secondary)', textDecoration: 'none', alignSelf: 'flex-start' }}
+                          >
+                            <FileText size={14} /> Visualizza OFP completo
+                          </a>
+                        )}
+                        <a
+                          href="https://dispatch.simbrief.com/briefing/latest"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 18px', height: '38px', fontSize: '13px', fontWeight: 600, border: 'none', borderRadius: '8px', background: 'var(--color-primary)', color: 'white', textDecoration: 'none', alignSelf: 'flex-start' }}
+                        >
+                          <ExternalLink size={14} /> Apri SimBrief
+                        </a>
+                      </div>
+                    )}
+
+                  </div>
+                );
+              })()}
+            </div>
+          )}
  
          </div>
        </main>
