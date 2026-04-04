@@ -17,6 +17,7 @@ import styles from './ARIAAssistant.module.css';
 import { 
   collection, 
   getDocs, 
+  getDoc,
   onSnapshot, 
   doc, 
   updateDoc, 
@@ -1771,13 +1772,14 @@ REGOLE:
     if (!userId) return;
     const loadSavedSchedule = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'users', userId, 'schedule'), limit(1)));
-        if (!snap.empty) {
-          const saved = snap.docs[0].data();
+        // Legge il documento esatto 'active' — path speculare a acceptSchedule
+        const snap = await getDoc(doc(db, 'users', userId, 'schedule', 'active'));
+        if (snap.exists()) {
+          const saved = snap.data();
           if (saved.flights && Array.isArray(saved.flights) && saved.flights.length > 0) {
             setSchedule(saved.flights);
             setScheduleAccepted(true);
-            if (saved.scheduleType) setScheduleType(saved.scheduleType);
+            if (saved.scheduleType) setScheduleType(saved.scheduleType as any);
             console.log('[ARIA Schedule] Schedule caricata da Cloud:', saved.flights.length, 'legs');
           }
         }
