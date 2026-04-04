@@ -57,6 +57,7 @@ import {
   Route,
   Copy,
   Check,
+  CheckSquare,
   FileText,
   Weight
 } from 'lucide-react';
@@ -341,6 +342,115 @@ const AIRCRAFT_FINANCIALS: Record<string, { capacity: number; fuelBurnHr: number
   'Boeing 787': { capacity: 290, fuelBurnHr: 4800, maintenanceDay: 5800 },
 };
 type MapMode = 'network' | 'route' | 'focused';
+
+// ─── EFB Checklist Data ────────────────────────────────────────────────────
+
+const CHECKLIST_DATA: Record<string, { label: string; items: { id: string; text: string; response: string }[] }> = {
+  preflight: {
+    label: 'Pre-Flight',
+    items: [
+      { id: 'pf01', text: 'OFP & Weather Brief', response: 'COMPLETED' },
+      { id: 'pf02', text: 'NOTAM Review', response: 'CHECKED' },
+      { id: 'pf03', text: 'Fuel Upload', response: 'CHECKED' },
+      { id: 'pf04', text: 'Battery 1 & 2', response: 'ON' },
+      { id: 'pf05', text: 'External Power', response: 'ON / AS RQRD' },
+      { id: 'pf06', text: 'Emergency Equipment', response: 'CHECKED' },
+      { id: 'pf07', text: 'Fire Protection', response: 'TESTED / NORMAL' },
+      { id: 'pf08', text: 'ADIRS', response: 'NAV' },
+      { id: 'pf09', text: 'Oxygen', response: 'CHECKED / 100%' },
+      { id: 'pf10', text: 'MCDU Performance Data', response: 'INSERTED' },
+      { id: 'pf11', text: 'V-Speeds', response: 'SET' },
+      { id: 'pf12', text: 'Flight Controls', response: 'CHECKED' },
+      { id: 'pf13', text: 'Flaps / Slats', response: 'SET TO T/O CONFIG' },
+      { id: 'pf14', text: 'Parking Brake', response: 'SET' },
+    ],
+  },
+  before_takeoff: {
+    label: 'Before Takeoff',
+    items: [
+      { id: 'bt01', text: 'TCAS', response: 'TA/RA' },
+      { id: 'bt02', text: 'Transponder', response: 'ALT / ON' },
+      { id: 'bt03', text: 'Cabin Report', response: 'RECEIVED' },
+      { id: 'bt04', text: 'Doors', response: 'CLOSED & ARMED' },
+      { id: 'bt05', text: 'Runway Confirmed', response: 'CONFIRMED' },
+      { id: 'bt06', text: 'Takeoff Briefing', response: 'COMPLETED' },
+      { id: 'bt07', text: 'ENG Anti-Ice (if rqrd)', response: 'ON / AS RQRD' },
+      { id: 'bt08', text: 'Thrust Levers', response: 'SET FLEX/TOGA' },
+      { id: 'bt09', text: 'Flight Directors', response: 'ON' },
+      { id: 'bt10', text: 'Autothrust', response: 'ARMED' },
+      { id: 'bt11', text: 'Strobes', response: 'ON' },
+      { id: 'bt12', text: 'Landing Lights', response: 'ON' },
+    ],
+  },
+  approach: {
+    label: 'Approach',
+    items: [
+      { id: 'ap01', text: 'ATIS Received', response: 'NOTED' },
+      { id: 'ap02', text: 'Approach Briefing', response: 'COMPLETED' },
+      { id: 'ap03', text: 'Arrival Fuel Check', response: 'CHECKED' },
+      { id: 'ap04', text: 'STAR & Transition', response: 'CONFIRMED' },
+      { id: 'ap05', text: 'ILS / Approach Frequency', response: 'SET & IDENT' },
+      { id: 'ap06', text: 'Minimums', response: 'SET' },
+      { id: 'ap07', text: 'Seat Belt Signs', response: 'ON' },
+      { id: 'ap08', text: 'Landing Lights', response: 'ON' },
+      { id: 'ap09', text: 'Auto-Brake', response: 'MED / SET' },
+      { id: 'ap10', text: 'GPWS & TCAS', response: 'CHECKED / ARMED' },
+    ],
+  },
+  landing: {
+    label: 'After Landing',
+    items: [
+      { id: 'la01', text: 'Reversers', response: 'STOWED' },
+      { id: 'la02', text: 'Auto-Brake', response: 'DISARMED' },
+      { id: 'la03', text: 'Spoilers', response: 'DISARMED' },
+      { id: 'la04', text: 'Landing Lights', response: 'OFF' },
+      { id: 'la05', text: 'Strobe Lights', response: 'OFF' },
+      { id: 'la06', text: 'Transponder', response: 'STBY' },
+      { id: 'la07', text: 'Flaps / Slats', response: 'RETRACT' },
+      { id: 'la08', text: 'APU', response: 'START' },
+      { id: 'la09', text: 'Parking Brake', response: 'SET / AS RQRD' },
+      { id: 'la10', text: 'Engines', response: 'SHUTDOWN' },
+      { id: 'la11', text: 'Seat Belt Signs', response: 'OFF' },
+      { id: 'la12', text: 'Flight Log OUT/OFF/ON/IN', response: 'LOGGED' },
+    ],
+  },
+};
+
+// ─── EFB V-Speeds Tables (A320 family reference, semplificato per sim) ────────
+// Basato su FCOM A320 — valori approssimati per uso simulatore
+const computeVSpeeds = (tow: number, oat: number, elevation: number, headwind: number, flapsConfig: string) => {
+  // Densità altitude correction
+  const pressureAlt = elevation + (15 - oat) * 27; // rough ISA correction in ft
+  const densityFactor = Math.max(0.85, 1 - pressureAlt / 145000);
+
+  // Base V-speeds per TOW (kg) — curva linearizzata FCOM A320
+  const towT = Math.min(Math.max(tow, 40000), 80000);
+  const baseV1  = 100 + (towT - 40000) / 40000 * 40; // 100–140 kt range
+  const baseVR  = baseV1 + 4;
+  const baseV2  = baseVR + 8;
+
+  // Flap config reduction
+  const flapReduction: Record<string, number> = { '1+F': 0, '2': -4, '3': -8 };
+  const flapDelta = flapReduction[flapsConfig] ?? 0;
+
+  // Density altitude adjustment
+  const da = 1 / densityFactor;
+
+  // Headwind reduction (max 10kt reduction for 20kt+ headwind)
+  const hwReduction = Math.min(Math.floor(headwind / 5), 10);
+
+  const v1  = Math.round((baseV1  + flapDelta) * da) - hwReduction;
+  const vr  = Math.round((baseVR  + flapDelta) * da) - Math.floor(hwReduction * 0.5);
+  const v2  = Math.round((baseV2  + flapDelta) * da);
+
+  // Flex temp: rough approximation — reduce by 1°C per 500kg below MTOW
+  const mtow = 78000;
+  const weightMargin = Math.max(0, mtow - tow);
+  const flexTemp = Math.min(60, Math.round(oat + weightMargin / 500));
+  const flexAvailable = flexTemp > oat + 5;
+
+  return { v1, vr, v2, flexTemp: flexAvailable ? flexTemp : null, flexAvailable };
+};
 
 // ─── Componente Mappa ─────────────────────────────────────────────────────────
 
@@ -849,8 +959,21 @@ export default function ARIAAssistant({ userId, pilotName }: ARIAProps) {
   const [efbLoading, setEfbLoading] = useState(false);
   const [efbError, setEfbError] = useState<string | null>(null);
   const [efbRouteCopied, setEfbRouteCopied] = useState(false);
-  const [efbSection, setEfbSection] = useState<'dispatch' | 'weights' | 'wind' | 'route'>('dispatch');
+  const [efbSection, setEfbSection] = useState<'dispatch' | 'weights' | 'wind' | 'route' | 'map' | 'vspeeds' | 'checklist'>('dispatch');
   const SIMBRIEF_USERNAME = 'mrandruz';
+
+  // EFB — V-speeds calculator state
+  const [vspeedsInput, setVspeedsInput] = useState({ oat: '15', elevation: '0', wind: '0', flaps: '1+F' });
+  const [vspeedsResult, setVspeedsResult] = useState<any>(null);
+  const [vspeedsLoading, setVspeedsLoading] = useState(false);
+
+  // EFB — Checklist state
+  const [checklistPhase, setChecklistPhase] = useState<'preflight' | 'before_takeoff' | 'approach' | 'landing'>('preflight');
+  const [checklistItems, setChecklistItems] = useState<Record<string, boolean>>({});
+
+  // EFB — Mappa ref
+  const efbMapRef = useRef<HTMLDivElement>(null);
+  const efbMapInstance = useRef<L.Map | null>(null);
 
   // Stato riga espansa per le quattro list views
   const [expandedScheduleId, setExpandedScheduleId] = useState<number | null>(null);
@@ -2045,6 +2168,67 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
     if (view === 'efb' && !efbData && !efbLoading) loadEfbData();
   }, [view, efbData, efbLoading, loadEfbData]);
 
+  // EFB Mappa — inizializza/aggiorna quando si entra nella sezione map
+  useEffect(() => {
+    if (efbSection !== 'map' || !efbData || !efbMapRef.current) return;
+
+    // Cleanup precedente
+    if (efbMapInstance.current) {
+      efbMapInstance.current.remove();
+      efbMapInstance.current = null;
+    }
+
+    const tileUrl = isDarkMode
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    const map = L.map(efbMapRef.current, { attributionControl: false, zoomControl: false })
+      .setView([30, 10], 2);
+    efbMapInstance.current = map;
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer(tileUrl).addTo(map);
+
+    const bounds = L.latLngBounds([]);
+    const d = efbData;
+
+    // Waypoint dots
+    const wps = d.waypoints.filter((w: any) => w.lat !== 0 || w.lon !== 0);
+    if (wps.length >= 2) {
+      const latLons: [number, number][] = wps.map((w: any) => [w.lat, w.lon]);
+      L.polyline(latLons, { color: 'var(--color-primary)', weight: 2.5, opacity: 0.8, dashArray: '6 8' }).addTo(map);
+      wps.forEach((w: any, i: number) => {
+        if (i === 0 || i === wps.length - 1) return; // skip origin/dest, drawn separately
+        L.circleMarker([w.lat, w.lon], { radius: 3, color: 'var(--color-primary)', fillOpacity: 0.6, weight: 1 })
+          .bindTooltip(w.id, { permanent: false, direction: 'top', className: 'aria-map-tooltip' })
+          .addTo(map);
+        bounds.extend([w.lat, w.lon]);
+      });
+    }
+
+    // Origin marker
+    if (d.origin.lat !== 0 || d.origin.lon !== 0) {
+      L.circleMarker([d.origin.lat, d.origin.lon], { radius: 7, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 2 })
+        .bindTooltip(`${d.origin.icao} (DEP)`, { permanent: true, direction: 'top', className: 'aria-map-tooltip' })
+        .addTo(map);
+      bounds.extend([d.origin.lat, d.origin.lon]);
+    }
+
+    // Destination marker
+    if (d.destination.lat !== 0 || d.destination.lon !== 0) {
+      L.circleMarker([d.destination.lat, d.destination.lon], { radius: 7, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 })
+        .bindTooltip(`${d.destination.icao} (ARR)`, { permanent: true, direction: 'top', className: 'aria-map-tooltip' })
+        .addTo(map);
+      bounds.extend([d.destination.lat, d.destination.lon]);
+    }
+
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
+
+    return () => {
+      if (efbMapInstance.current) { efbMapInstance.current.remove(); efbMapInstance.current = null; }
+    };
+  }, [efbSection, efbData, isDarkMode]);
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -3073,10 +3257,13 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
 
                 // Section tabs
                 const sections = [
-                  { key: 'dispatch', label: 'Dispatch', icon: FileText },
-                  { key: 'weights',  label: 'Pesi & Fuel', icon: Fuel },
-                  { key: 'wind',     label: 'Vento & Profilo', icon: Wind },
-                  { key: 'route',    label: 'Rotta ATC', icon: Route },
+                  { key: 'dispatch',  label: 'Dispatch',     icon: FileText },
+                  { key: 'weights',   label: 'Pesi & Fuel',  icon: Fuel },
+                  { key: 'wind',      label: 'Vento',        icon: Wind },
+                  { key: 'map',       label: 'Mappa',        icon: MapIcon },
+                  { key: 'vspeeds',   label: 'V-Speeds',     icon: Gauge },
+                  { key: 'checklist', label: 'Checklist',    icon: CheckSquare },
+                  { key: 'route',     label: 'Rotta ATC',    icon: Route },
                 ] as const;
 
                 return (
@@ -3246,6 +3433,241 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                         )}
                       </div>
                     )}
+
+                    {/* MAP section */}
+                    {efbSection === 'map' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ height: '420px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-border)', position: 'relative' }}>
+                          <div ref={efbMapRef} style={{ height: '100%', width: '100%' }} />
+                          {/* Map legend */}
+                          <div style={{ position: 'absolute', bottom: '12px', left: '12px', zIndex: 800, display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} /> {d.origin.icao}
+                            </div>
+                            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} /> {d.destination.icao}
+                            </div>
+                            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', color: 'var(--color-text-hint)', fontFamily: 'var(--font-family-mono)' }}>
+                              {d.distance} nm · {d.waypoints.length} waypoints
+                            </div>
+                          </div>
+                        </div>
+                        {d.waypoints.length === 0 && (
+                          <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-hint)', textAlign: 'center' }}>
+                            I waypoints non sono disponibili per questo piano — la rotta è mostrata come linea diretta.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* V-SPEEDS section */}
+                    {efbSection === 'vspeeds' && (() => {
+                      const tow = d.tow || 70000;
+                      const handleCalc = () => {
+                        setVspeedsLoading(true);
+                        setTimeout(() => {
+                          const result = computeVSpeeds(
+                            tow,
+                            parseFloat(vspeedsInput.oat) || 15,
+                            parseFloat(vspeedsInput.elevation) || 0,
+                            parseFloat(vspeedsInput.wind) || 0,
+                            vspeedsInput.flaps
+                          );
+                          setVspeedsResult(result);
+                          setVspeedsLoading(false);
+                        }, 400);
+                      };
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {/* Input panel */}
+                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '20px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-hint)', marginBottom: '16px' }}>
+                              Parametri di decollo
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                              {/* TOW — pre-filled from SimBrief */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>TOW (kg)</label>
+                                <div style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-background)', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>
+                                  {tow.toLocaleString()}
+                                  <span style={{ fontSize: '10px', color: 'var(--color-text-hint)', fontWeight: 400, marginLeft: '6px' }}>da SimBrief</span>
+                                </div>
+                              </div>
+                              {[
+                                { key: 'oat', label: 'OAT (°C)', placeholder: '15', type: 'number' },
+                                { key: 'elevation', label: 'Elevazione pista (ft)', placeholder: '0', type: 'number' },
+                                { key: 'wind', label: 'Vento frontale (kt)', placeholder: '0', type: 'number' },
+                              ].map(({ key, label, placeholder, type }) => (
+                                <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>{label}</label>
+                                  <input
+                                    type={type}
+                                    value={(vspeedsInput as any)[key]}
+                                    onChange={e => setVspeedsInput(prev => ({ ...prev, [key]: e.target.value }))}
+                                    placeholder={placeholder}
+                                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', fontSize: '14px', color: 'var(--color-text-primary)', outline: 'none', fontFamily: 'var(--font-family-mono)' }}
+                                  />
+                                </div>
+                              ))}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-hint)', textTransform: 'uppercase' }}>Config Flap</label>
+                                <select
+                                  value={vspeedsInput.flaps}
+                                  onChange={e => setVspeedsInput(prev => ({ ...prev, flaps: e.target.value }))}
+                                  style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', fontSize: '14px', color: 'var(--color-text-primary)', outline: 'none' }}
+                                >
+                                  <option value="1+F">FLAP 1+F</option>
+                                  <option value="2">FLAP 2</option>
+                                  <option value="3">FLAP 3</option>
+                                </select>
+                              </div>
+                            </div>
+                            <button
+                              onClick={handleCalc}
+                              disabled={vspeedsLoading}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 24px', height: '40px', fontSize: '13px', fontWeight: 700, border: 'none', borderRadius: '8px', background: 'var(--color-primary)', color: 'white', cursor: 'pointer', opacity: vspeedsLoading ? 0.7 : 1, letterSpacing: '0.02em' }}
+                            >
+                              {vspeedsLoading
+                                ? <><RefreshCw size={14} className={styles.spin} /> Calcolo...</>
+                                : <><Gauge size={14} /> ARIA, calcola performance</>}
+                            </button>
+                          </div>
+
+                          {/* Results */}
+                          {vspeedsResult && (
+                            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
+                              <div style={{ padding: '12px 20px', background: 'rgba(var(--color-primary-rgb),0.06)', borderBottom: '1px solid var(--color-border)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-primary)' }}>
+                                Takeoff Performance — {d.aircraft} · TOW {tow.toLocaleString()} kg
+                              </div>
+                              <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                                {[
+                                  { label: 'V1',  value: `${vspeedsResult.v1} kt`,  sub: 'Decision Speed',     color: 'var(--color-danger)' },
+                                  { label: 'VR',  value: `${vspeedsResult.vr} kt`,  sub: 'Rotation Speed',     color: 'var(--color-warning)' },
+                                  { label: 'V2',  value: `${vspeedsResult.v2} kt`,  sub: 'Safety Speed',       color: 'var(--color-success)' },
+                                  { label: 'FLEX',
+                                    value: vspeedsResult.flexAvailable ? `${vspeedsResult.flexTemp}°C` : 'N/A',
+                                    sub: vspeedsResult.flexAvailable ? 'Flex Temp' : 'TOGA Reqrd',
+                                    color: vspeedsResult.flexAvailable ? 'var(--color-primary)' : 'var(--color-text-hint)' },
+                                ].map(({ label, value, sub, color }) => (
+                                  <div key={label} style={{ textAlign: 'center', padding: '16px', borderRadius: '8px', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{label}</div>
+                                    <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color, lineHeight: 1 }}>{value}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--color-text-hint)', marginTop: '6px' }}>{sub}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ padding: '10px 20px', borderTop: '1px solid var(--color-border)', fontSize: '11px', color: 'var(--color-text-hint)' }}>
+                                ⚠ Valori calcolati per A320 family — uso esclusivo simulatore. Non certificati per volo reale.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* CHECKLIST section */}
+                    {efbSection === 'checklist' && (() => {
+                      const phases = [
+                        { key: 'preflight',      label: 'Pre-Flight' },
+                        { key: 'before_takeoff', label: 'Before T/O' },
+                        { key: 'approach',       label: 'Approach' },
+                        { key: 'landing',        label: 'After Landing' },
+                      ] as const;
+
+                      const currentList = CHECKLIST_DATA[checklistPhase];
+                      const completedCount = currentList.items.filter(item => checklistItems[item.id]).length;
+                      const totalCount = currentList.items.length;
+                      const allDone = completedCount === totalCount;
+
+                      const toggleItem = (id: string) =>
+                        setChecklistItems(prev => ({ ...prev, [id]: !prev[id] }));
+
+                      const resetPhase = () =>
+                        setChecklistItems(prev => {
+                          const next = { ...prev };
+                          currentList.items.forEach(item => { delete next[item.id]; });
+                          return next;
+                        });
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* Phase selector */}
+                          <div style={{ display: 'flex', gap: '6px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px' }}>
+                            {phases.map(({ key, label }) => {
+                              const phaseList = CHECKLIST_DATA[key];
+                              const phaseDone = phaseList.items.filter(i => checklistItems[i.id]).length;
+                              const phaseTotal = phaseList.items.length;
+                              const isActive = checklistPhase === key;
+                              const isDone = phaseDone === phaseTotal;
+                              return (
+                                <button
+                                  key={key}
+                                  onClick={() => setChecklistPhase(key)}
+                                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '6px 4px', fontSize: '11px', fontWeight: 600, border: 'none', borderRadius: '6px', background: isActive ? 'var(--color-primary)' : 'transparent', color: isActive ? 'white' : isDone ? 'var(--color-success)' : 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all 0.15s' }}
+                                >
+                                  <span>{label}</span>
+                                  <span style={{ fontSize: '9px', opacity: 0.8 }}>{phaseDone}/{phaseTotal}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Progress bar */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ flex: 1, height: '4px', background: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allDone ? 'var(--color-success)' : 'var(--color-primary)', transition: 'width 0.3s ease' }} />
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: allDone ? 'var(--color-success)' : 'var(--color-text-hint)', whiteSpace: 'nowrap' }}>
+                              {completedCount}/{totalCount}
+                              {allDone && ' ✓'}
+                            </span>
+                            <button
+                              onClick={resetPhase}
+                              style={{ fontSize: '11px', color: 'var(--color-text-hint)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px' }}
+                            >
+                              Reset
+                            </button>
+                          </div>
+
+                          {/* Checklist items */}
+                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
+                            <div style={{ padding: '10px 16px', background: allDone ? 'rgba(34,197,94,0.08)' : 'var(--color-background)', borderBottom: '1px solid var(--color-border)', fontSize: '12px', fontWeight: 700, color: allDone ? 'var(--color-success)' : 'var(--color-text-hint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {currentList.label} — {allDone ? 'COMPLETED ✓' : `${totalCount - completedCount} items remaining`}
+                            </div>
+                            {currentList.items.map((item, i) => {
+                              const done = !!checklistItems[item.id];
+                              return (
+                                <div
+                                  key={item.id}
+                                  onClick={() => toggleItem(item.id)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '12px 16px', cursor: 'pointer',
+                                    background: done ? 'rgba(34,197,94,0.05)' : i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)',
+                                    borderBottom: i < currentList.items.length - 1 ? '1px solid var(--color-border)' : 'none',
+                                    transition: 'background 0.15s',
+                                    gap: '16px',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                                    <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${done ? 'var(--color-success)' : 'var(--color-border)'}`, background: done ? 'var(--color-success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                                      {done && <Check size={12} color="white" strokeWidth={3} />}
+                                    </div>
+                                    <span style={{ fontSize: '13px', fontWeight: done ? 400 : 500, color: done ? 'var(--color-text-hint)' : 'var(--color-text-primary)', textDecoration: done ? 'line-through' : 'none', transition: 'all 0.15s' }}>
+                                      {item.text}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: done ? 'var(--color-success)' : 'var(--color-primary)', fontFamily: 'var(--font-family-mono)', flexShrink: 0, textTransform: 'uppercase' }}>
+                                    {item.response}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* ROUTE section */}
                     {efbSection === 'route' && (
