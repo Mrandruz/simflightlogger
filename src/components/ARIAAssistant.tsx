@@ -3107,17 +3107,19 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                    <span />
                  </div>
 
-                 {[...allNetworkFlights].sort((a, b) => {
-                   const statusPrio: Record<string, number> = {
+                 {(() => {
+                   const STATUS_PRIO: Record<string, number> = {
                      'En Route': 100, 'Approach': 90, 'Taxi Out': 80,
                      'Pushback': 70, 'Boarding': 60, 'Taxi In': 50,
                      'Arrived': 40, 'Turnaround': 30, 'Scheduled': 20, 'AOG/Cancel': 10
                    };
-                   const pa = statusPrio[a.status] || 0;
-                   const pb = statusPrio[b.status] || 0;
-                   if (pa !== pb) return pb - pa;
-                   return a.departureTime - b.departureTime;
-                 }).map((nf) => {
+                   return [...allNetworkFlights]
+                   .sort((a, b) => {
+                     const pa = STATUS_PRIO[a.status] || 0;
+                     const pb = STATUS_PRIO[b.status] || 0;
+                     if (pa !== pb) return pb - pa;
+                     return a.departureTime - b.departureTime;
+                   }).map((nf) => {
                    const isOpen = expandedNetworkId === nf.id;
                    const statusActive = nf.status === 'En Route' || nf.status === 'Approach';
                    const isUser = (nf as any).isUserFlight === true;
@@ -3200,71 +3202,7 @@ Stile: professionale, sintetico, esattamente come nell'esempio del Protocollo AR
                        )}
                      </div>
                    );
-                 })}
-                   return (
-                     <div key={nf.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                       {/* Riga compatta */}
-                       <div
-                         onClick={() => {
-                           const next = isOpen ? null : nf.id;
-                           setExpandedNetworkId(next);
-                           if (next !== null) { setSelectedFlightForMap(nf); setIsMapZoomed(true); }
-                         }}
-                         style={{
-                           display: 'grid',
-                           gridTemplateColumns: '90px 200px 1fr 130px 60px 28px',
-                           gap: '0 12px',
-                           padding: '10px 16px',
-                           alignItems: 'center',
-                           cursor: 'pointer',
-                           background: isOpen ? 'rgba(var(--color-primary-rgb), 0.04)' : 'transparent',
-                           transition: 'background 0.15s',
-                         }}
-                       >
-                         <span style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-family-mono)', color: 'var(--color-primary)' }}>{nf.flightNumber}</span>
-                         <span style={{ fontSize: '13px', fontWeight: 600 }}>
-                           {nf.departure}
-                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.departureTime)}</span>
-                           {' → '}
-                           {nf.arrival}
-                           <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-hint)' }}> {formatMinutesToTime(nf.arrivalTime)}</span>
-                         </span>
-                         <div style={{ minWidth: 0 }}>
-                           <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                             {nf.pilot.name} · {nf.aircraft}
-                             {nf.tailNumber && nf.tailNumber !== 'Generic' && <span style={{ color: 'var(--color-text-hint)' }}> ({nf.tailNumber})</span>}
-                           </span>
-                         </div>
-                         <span style={{ fontSize: '11px', fontWeight: 700, color: statusActive ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>{nf.status.toUpperCase()}</span>
-                         {/* Progress inline */}
-                         {nf.progressPercent > 0 && nf.progressPercent < 100 ? (
-                           <div style={{ height: '3px', background: 'var(--color-background)', borderRadius: '2px', overflow: 'hidden' }}>
-                             <div style={{ height: '100%', width: `${nf.progressPercent}%`, background: 'var(--color-primary)' }} />
-                           </div>
-                         ) : (
-                           <span style={{ fontSize: '11px', color: 'var(--color-text-hint)' }}>—</span>
-                         )}
-                         <ChevronRight size={14} style={{ color: 'var(--color-text-hint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                       </div>
-
-                       {/* Pannello espanso */}
-                       {isOpen && (
-                         <div style={{ padding: '10px 16px 14px', background: 'rgba(var(--color-primary-rgb), 0.04)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-text-hint)' }}>
-                           <span>Comandante: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.name}</strong></span>
-                           <span>Rank: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.rank}</strong></span>
-                           <span>Base: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.pilot.base}</strong></span>
-                           <span>Aeromobile: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.aircraft}</strong></span>
-                           {nf.tailNumber && nf.tailNumber !== 'Generic' && (
-                             <span>Targa: <strong style={{ color: 'var(--color-text-primary)' }}>{nf.tailNumber}</strong></span>
-                           )}
-                           {nf.progressPercent > 0 && nf.progressPercent < 100 && (
-                             <span>Progresso: <strong style={{ color: 'var(--color-primary)' }}>{nf.progressPercent.toFixed(1)}%</strong></span>
-                           )}
-                         </div>
-                       )}
-                     </div>
-                   );
-                 })}
+                 }); })()}
                </div>
             </div>
           )}
