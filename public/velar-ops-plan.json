@@ -1,13 +1,14 @@
 {
   "_meta": {
-    "version": "5.2",
+    "version": "5.3",
     "name": "Velar Airlines Global Strategic Plan",
-    "updated": "2026-04-03",
+    "updated": "2026-04-10",
     "motto": "Motion, simplified.",
     "positioning": "Boutique Tech-Luxury Airline",
-    "schedule_version": "routes_new v2.0",
+    "schedule_version": "routes_new v3.0",
     "roster_source": "roster_velar.md",
     "changelog": [
+      "v5.3 — +20 rotte LIRF corto/medio raggio A320 Family: 5 domestiche (LICC/LIRN/LIPZ/LICJ/LIEE), 7 Europa occidentale (EHAM/LEMD/LEBL/LOWW/EBBR/LKPR/LPPT), 3 Sud-Est/Nordafrica (LGAV/LTFM/DTTA), 5 Nord Europa (EKCH/ENGM/ESSA/EFHK/EIDW). Fleet: A320 11→28, A319 6→10. 64 nuove legs, ac_slot 7-23 LIRF A320, slot 5-8 LIRF A319. 20 nuovi crew assignments.",
       "v5.2 — 3 nuove rotte: WIII-RPLL Manila (VLR861/862, A320 slot10), LIRF-LIEO Olbia (VLR631-634, A319 slot4, 2xdaily), KBOS-TXKF Bermuda (VLR961/962, A321LR slot4). Fleet: A319 5→6, A320 10→11, A321LR 5→6. Crew: +4 entries (Zhao Jing, Wu Qiang, Widya Sari, Edward Reed).",
       "v5.0 — Struttura routes ripristinata al formato atteso da networkSimulator.ts e ARIAAssistant.tsx.",
       "v5.0 — Chiave 'flight' ripristinata (era stata rinominata 'pair' in v4.x, causando crash).",
@@ -37,16 +38,16 @@
   "fleet": [
     {
       "type": "Airbus A319",
-      "count": 6,
+      "count": 10,
       "role": "Executive Shuttle",
       "mission": "Rotte finanziarie e diplomatiche (Zurigo, Francoforte, Toronto).",
       "capacity": 124
     },
     {
       "type": "Airbus A320",
-      "count": 11,
+      "count": 28,
       "role": "Core Feeders",
-      "mission": "Connettività quotidiana ad alta frequenza tra gli Hub.",
+      "mission": "Connettività quotidiana ad alta frequenza tra gli Hub e rotte europee corto/medio raggio da LIRF.",
       "capacity": 180
     },
     {
@@ -627,6 +628,878 @@
                 "name": "Wu Qiang",
                 "rank": "Captain"
               }
+            }
+          ]
+        },
+        {
+          "dest": "LICC",
+          "city": "Catania Fontanarossa",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 321/322/323/324",
+          "note": "Domestic Sicilia Nord",
+          "legs": [
+            {
+              "flight": "VLR321",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LICC",
+              "dep_utc": "07:00",
+              "arr_utc": "08:30",
+              "block": "1h30m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR322",
+              "direction": "inbound",
+              "dep_icao": "LICC",
+              "arr_icao": "LIRF",
+              "dep_utc": "09:30",
+              "arr_utc": "11:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR323",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LICC",
+              "dep_utc": "15:00",
+              "arr_utc": "16:30",
+              "block": "1h30m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR324",
+              "direction": "inbound",
+              "dep_icao": "LICC",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:30",
+              "arr_utc": "19:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            }
+          ]
+        },
+        {
+          "dest": "LIRN",
+          "city": "Napoli Capodichino",
+          "aircraft": "A319",
+          "freq": "3x Daily",
+          "flight": "VLR 331-336",
+          "note": "Executive Shuttle Campania",
+          "legs": [
+            {
+              "flight": "VLR331",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIRN",
+              "dep_utc": "06:30",
+              "arr_utc": "07:10",
+              "block": "0h40m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR332",
+              "direction": "inbound",
+              "dep_icao": "LIRN",
+              "arr_icao": "LIRF",
+              "dep_utc": "08:00",
+              "arr_utc": "08:40",
+              "block": "0h40m",
+              "turnaround_min": 50,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR333",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIRN",
+              "dep_utc": "11:30",
+              "arr_utc": "12:10",
+              "block": "0h40m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR334",
+              "direction": "inbound",
+              "dep_icao": "LIRN",
+              "arr_icao": "LIRF",
+              "dep_utc": "13:00",
+              "arr_utc": "13:40",
+              "block": "0h40m",
+              "turnaround_min": 50,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR335",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIRN",
+              "dep_utc": "18:00",
+              "arr_utc": "18:40",
+              "block": "0h40m",
+              "ac_slot": 6
+            },
+            {
+              "flight": "VLR336",
+              "direction": "inbound",
+              "dep_icao": "LIRN",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:30",
+              "arr_utc": "20:10",
+              "block": "0h40m",
+              "turnaround_min": 50,
+              "ac_slot": 6
+            }
+          ]
+        },
+        {
+          "dest": "LIPZ",
+          "city": "Venezia Marco Polo",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 341/342/343/344",
+          "note": "Laguna Luxury Shuttle",
+          "legs": [
+            {
+              "flight": "VLR341",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIPZ",
+              "dep_utc": "07:30",
+              "arr_utc": "08:40",
+              "block": "1h10m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR342",
+              "direction": "inbound",
+              "dep_icao": "LIPZ",
+              "arr_icao": "LIRF",
+              "dep_utc": "09:30",
+              "arr_utc": "10:40",
+              "block": "1h10m",
+              "turnaround_min": 50,
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR343",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIPZ",
+              "dep_utc": "17:00",
+              "arr_utc": "18:10",
+              "block": "1h10m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR344",
+              "direction": "inbound",
+              "dep_icao": "LIPZ",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:00",
+              "arr_utc": "20:10",
+              "block": "1h10m",
+              "turnaround_min": 50,
+              "ac_slot": 7
+            }
+          ]
+        },
+        {
+          "dest": "LICJ",
+          "city": "Palermo Falcone Borsellino",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 351/352/353/354",
+          "note": "Domestic Sicilia Ovest",
+          "legs": [
+            {
+              "flight": "VLR351",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LICJ",
+              "dep_utc": "08:00",
+              "arr_utc": "09:30",
+              "block": "1h30m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR352",
+              "direction": "inbound",
+              "dep_icao": "LICJ",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:30",
+              "arr_utc": "12:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR353",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LICJ",
+              "dep_utc": "16:00",
+              "arr_utc": "17:30",
+              "block": "1h30m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR354",
+              "direction": "inbound",
+              "dep_icao": "LICJ",
+              "arr_icao": "LIRF",
+              "dep_utc": "18:30",
+              "arr_utc": "20:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 8
+            }
+          ]
+        },
+        {
+          "dest": "LIEE",
+          "city": "Cagliari Elmas",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 361/362/363/364",
+          "note": "Sardegna Sud Shuttle",
+          "legs": [
+            {
+              "flight": "VLR361",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIEE",
+              "dep_utc": "06:00",
+              "arr_utc": "07:20",
+              "block": "1h20m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR362",
+              "direction": "inbound",
+              "dep_icao": "LIEE",
+              "arr_icao": "LIRF",
+              "dep_utc": "08:10",
+              "arr_utc": "09:30",
+              "block": "1h20m",
+              "turnaround_min": 50,
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR363",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LIEE",
+              "dep_utc": "15:30",
+              "arr_utc": "16:50",
+              "block": "1h20m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR364",
+              "direction": "inbound",
+              "dep_icao": "LIEE",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:40",
+              "arr_utc": "19:00",
+              "block": "1h20m",
+              "turnaround_min": 50,
+              "ac_slot": 8
+            }
+          ]
+        },
+        {
+          "dest": "EHAM",
+          "city": "Amsterdam Schiphol",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 651/652/653/654",
+          "note": "Benelux Gateway",
+          "legs": [
+            {
+              "flight": "VLR651",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EHAM",
+              "dep_utc": "07:00",
+              "arr_utc": "09:30",
+              "block": "2h30m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR652",
+              "direction": "inbound",
+              "dep_icao": "EHAM",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:30",
+              "arr_utc": "13:00",
+              "block": "2h30m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR653",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EHAM",
+              "dep_utc": "15:00",
+              "arr_utc": "17:30",
+              "block": "2h30m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR654",
+              "direction": "inbound",
+              "dep_icao": "EHAM",
+              "arr_icao": "LIRF",
+              "dep_utc": "18:30",
+              "arr_utc": "21:00",
+              "block": "2h30m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            }
+          ]
+        },
+        {
+          "dest": "LEMD",
+          "city": "Madrid Barajas",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 661/662/663/664",
+          "note": "Iberian Business Corridor",
+          "legs": [
+            {
+              "flight": "VLR661",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LEMD",
+              "dep_utc": "07:30",
+              "arr_utc": "10:15",
+              "block": "2h45m",
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR662",
+              "direction": "inbound",
+              "dep_icao": "LEMD",
+              "arr_icao": "LIRF",
+              "dep_utc": "11:15",
+              "arr_utc": "14:00",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR663",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LEMD",
+              "dep_utc": "16:00",
+              "arr_utc": "18:45",
+              "block": "2h45m",
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR664",
+              "direction": "inbound",
+              "dep_icao": "LEMD",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:45",
+              "arr_utc": "22:30",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 10
+            }
+          ]
+        },
+        {
+          "dest": "LEBL",
+          "city": "Barcellona El Prat",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 671/672/673/674",
+          "note": "Mediterranean Congress Corridor",
+          "legs": [
+            {
+              "flight": "VLR671",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LEBL",
+              "dep_utc": "08:00",
+              "arr_utc": "10:15",
+              "block": "2h15m",
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR672",
+              "direction": "inbound",
+              "dep_icao": "LEBL",
+              "arr_icao": "LIRF",
+              "dep_utc": "11:15",
+              "arr_utc": "13:30",
+              "block": "2h15m",
+              "turnaround_min": 60,
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR673",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LEBL",
+              "dep_utc": "16:30",
+              "arr_utc": "18:45",
+              "block": "2h15m",
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR674",
+              "direction": "inbound",
+              "dep_icao": "LEBL",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:45",
+              "arr_utc": "22:00",
+              "block": "2h15m",
+              "turnaround_min": 60,
+              "ac_slot": 11
+            }
+          ]
+        },
+        {
+          "dest": "LOWW",
+          "city": "Vienna Schwechat",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 681/682/683/684",
+          "note": "Mitteleuropa Gateway",
+          "legs": [
+            {
+              "flight": "VLR681",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LOWW",
+              "dep_utc": "07:00",
+              "arr_utc": "08:45",
+              "block": "1h45m",
+              "ac_slot": 12
+            },
+            {
+              "flight": "VLR682",
+              "direction": "inbound",
+              "dep_icao": "LOWW",
+              "arr_icao": "LIRF",
+              "dep_utc": "09:45",
+              "arr_utc": "11:30",
+              "block": "1h45m",
+              "turnaround_min": 60,
+              "ac_slot": 12
+            },
+            {
+              "flight": "VLR683",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LOWW",
+              "dep_utc": "15:30",
+              "arr_utc": "17:15",
+              "block": "1h45m",
+              "ac_slot": 12
+            },
+            {
+              "flight": "VLR684",
+              "direction": "inbound",
+              "dep_icao": "LOWW",
+              "arr_icao": "LIRF",
+              "dep_utc": "18:15",
+              "arr_utc": "20:00",
+              "block": "1h45m",
+              "turnaround_min": 60,
+              "ac_slot": 12
+            }
+          ]
+        },
+        {
+          "dest": "EBBR",
+          "city": "Bruxelles Zaventem",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 691/692",
+          "note": "EU Institutional Corridor",
+          "legs": [
+            {
+              "flight": "VLR691",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EBBR",
+              "dep_utc": "08:30",
+              "arr_utc": "10:30",
+              "block": "2h00m",
+              "ac_slot": 13
+            },
+            {
+              "flight": "VLR692",
+              "direction": "inbound",
+              "dep_icao": "EBBR",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:00",
+              "arr_utc": "19:00",
+              "block": "2h00m",
+              "turnaround_min": 390,
+              "ac_slot": 13
+            }
+          ]
+        },
+        {
+          "dest": "LKPR",
+          "city": "Praga Václav Havel",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 221/222",
+          "note": "Luxury Leisure Emerging",
+          "legs": [
+            {
+              "flight": "VLR221",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LKPR",
+              "dep_utc": "09:00",
+              "arr_utc": "11:00",
+              "block": "2h00m",
+              "ac_slot": 14
+            },
+            {
+              "flight": "VLR222",
+              "direction": "inbound",
+              "dep_icao": "LKPR",
+              "arr_icao": "LIRF",
+              "dep_utc": "15:30",
+              "arr_utc": "17:30",
+              "block": "2h00m",
+              "turnaround_min": 270,
+              "ac_slot": 14
+            }
+          ]
+        },
+        {
+          "dest": "LPPT",
+          "city": "Lisbona Humberto Delgado",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 231/232",
+          "note": "Atlantic Peninsula Link",
+          "legs": [
+            {
+              "flight": "VLR231",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LPPT",
+              "dep_utc": "09:30",
+              "arr_utc": "12:20",
+              "block": "2h50m",
+              "ac_slot": 15
+            },
+            {
+              "flight": "VLR232",
+              "direction": "inbound",
+              "dep_icao": "LPPT",
+              "arr_icao": "LIRF",
+              "dep_utc": "16:00",
+              "arr_utc": "18:50",
+              "block": "2h50m",
+              "turnaround_min": 220,
+              "ac_slot": 15
+            }
+          ]
+        },
+        {
+          "dest": "LGAV",
+          "city": "Atene Eleftherios Venizelos",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 241/242/243/244",
+          "note": "Eastern Mediterranean Luxury",
+          "legs": [
+            {
+              "flight": "VLR241",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LGAV",
+              "dep_utc": "07:30",
+              "arr_utc": "09:30",
+              "block": "2h00m",
+              "ac_slot": 16
+            },
+            {
+              "flight": "VLR242",
+              "direction": "inbound",
+              "dep_icao": "LGAV",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:30",
+              "arr_utc": "12:30",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 16
+            },
+            {
+              "flight": "VLR243",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LGAV",
+              "dep_utc": "15:00",
+              "arr_utc": "17:00",
+              "block": "2h00m",
+              "ac_slot": 16
+            },
+            {
+              "flight": "VLR244",
+              "direction": "inbound",
+              "dep_icao": "LGAV",
+              "arr_icao": "LIRF",
+              "dep_utc": "18:00",
+              "arr_utc": "20:00",
+              "block": "2h00m",
+              "turnaround_min": 60,
+              "ac_slot": 16
+            }
+          ]
+        },
+        {
+          "dest": "LTFM",
+          "city": "Istanbul Nuova",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 251/252",
+          "note": "Bosphorus Business Gateway",
+          "legs": [
+            {
+              "flight": "VLR251",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "LTFM",
+              "dep_utc": "08:00",
+              "arr_utc": "10:45",
+              "block": "2h45m",
+              "ac_slot": 17
+            },
+            {
+              "flight": "VLR252",
+              "direction": "inbound",
+              "dep_icao": "LTFM",
+              "arr_icao": "LIRF",
+              "dep_utc": "16:00",
+              "arr_utc": "18:45",
+              "block": "2h45m",
+              "turnaround_min": 315,
+              "ac_slot": 17
+            }
+          ]
+        },
+        {
+          "dest": "DTTA",
+          "city": "Tunisi Carthage",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 261/262",
+          "note": "North Africa Bridge",
+          "legs": [
+            {
+              "flight": "VLR261",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "DTTA",
+              "dep_utc": "10:00",
+              "arr_utc": "11:30",
+              "block": "1h30m",
+              "ac_slot": 18
+            },
+            {
+              "flight": "VLR262",
+              "direction": "inbound",
+              "dep_icao": "DTTA",
+              "arr_icao": "LIRF",
+              "dep_utc": "14:30",
+              "arr_utc": "16:00",
+              "block": "1h30m",
+              "turnaround_min": 180,
+              "ac_slot": 18
+            }
+          ]
+        },
+        {
+          "dest": "EKCH",
+          "city": "Copenaghen Kastrup",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 271/272/273/274",
+          "note": "Scandinavian Hub Gateway",
+          "legs": [
+            {
+              "flight": "VLR271",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EKCH",
+              "dep_utc": "07:00",
+              "arr_utc": "09:45",
+              "block": "2h45m",
+              "ac_slot": 19
+            },
+            {
+              "flight": "VLR272",
+              "direction": "inbound",
+              "dep_icao": "EKCH",
+              "arr_icao": "LIRF",
+              "dep_utc": "10:45",
+              "arr_utc": "13:30",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 19
+            },
+            {
+              "flight": "VLR273",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EKCH",
+              "dep_utc": "16:00",
+              "arr_utc": "18:45",
+              "block": "2h45m",
+              "ac_slot": 19
+            },
+            {
+              "flight": "VLR274",
+              "direction": "inbound",
+              "dep_icao": "EKCH",
+              "arr_icao": "LIRF",
+              "dep_utc": "19:45",
+              "arr_utc": "22:30",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 19
+            }
+          ]
+        },
+        {
+          "dest": "ENGM",
+          "city": "Oslo Gardermoen",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 281/282",
+          "note": "Nordic Premium",
+          "legs": [
+            {
+              "flight": "VLR281",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "ENGM",
+              "dep_utc": "08:30",
+              "arr_utc": "11:30",
+              "block": "3h00m",
+              "ac_slot": 20
+            },
+            {
+              "flight": "VLR282",
+              "direction": "inbound",
+              "dep_icao": "ENGM",
+              "arr_icao": "LIRF",
+              "dep_utc": "16:00",
+              "arr_utc": "19:00",
+              "block": "3h00m",
+              "turnaround_min": 270,
+              "ac_slot": 20
+            }
+          ]
+        },
+        {
+          "dest": "ESSA",
+          "city": "Stoccolma Arlanda",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 291/292",
+          "note": "Tech Corridor Nordic",
+          "legs": [
+            {
+              "flight": "VLR291",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "ESSA",
+              "dep_utc": "09:00",
+              "arr_utc": "12:00",
+              "block": "3h00m",
+              "ac_slot": 21
+            },
+            {
+              "flight": "VLR292",
+              "direction": "inbound",
+              "dep_icao": "ESSA",
+              "arr_icao": "LIRF",
+              "dep_utc": "16:30",
+              "arr_utc": "19:30",
+              "block": "3h00m",
+              "turnaround_min": 270,
+              "ac_slot": 21
+            }
+          ]
+        },
+        {
+          "dest": "EFHK",
+          "city": "Helsinki Vantaa",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 741/742",
+          "note": "Finnair Interline Node",
+          "legs": [
+            {
+              "flight": "VLR741",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EFHK",
+              "dep_utc": "09:30",
+              "arr_utc": "12:45",
+              "block": "3h15m",
+              "ac_slot": 22
+            },
+            {
+              "flight": "VLR742",
+              "direction": "inbound",
+              "dep_icao": "EFHK",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:00",
+              "arr_utc": "20:15",
+              "block": "3h15m",
+              "turnaround_min": 255,
+              "ac_slot": 22
+            }
+          ]
+        },
+        {
+          "dest": "EIDW",
+          "city": "Dublino",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 751/752",
+          "note": "Celtic Diaspora & Tech Hub",
+          "legs": [
+            {
+              "flight": "VLR751",
+              "direction": "outbound",
+              "dep_icao": "LIRF",
+              "arr_icao": "EIDW",
+              "dep_utc": "10:00",
+              "arr_utc": "13:00",
+              "block": "3h00m",
+              "ac_slot": 23
+            },
+            {
+              "flight": "VLR752",
+              "direction": "inbound",
+              "dep_icao": "EIDW",
+              "arr_icao": "LIRF",
+              "dep_utc": "17:00",
+              "arr_utc": "20:00",
+              "block": "3h00m",
+              "turnaround_min": 240,
+              "ac_slot": 23
             }
           ]
         }
@@ -1215,6 +2088,286 @@
         "arrCity": "Bermuda",
         "aircraft": "A321LR",
         "time": "14:00"
+      }
+    },
+    {
+      "name": "Alessandro Rossi",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR321",
+        "dep": "LIRF",
+        "arr": "LICC",
+        "depCity": "Roma",
+        "arrCity": "Catania",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Sofia Moretti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR331",
+        "dep": "LIRF",
+        "arr": "LIRN",
+        "depCity": "Roma",
+        "arrCity": "Napoli",
+        "aircraft": "A319",
+        "time": "06:30"
+      }
+    },
+    {
+      "name": "Luca Ricci",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR341",
+        "dep": "LIRF",
+        "arr": "LIPZ",
+        "depCity": "Roma",
+        "arrCity": "Venezia",
+        "aircraft": "A319",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Paola Marino",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR351",
+        "dep": "LIRF",
+        "arr": "LICJ",
+        "depCity": "Roma",
+        "arrCity": "Palermo",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Elena Bianchi",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR361",
+        "dep": "LIRF",
+        "arr": "LIEE",
+        "depCity": "Roma",
+        "arrCity": "Cagliari",
+        "aircraft": "A319",
+        "time": "06:00"
+      }
+    },
+    {
+      "name": "Davide Romano",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR651",
+        "dep": "LIRF",
+        "arr": "EHAM",
+        "depCity": "Roma",
+        "arrCity": "Amsterdam",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Giorgio Gallo",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR661",
+        "dep": "LIRF",
+        "arr": "LEMD",
+        "depCity": "Roma",
+        "arrCity": "Madrid",
+        "aircraft": "A320",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Fabrizio Mancini",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR671",
+        "dep": "LIRF",
+        "arr": "LEBL",
+        "depCity": "Roma",
+        "arrCity": "Barcellona",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Monica Rizzo",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR681",
+        "dep": "LIRF",
+        "arr": "LOWW",
+        "depCity": "Roma",
+        "arrCity": "Vienna",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Beatrice Moretti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR691",
+        "dep": "LIRF",
+        "arr": "EBBR",
+        "depCity": "Roma",
+        "arrCity": "Bruxelles",
+        "aircraft": "A320",
+        "time": "08:30"
+      }
+    },
+    {
+      "name": "Filippo Mariani",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR221",
+        "dep": "LIRF",
+        "arr": "LKPR",
+        "depCity": "Roma",
+        "arrCity": "Praga",
+        "aircraft": "A320",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "Tommaso Serra",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR231",
+        "dep": "LIRF",
+        "arr": "LPPT",
+        "depCity": "Roma",
+        "arrCity": "Lisbona",
+        "aircraft": "A320",
+        "time": "09:30"
+      }
+    },
+    {
+      "name": "Sarah O'Connor",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR241",
+        "dep": "LIRF",
+        "arr": "LGAV",
+        "depCity": "Roma",
+        "arrCity": "Atene",
+        "aircraft": "A320",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Robert Smith",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR251",
+        "dep": "LIRF",
+        "arr": "LTFM",
+        "depCity": "Roma",
+        "arrCity": "Istanbul",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Emily Johnson",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR261",
+        "dep": "LIRF",
+        "arr": "DTTA",
+        "depCity": "Roma",
+        "arrCity": "Tunisi",
+        "aircraft": "A320",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Michael Brown",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR271",
+        "dep": "LIRF",
+        "arr": "EKCH",
+        "depCity": "Roma",
+        "arrCity": "Copenaghen",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Linda Taylor",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR281",
+        "dep": "LIRF",
+        "arr": "ENGM",
+        "depCity": "Roma",
+        "arrCity": "Oslo",
+        "aircraft": "A320",
+        "time": "08:30"
+      }
+    },
+    {
+      "name": "Barbara Wilson",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR291",
+        "dep": "LIRF",
+        "arr": "ESSA",
+        "depCity": "Roma",
+        "arrCity": "Stoccolma",
+        "aircraft": "A320",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "David Williams",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR741",
+        "dep": "LIRF",
+        "arr": "EFHK",
+        "depCity": "Roma",
+        "arrCity": "Helsinki",
+        "aircraft": "A320",
+        "time": "09:30"
+      }
+    },
+    {
+      "name": "Jennifer Garcia",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR751",
+        "dep": "LIRF",
+        "arr": "EIDW",
+        "depCity": "Roma",
+        "arrCity": "Dublino",
+        "aircraft": "A320",
+        "time": "10:00"
       }
     }
   ],
