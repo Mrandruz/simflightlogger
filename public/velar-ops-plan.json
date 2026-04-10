@@ -8,7 +8,7 @@
     "schedule_version": "routes_new v3.0",
     "roster_source": "roster_velar.md",
     "changelog": [
-      "v5.3 — +20 rotte LIRF corto/medio raggio A320 Family: 5 domestiche (LICC/LIRN/LIPZ/LICJ/LIEE), 7 Europa occidentale (EHAM/LEMD/LEBL/LOWW/EBBR/LKPR/LPPT), 3 Sud-Est/Nordafrica (LGAV/LTFM/DTTA), 5 Nord Europa (EKCH/ENGM/ESSA/EFHK/EIDW). Fleet: A320 11→28, A319 6→10. 64 nuove legs, ac_slot 7-23 LIRF A320, slot 5-8 LIRF A319. 20 nuovi crew assignments.",
+      "v5.3 — +20 rotte LIRF corto/medio raggio A320 Family: 5 domestiche (LICC/LIRN/LIPZ/LICJ/LIEE), 7 Europa occidentale (EHAM/LEMD/LEBL/LOWW/EBBR/LKPR/LPPT), 3 Sud-Est/Nordafrica (LGAV/LTFM/DTTA), 5 Nord Europa (EKCH/ENGM/ESSA/EFHK/EIDW). Fleet: A320 11→28, A319 6→10. 64 nuove legs, ac_slot 7-23 LIRF A320, slot 5-8 LIRF A319. 20 Captain + 20 First Officer assignments (40 crew entries totali per nuove rotte).",
       "v5.2 — 3 nuove rotte: WIII-RPLL Manila (VLR861/862, A320 slot10), LIRF-LIEO Olbia (VLR631-634, A319 slot4, 2xdaily), KBOS-TXKF Bermuda (VLR961/962, A321LR slot4). Fleet: A319 5→6, A320 10→11, A321LR 5→6. Crew: +4 entries (Zhao Jing, Wu Qiang, Widya Sari, Edward Reed).",
       "v5.0 — Struttura routes ripristinata al formato atteso da networkSimulator.ts e ARIAAssistant.tsx.",
       "v5.0 — Chiave 'flight' ripristinata (era stata rinominata 'pair' in v4.x, causando crash).",
@@ -2359,6 +2359,286 @@
     {
       "name": "Jennifer Garcia",
       "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR751",
+        "dep": "LIRF",
+        "arr": "EIDW",
+        "depCity": "Roma",
+        "arrCity": "Dublino",
+        "aircraft": "A320",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Marco Esposito",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR321",
+        "dep": "LIRF",
+        "arr": "LICC",
+        "depCity": "Roma",
+        "arrCity": "Catania",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Roberto Greco",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR331",
+        "dep": "LIRF",
+        "arr": "LIRN",
+        "depCity": "Roma",
+        "arrCity": "Napoli",
+        "aircraft": "A319",
+        "time": "06:30"
+      }
+    },
+    {
+      "name": "Enrico Ferrara",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR341",
+        "dep": "LIRF",
+        "arr": "LIPZ",
+        "depCity": "Roma",
+        "arrCity": "Venezia",
+        "aircraft": "A319",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Vittoria Leone",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR351",
+        "dep": "LIRF",
+        "arr": "LICJ",
+        "depCity": "Roma",
+        "arrCity": "Palermo",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Andrea Santoro",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR361",
+        "dep": "LIRF",
+        "arr": "LIEE",
+        "depCity": "Roma",
+        "arrCity": "Cagliari",
+        "aircraft": "A319",
+        "time": "06:00"
+      }
+    },
+    {
+      "name": "Sara Barbieri",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR651",
+        "dep": "LIRF",
+        "arr": "EHAM",
+        "depCity": "Roma",
+        "arrCity": "Amsterdam",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "James Miller",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR661",
+        "dep": "LIRF",
+        "arr": "LEMD",
+        "depCity": "Roma",
+        "arrCity": "Madrid",
+        "aircraft": "A320",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Christopher Jones",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR671",
+        "dep": "LIRF",
+        "arr": "LEBL",
+        "depCity": "Roma",
+        "arrCity": "Barcellona",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Elizabeth Moore",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR681",
+        "dep": "LIRF",
+        "arr": "LOWW",
+        "depCity": "Roma",
+        "arrCity": "Vienna",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Richard Anderson",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR691",
+        "dep": "LIRF",
+        "arr": "EBBR",
+        "depCity": "Roma",
+        "arrCity": "Bruxelles",
+        "aircraft": "A320",
+        "time": "08:30"
+      }
+    },
+    {
+      "name": "Thomas Harris",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR221",
+        "dep": "LIRF",
+        "arr": "LKPR",
+        "depCity": "Roma",
+        "arrCity": "Praga",
+        "aircraft": "A320",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "Christopher Martinez",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR231",
+        "dep": "LIRF",
+        "arr": "LPPT",
+        "depCity": "Roma",
+        "arrCity": "Lisbona",
+        "aircraft": "A320",
+        "time": "09:30"
+      }
+    },
+    {
+      "name": "Anthony Lewis",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR241",
+        "dep": "LIRF",
+        "arr": "LGAV",
+        "depCity": "Roma",
+        "arrCity": "Atene",
+        "aircraft": "A320",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Mark Walker",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR251",
+        "dep": "LIRF",
+        "arr": "LTFM",
+        "depCity": "Roma",
+        "arrCity": "Istanbul",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Nancy Hall",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR261",
+        "dep": "LIRF",
+        "arr": "DTTA",
+        "depCity": "Roma",
+        "arrCity": "Tunisi",
+        "aircraft": "A320",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Steven Allen",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR271",
+        "dep": "LIRF",
+        "arr": "EKCH",
+        "depCity": "Roma",
+        "arrCity": "Copenaghen",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Karen Young",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR281",
+        "dep": "LIRF",
+        "arr": "ENGM",
+        "depCity": "Roma",
+        "arrCity": "Oslo",
+        "aircraft": "A320",
+        "time": "08:30"
+      }
+    },
+    {
+      "name": "Sandra Scott",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR291",
+        "dep": "LIRF",
+        "arr": "ESSA",
+        "depCity": "Roma",
+        "arrCity": "Stoccolma",
+        "aircraft": "A320",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "Brian Green",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR741",
+        "dep": "LIRF",
+        "arr": "EFHK",
+        "depCity": "Roma",
+        "arrCity": "Helsinki",
+        "aircraft": "A320",
+        "time": "09:30"
+      }
+    },
+    {
+      "name": "Donna Adams",
+      "rank": "First Officer",
       "base": "LIRF",
       "todayFlight": {
         "flightNumber": "VLR751",
