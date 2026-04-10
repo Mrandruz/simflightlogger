@@ -199,8 +199,8 @@
 | VLR-164 | Larasati Putri | Junior First Officer |
 | VLR-165 | Bagus Nugroho | Captain |
 | VLR-166 | Dewi Anggraini | First Officer |
-| VLR-167 | Joko Widodo | Senior Captain |
-| VLR-168 | Megawati Sukarno | Junior First Officer |
+| VLR-167 | Surya Prabowo | Senior Captain |
+| VLR-168 | Kartika Rahardjo | Junior First Officer |
 | VLR-169 | Yanuar Abdi | Senior Captain |
 | VLR-170 | Putu Gede | Captain |
 | VLR-171 | Made Wirawan | Captain |
@@ -212,17 +212,17 @@
 | VLR-177 | Oliver Burke | First Officer |
 | VLR-178 | Alice Fletcher | Captain |
 | VLR-179 | Henry Watson | Captain |
-| VLR-180 | Grace Hopper | Captain |
-| VLR-181 | William Gates | First Officer |
-| VLR-182 | Steve Jobs | Captain |
-| VLR-183 | Ada Lovelace | Captain |
-| VLR-184 | Alan Turing | Captain |
-| VLR-185 | Margaret Hamilton | Junior First Officer |
-| VLR-186 | Linus Torvalds | Junior First Officer |
-| VLR-187 | Tim Berners-Lee | Captain |
-| VLR-188 | Katherine Johnson | Senior Captain |
-| VLR-189 | Dorothy Vaughan | Junior First Officer |
-| VLR-190 | Mary Jackson | Senior Captain |
+| VLR-180 | Layla Morrison | Captain |
+| VLR-181 | Nathan Caldwell | First Officer |
+| VLR-182 | Derek Ashford | Captain |
+| VLR-183 | Serena Whitfield | Captain |
+| VLR-184 | Colin Hartley | Captain |
+| VLR-185 | Patricia Holloway | Junior First Officer |
+| VLR-186 | Erik Lindqvist | Junior First Officer |
+| VLR-187 | Oliver Blackwood | Captain |
+| VLR-188 | Vivienne Okafor | Senior Captain |
+| VLR-189 | Renée Fontaine | Junior First Officer |
+| VLR-190 | Celeste Adeyemi | Senior Captain |
 | VLR-203 | Sari Dewi | Senior Captain |
 | VLR-204 | Rizal Pratama | Captain |
 | VLR-205 | Nadia Santoso | Captain |

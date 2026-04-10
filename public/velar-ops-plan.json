@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "5.5",
+    "version": "5.5.1",
     "name": "Velar Airlines Global Strategic Plan",
     "updated": "2026-04-11",
     "motto": "Motion, simplified.",
@@ -8,6 +8,7 @@
     "schedule_version": "routes_new v4.0",
     "roster_source": "roster_velar.md",
     "changelog": [
+      "v5.5.1 — Rimossi 13 nomi di persone reali dal roster WIII (Joko Widodo, Megawati Sukarno, Grace Hopper, Steve Jobs, Alan Turing, Ada Lovelace, ecc.) e sostituiti con nomi fittizi.",
       "v5.5 — Roster audit completo. +19 nuovi piloti (VLR-191 a VLR-209) per coprire rotazioni precedentemente non assegnate. 29 assegnazioni seconda rotazione aggiunte a crew[]. Roster totale: 206 NPC + Andrea Lana (Chief). Zero duplicati verificati. crew[] totale: 101 entries.",
       "v5.4 — +15 rotte KBOS (5 short USA/Canada, 7 medium USA/Centro America, 3 long haul: GRU/BOM/KEF) e +15 rotte WIII (7 short/medium SEA+Australia, 2 medium Asia orientale, 2 medium subcontinente, 4 long haul: LHR/AMS/DXB/CPT). 84 nuove legs totali. Fleet: A319 10→14, A320 28→42, A321LR 6→12, A330neo 3→6, A350 4→9. 40 nuovi crew assignments KBOS+WIII.",
       "v5.3 — +20 rotte LIRF corto/medio raggio A320 Family: 5 domestiche (LICC/LIRN/LIPZ/LICJ/LIEE), 7 Europa occidentale (EHAM/LEMD/LEBL/LOWW/EBBR/LKPR/LPPT), 3 Sud-Est/Nordafrica (LGAV/LTFM/DTTA), 5 Nord Europa (EKCH/ENGM/ESSA/EFHK/EIDW). Fleet: A320 11→28, A319 6→10. 64 nuove legs, ac_slot 7-23 LIRF A320, slot 5-8 LIRF A319. 20 Captain + 20 First Officer assignments (40 crew entries totali per nuove rotte).",
@@ -4101,7 +4102,7 @@
       }
     },
     {
-      "name": "Joko Widodo",
+      "name": "Surya Prabowo",
       "rank": "Senior Captain",
       "base": "WIII",
       "todayFlight": {
@@ -4199,7 +4200,7 @@
       }
     },
     {
-      "name": "Ada Lovelace",
+      "name": "Serena Whitfield",
       "rank": "Captain",
       "base": "WIII",
       "todayFlight": {
@@ -4213,7 +4214,7 @@
       }
     },
     {
-      "name": "Katherine Johnson",
+      "name": "Vivienne Okafor",
       "rank": "Senior Captain",
       "base": "WIII",
       "todayFlight": {
@@ -4227,7 +4228,7 @@
       }
     },
     {
-      "name": "Mary Jackson",
+      "name": "Celeste Adeyemi",
       "rank": "Senior Captain",
       "base": "WIII",
       "todayFlight": {
@@ -4241,7 +4242,7 @@
       }
     },
     {
-      "name": "Alan Turing",
+      "name": "Colin Hartley",
       "rank": "Captain",
       "base": "WIII",
       "todayFlight": {
