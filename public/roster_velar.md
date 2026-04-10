@@ -3,7 +3,7 @@
 
 ---
 
-## 🏛️ HUB ROMA FIUMICINO (LIRF) — 100 PIC
+## 🏛️ HUB ROMA FIUMICINO (LIRF) — 109 PIC
 
 | ID | Nome | Rating |
 | :--- | :--- | :--- |
@@ -107,10 +107,19 @@
 | VLR-098 | Vu Minh | Captain |
 | VLR-099 | Zhou Feng | First Officer |
 | VLR-100 | In-Ho Moon | Senior Captain |
+| VLR-191 | Marco Vitali | Senior Captain |
+| VLR-192 | Giulia Ferrero | Senior Captain |
+| VLR-193 | Andrea Conti | Captain |
+| VLR-194 | Luca Esposito | Captain |
+| VLR-195 | Chiara Russo | Captain |
+| VLR-196 | Marco De Santis | Captain |
+| VLR-197 | Valentina Greco | Captain |
+| VLR-198 | Stefano Ferretti | Captain |
+| VLR-199 | Isabella Monti | Captain |
 
 ---
 
-## 🇺🇸 HUB BOSTON LOGAN (KBOS) — 45 PIC
+## 🇺🇸 HUB BOSTON LOGAN (KBOS) — 48 PIC
 
 | ID | Nome | Rating |
 | :--- | :--- | :--- |
@@ -159,10 +168,13 @@
 | VLR-143 | Han Ling | First Officer |
 | VLR-144 | Ryu Jun-yeol | Junior First Officer |
 | VLR-145 | Kim Tae-hee | First Officer |
+| VLR-207 | James O'Brien | Senior Captain |
+| VLR-208 | Rachel Nguyen | Captain |
+| VLR-209 | Patrick Sullivan | Captain |
 
 ---
 
-## 🇮🇩 HUB GIACARTA (WIII) — 45 PIC
+## 🇮🇩 HUB GIACARTA (WIII) — 49 PIC
 
 | ID | Nome | Rating |
 | :--- | :--- | :--- |
@@ -211,9 +223,16 @@
 | VLR-188 | Katherine Johnson | Senior Captain |
 | VLR-189 | Dorothy Vaughan | Junior First Officer |
 | VLR-190 | Mary Jackson | Senior Captain |
+| VLR-203 | Sari Dewi | Senior Captain |
+| VLR-204 | Rizal Pratama | Captain |
+| VLR-205 | Nadia Santoso | Captain |
+| VLR-206 | Fajar Hidayat | Captain |
 
 ---
-**Statistiche Finali Roster:**
-- **Senior Captains:** 82
-- **Captains:** 108
+**Statistiche Finali Roster v2.0:**
+- **Senior Captains:** 37
+- **Captains:** 75
+- **First Officers:** 58
+- **Junior First Officers:** 36
+- **Totale NPC:** 206
 - **Chief Pilot:** Andrea Lana (VLR-CHIEF-01)

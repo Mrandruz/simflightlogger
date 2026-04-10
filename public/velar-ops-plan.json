@@ -1,13 +1,15 @@
 {
   "_meta": {
-    "version": "5.3",
+    "version": "5.5",
     "name": "Velar Airlines Global Strategic Plan",
-    "updated": "2026-04-10",
+    "updated": "2026-04-11",
     "motto": "Motion, simplified.",
     "positioning": "Boutique Tech-Luxury Airline",
-    "schedule_version": "routes_new v3.0",
+    "schedule_version": "routes_new v4.0",
     "roster_source": "roster_velar.md",
     "changelog": [
+      "v5.5 — Roster audit completo. +19 nuovi piloti (VLR-191 a VLR-209) per coprire rotazioni precedentemente non assegnate. 29 assegnazioni seconda rotazione aggiunte a crew[]. Roster totale: 206 NPC + Andrea Lana (Chief). Zero duplicati verificati. crew[] totale: 101 entries.",
+      "v5.4 — +15 rotte KBOS (5 short USA/Canada, 7 medium USA/Centro America, 3 long haul: GRU/BOM/KEF) e +15 rotte WIII (7 short/medium SEA+Australia, 2 medium Asia orientale, 2 medium subcontinente, 4 long haul: LHR/AMS/DXB/CPT). 84 nuove legs totali. Fleet: A319 10→14, A320 28→42, A321LR 6→12, A330neo 3→6, A350 4→9. 40 nuovi crew assignments KBOS+WIII.",
       "v5.3 — +20 rotte LIRF corto/medio raggio A320 Family: 5 domestiche (LICC/LIRN/LIPZ/LICJ/LIEE), 7 Europa occidentale (EHAM/LEMD/LEBL/LOWW/EBBR/LKPR/LPPT), 3 Sud-Est/Nordafrica (LGAV/LTFM/DTTA), 5 Nord Europa (EKCH/ENGM/ESSA/EFHK/EIDW). Fleet: A320 11→28, A319 6→10. 64 nuove legs, ac_slot 7-23 LIRF A320, slot 5-8 LIRF A319. 20 Captain + 20 First Officer assignments (40 crew entries totali per nuove rotte).",
       "v5.2 — 3 nuove rotte: WIII-RPLL Manila (VLR861/862, A320 slot10), LIRF-LIEO Olbia (VLR631-634, A319 slot4, 2xdaily), KBOS-TXKF Bermuda (VLR961/962, A321LR slot4). Fleet: A319 5→6, A320 10→11, A321LR 5→6. Crew: +4 entries (Zhao Jing, Wu Qiang, Widya Sari, Edward Reed).",
       "v5.0 — Struttura routes ripristinata al formato atteso da networkSimulator.ts e ARIAAssistant.tsx.",
@@ -38,37 +40,37 @@
   "fleet": [
     {
       "type": "Airbus A319",
-      "count": 10,
+      "count": 14,
       "role": "Executive Shuttle",
-      "mission": "Rotte finanziarie e diplomatiche (Zurigo, Francoforte, Toronto).",
+      "mission": "Executive Shuttle e rotte domestiche premium (Italia, Nord America, Canada).",
       "capacity": 124
     },
     {
       "type": "Airbus A320",
-      "count": 28,
+      "count": 42,
       "role": "Core Feeders",
-      "mission": "Connettività quotidiana ad alta frequenza tra gli Hub e rotte europee corto/medio raggio da LIRF.",
+      "mission": "Core Feeders: connettività quotidiana ad alta frequenza su tutti e tre gli hub. Backbone del network europeo, SEA e Nord America.",
       "capacity": 180
     },
     {
       "type": "Airbus A321LR",
-      "count": 6,
+      "count": 12,
       "role": "Mid-Range Boutique",
-      "mission": "Rotte thin a lungo raggio (Dubai, Austin, San Francisco transcontinentale).",
+      "mission": "Mid-Range Boutique: rotte thin a medio-lungo raggio (Caraibi, Centro America, Nordatlantico, subcontinente indiano, SEA stretch).",
       "capacity": 182
     },
     {
       "type": "Airbus A330neo",
-      "count": 3,
+      "count": 6,
       "role": "High Capacity",
-      "mission": "Rotte transatlantiche, oceaniche e regionali ad alta densità (NY, Sydney, Tokyo, Londra-Boston).",
+      "mission": "High Capacity: rotte intercontinentali e hub-to-hub ad alta densità (Seoul, Shanghai, Dubai, Londra-Boston, Sydney, Tokyo).",
       "capacity": 287
     },
     {
       "type": "Airbus A350-900",
-      "count": 4,
+      "count": 9,
       "role": "Flagship",
-      "mission": "Voli ultra-long-haul quotidiani tra i tre Hub principali e rotte strategiche long range.",
+      "mission": "Flagship Ultra-Long-Haul: corridoi strategici tra i tre hub e aperture di mercato (São Paulo, Mumbai, Cape Town, Amsterdam-Jakarta, Londra-Jakarta).",
       "capacity": 369
     }
   ],
@@ -1741,6 +1743,597 @@
               }
             }
           ]
+        },
+        {
+          "dest": "WMKK",
+          "city": "Kuala Lumpur International",
+          "aircraft": "A320",
+          "freq": "3x Daily",
+          "flight": "VLR 851-856",
+          "note": "SEA Core — Busiest Regional Corridor",
+          "legs": [
+            {
+              "flight": "VLR851",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WMKK",
+              "dep_utc": "04:00",
+              "arr_utc": "05:45",
+              "block": "1h45m",
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR852",
+              "direction": "inbound",
+              "dep_icao": "WMKK",
+              "arr_icao": "WIII",
+              "dep_utc": "06:45",
+              "arr_utc": "08:30",
+              "block": "1h45m",
+              "turnaround_min": 60,
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR853",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WMKK",
+              "dep_utc": "10:00",
+              "arr_utc": "11:45",
+              "block": "1h45m",
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR854",
+              "direction": "inbound",
+              "dep_icao": "WMKK",
+              "arr_icao": "WIII",
+              "dep_utc": "12:45",
+              "arr_utc": "14:30",
+              "block": "1h45m",
+              "turnaround_min": 60,
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR855",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WMKK",
+              "dep_utc": "16:00",
+              "arr_utc": "17:45",
+              "block": "1h45m",
+              "ac_slot": 12
+            },
+            {
+              "flight": "VLR856",
+              "direction": "inbound",
+              "dep_icao": "WMKK",
+              "arr_icao": "WIII",
+              "dep_utc": "18:45",
+              "arr_utc": "20:30",
+              "block": "1h45m",
+              "turnaround_min": 60,
+              "ac_slot": 12
+            }
+          ]
+        },
+        {
+          "dest": "VTBS",
+          "city": "Bangkok Suvarnabhumi",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 871/872/873/874",
+          "note": "MICE & Luxury Leisure Thailand",
+          "legs": [
+            {
+              "flight": "VLR871",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VTBS",
+              "dep_utc": "05:00",
+              "arr_utc": "08:00",
+              "block": "3h00m",
+              "ac_slot": 13
+            },
+            {
+              "flight": "VLR872",
+              "direction": "inbound",
+              "dep_icao": "VTBS",
+              "arr_icao": "WIII",
+              "dep_utc": "09:00",
+              "arr_utc": "12:00",
+              "block": "3h00m",
+              "turnaround_min": 60,
+              "ac_slot": 13
+            },
+            {
+              "flight": "VLR873",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VTBS",
+              "dep_utc": "13:00",
+              "arr_utc": "16:00",
+              "block": "3h00m",
+              "ac_slot": 13
+            },
+            {
+              "flight": "VLR874",
+              "direction": "inbound",
+              "dep_icao": "VTBS",
+              "arr_icao": "WIII",
+              "dep_utc": "17:00",
+              "arr_utc": "20:00",
+              "block": "3h00m",
+              "turnaround_min": 60,
+              "ac_slot": 13
+            }
+          ]
+        },
+        {
+          "dest": "VVTS",
+          "city": "Ho Chi Minh Tan Son Nhat",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 881/882/883/884",
+          "note": "Vietnam Emerging Market",
+          "legs": [
+            {
+              "flight": "VLR881",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VVTS",
+              "dep_utc": "05:30",
+              "arr_utc": "08:15",
+              "block": "2h45m",
+              "ac_slot": 14
+            },
+            {
+              "flight": "VLR882",
+              "direction": "inbound",
+              "dep_icao": "VVTS",
+              "arr_icao": "WIII",
+              "dep_utc": "09:15",
+              "arr_utc": "12:00",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 14
+            },
+            {
+              "flight": "VLR883",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VVTS",
+              "dep_utc": "14:00",
+              "arr_utc": "16:45",
+              "block": "2h45m",
+              "ac_slot": 14
+            },
+            {
+              "flight": "VLR884",
+              "direction": "inbound",
+              "dep_icao": "VVTS",
+              "arr_icao": "WIII",
+              "dep_utc": "17:45",
+              "arr_utc": "20:30",
+              "block": "2h45m",
+              "turnaround_min": 60,
+              "ac_slot": 14
+            }
+          ]
+        },
+        {
+          "dest": "WARR",
+          "city": "Surabaya Juanda",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 891/892/893/894",
+          "note": "Domestic Premium Indonesia",
+          "legs": [
+            {
+              "flight": "VLR891",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WARR",
+              "dep_utc": "05:00",
+              "arr_utc": "06:00",
+              "block": "1h00m",
+              "ac_slot": 15
+            },
+            {
+              "flight": "VLR892",
+              "direction": "inbound",
+              "dep_icao": "WARR",
+              "arr_icao": "WIII",
+              "dep_utc": "07:00",
+              "arr_utc": "08:00",
+              "block": "1h00m",
+              "turnaround_min": 60,
+              "ac_slot": 15
+            },
+            {
+              "flight": "VLR893",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WARR",
+              "dep_utc": "13:00",
+              "arr_utc": "14:00",
+              "block": "1h00m",
+              "ac_slot": 15
+            },
+            {
+              "flight": "VLR894",
+              "direction": "inbound",
+              "dep_icao": "WARR",
+              "arr_icao": "WIII",
+              "dep_utc": "15:00",
+              "arr_utc": "16:00",
+              "block": "1h00m",
+              "turnaround_min": 60,
+              "ac_slot": 15
+            }
+          ]
+        },
+        {
+          "dest": "WAAA",
+          "city": "Makassar Sultan Hasanuddin",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1101/1102",
+          "note": "Eastern Indonesia Gateway",
+          "legs": [
+            {
+              "flight": "VLR1101",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WAAA",
+              "dep_utc": "06:00",
+              "arr_utc": "07:45",
+              "block": "1h45m",
+              "ac_slot": 16
+            },
+            {
+              "flight": "VLR1102",
+              "direction": "inbound",
+              "dep_icao": "WAAA",
+              "arr_icao": "WIII",
+              "dep_utc": "09:00",
+              "arr_utc": "10:45",
+              "block": "1h45m",
+              "turnaround_min": 75,
+              "ac_slot": 16
+            }
+          ]
+        },
+        {
+          "dest": "WIMM",
+          "city": "Medan Kualanamu",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 1111/1112/1113/1114",
+          "note": "North Sumatra Commercial Hub",
+          "legs": [
+            {
+              "flight": "VLR1111",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WIMM",
+              "dep_utc": "05:30",
+              "arr_utc": "07:00",
+              "block": "1h30m",
+              "ac_slot": 17
+            },
+            {
+              "flight": "VLR1112",
+              "direction": "inbound",
+              "dep_icao": "WIMM",
+              "arr_icao": "WIII",
+              "dep_utc": "08:00",
+              "arr_utc": "09:30",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 17
+            },
+            {
+              "flight": "VLR1113",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "WIMM",
+              "dep_utc": "14:00",
+              "arr_utc": "15:30",
+              "block": "1h30m",
+              "ac_slot": 17
+            },
+            {
+              "flight": "VLR1114",
+              "direction": "inbound",
+              "dep_icao": "WIMM",
+              "arr_icao": "WIII",
+              "dep_utc": "16:30",
+              "arr_utc": "18:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 17
+            }
+          ]
+        },
+        {
+          "dest": "YPPH",
+          "city": "Perth International",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1121/1122",
+          "note": "Western Australia Mining & Leisure",
+          "legs": [
+            {
+              "flight": "VLR1121",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "YPPH",
+              "dep_utc": "07:00",
+              "arr_utc": "10:30",
+              "block": "3h30m",
+              "ac_slot": 18
+            },
+            {
+              "flight": "VLR1122",
+              "direction": "inbound",
+              "dep_icao": "YPPH",
+              "arr_icao": "WIII",
+              "dep_utc": "12:00",
+              "arr_utc": "15:30",
+              "block": "3h30m",
+              "turnaround_min": 90,
+              "ac_slot": 18
+            }
+          ]
+        },
+        {
+          "dest": "RKSI",
+          "city": "Seoul Incheon",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 1131/1132",
+          "note": "K-Culture & Corporate Korea",
+          "legs": [
+            {
+              "flight": "VLR1131",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "RKSI",
+              "dep_utc": "23:00",
+              "arr_utc": "06:00+1",
+              "block": "7h00m",
+              "ac_slot": 4
+            },
+            {
+              "flight": "VLR1132",
+              "direction": "inbound",
+              "dep_icao": "RKSI",
+              "arr_icao": "WIII",
+              "dep_utc": "08:00+1",
+              "arr_utc": "14:00+1",
+              "block": "7h00m",
+              "turnaround_min": 120,
+              "ac_slot": 4
+            }
+          ]
+        },
+        {
+          "dest": "ZSPD",
+          "city": "Shanghai Pudong",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 1141/1142",
+          "note": "China-Indonesia Strategic Corridor",
+          "legs": [
+            {
+              "flight": "VLR1141",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "ZSPD",
+              "dep_utc": "22:00",
+              "arr_utc": "04:30+1",
+              "block": "6h30m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR1142",
+              "direction": "inbound",
+              "dep_icao": "ZSPD",
+              "arr_icao": "WIII",
+              "dep_utc": "06:30+1",
+              "arr_utc": "12:30+1",
+              "block": "6h00m",
+              "turnaround_min": 120,
+              "ac_slot": 5
+            }
+          ]
+        },
+        {
+          "dest": "VABB",
+          "city": "Mumbai Chhatrapati Shivaji",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1151/1152",
+          "note": "India-Indonesia Business Bridge",
+          "legs": [
+            {
+              "flight": "VLR1151",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VABB",
+              "dep_utc": "01:00",
+              "arr_utc": "04:45",
+              "block": "5h45m",
+              "ac_slot": 19
+            },
+            {
+              "flight": "VLR1152",
+              "direction": "inbound",
+              "dep_icao": "VABB",
+              "arr_icao": "WIII",
+              "dep_utc": "06:00",
+              "arr_utc": "13:00",
+              "block": "7h00m",
+              "turnaround_min": 75,
+              "ac_slot": 19
+            }
+          ]
+        },
+        {
+          "dest": "VCBI",
+          "city": "Colombo Bandaranaike",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1161/1162",
+          "note": "Sri Lanka Luxury Leisure Node",
+          "legs": [
+            {
+              "flight": "VLR1161",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "VCBI",
+              "dep_utc": "02:00",
+              "arr_utc": "05:45",
+              "block": "3h45m",
+              "ac_slot": 20
+            },
+            {
+              "flight": "VLR1162",
+              "direction": "inbound",
+              "dep_icao": "VCBI",
+              "arr_icao": "WIII",
+              "dep_utc": "07:00",
+              "arr_utc": "13:30",
+              "block": "4h00m",
+              "turnaround_min": 75,
+              "ac_slot": 20
+            }
+          ]
+        },
+        {
+          "dest": "EGLL",
+          "city": "Londra Heathrow",
+          "aircraft": "A350-900",
+          "freq": "Daily",
+          "flight": "VLR 1171/1172",
+          "note": "WIII Flagship — Europe Direct",
+          "legs": [
+            {
+              "flight": "VLR1171",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "EGLL",
+              "dep_utc": "08:00",
+              "arr_utc": "14:30",
+              "block": "14h30m",
+              "ac_slot": 1
+            },
+            {
+              "flight": "VLR1172",
+              "direction": "inbound",
+              "dep_icao": "EGLL",
+              "arr_icao": "WIII",
+              "dep_utc": "16:30",
+              "arr_utc": "07:00+1",
+              "block": "14h30m",
+              "turnaround_min": 120,
+              "ac_slot": 1
+            }
+          ]
+        },
+        {
+          "dest": "EHAM",
+          "city": "Amsterdam Schiphol",
+          "aircraft": "A350-900",
+          "freq": "4x Weekly",
+          "flight": "VLR 1181/1182",
+          "note": "Colonial Heritage Route — Velar Signature",
+          "legs": [
+            {
+              "flight": "VLR1181",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "EHAM",
+              "dep_utc": "09:00",
+              "arr_utc": "15:30",
+              "block": "14h30m",
+              "ac_slot": 6
+            },
+            {
+              "flight": "VLR1182",
+              "direction": "inbound",
+              "dep_icao": "EHAM",
+              "arr_icao": "WIII",
+              "dep_utc": "18:00",
+              "arr_utc": "08:30+1",
+              "block": "14h30m",
+              "turnaround_min": 150,
+              "ac_slot": 6
+            }
+          ]
+        },
+        {
+          "dest": "OMDB",
+          "city": "Dubai International",
+          "aircraft": "A330neo",
+          "freq": "Daily",
+          "flight": "VLR 1191/1192",
+          "note": "Middle East Gateway",
+          "legs": [
+            {
+              "flight": "VLR1191",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "OMDB",
+              "dep_utc": "21:00",
+              "arr_utc": "01:00+1",
+              "block": "8h00m",
+              "ac_slot": 6
+            },
+            {
+              "flight": "VLR1192",
+              "direction": "inbound",
+              "dep_icao": "OMDB",
+              "arr_icao": "WIII",
+              "dep_utc": "03:00+1",
+              "arr_utc": "11:30+1",
+              "block": "8h30m",
+              "turnaround_min": 120,
+              "ac_slot": 6
+            }
+          ]
+        },
+        {
+          "dest": "FACT",
+          "city": "Cape Town International",
+          "aircraft": "A350-900",
+          "freq": "3x Weekly",
+          "flight": "VLR 1201/1202",
+          "note": "Africa Luxury Flagship — Velar Africa Opening",
+          "legs": [
+            {
+              "flight": "VLR1201",
+              "direction": "outbound",
+              "dep_icao": "WIII",
+              "arr_icao": "FACT",
+              "dep_utc": "10:00",
+              "arr_utc": "20:30",
+              "block": "10h30m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR1202",
+              "direction": "inbound",
+              "dep_icao": "FACT",
+              "arr_icao": "WIII",
+              "dep_utc": "23:30",
+              "arr_utc": "10:00+1",
+              "block": "10h30m",
+              "turnaround_min": 180,
+              "ac_slot": 7
+            }
+          ]
         }
       ]
     },
@@ -1915,6 +2508,597 @@
                 "name": "Edward Reed",
                 "rank": "Senior Captain"
               }
+            }
+          ]
+        },
+        {
+          "dest": "KJFK",
+          "city": "New York JFK",
+          "aircraft": "A319",
+          "freq": "3x Daily",
+          "flight": "VLR 951-956",
+          "note": "Northeast Executive Shuttle",
+          "legs": [
+            {
+              "flight": "VLR951",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KJFK",
+              "dep_utc": "11:00",
+              "arr_utc": "11:55",
+              "block": "0h55m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR952",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "KBOS",
+              "dep_utc": "12:45",
+              "arr_utc": "13:40",
+              "block": "0h55m",
+              "turnaround_min": 50,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR953",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KJFK",
+              "dep_utc": "15:00",
+              "arr_utc": "15:55",
+              "block": "0h55m",
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR954",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:45",
+              "arr_utc": "17:40",
+              "block": "0h55m",
+              "turnaround_min": 50,
+              "ac_slot": 5
+            },
+            {
+              "flight": "VLR955",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KJFK",
+              "dep_utc": "20:00",
+              "arr_utc": "20:55",
+              "block": "0h55m",
+              "ac_slot": 6
+            },
+            {
+              "flight": "VLR956",
+              "direction": "inbound",
+              "dep_icao": "KJFK",
+              "arr_icao": "KBOS",
+              "dep_utc": "21:45",
+              "arr_utc": "22:40",
+              "block": "0h55m",
+              "turnaround_min": 50,
+              "ac_slot": 6
+            }
+          ]
+        },
+        {
+          "dest": "KIAD",
+          "city": "Washington Dulles",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 971/972/973/974",
+          "note": "Government & Diplomatic Corridor",
+          "legs": [
+            {
+              "flight": "VLR971",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KIAD",
+              "dep_utc": "10:00",
+              "arr_utc": "11:30",
+              "block": "1h30m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR972",
+              "direction": "inbound",
+              "dep_icao": "KIAD",
+              "arr_icao": "KBOS",
+              "dep_utc": "12:30",
+              "arr_utc": "14:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR973",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KIAD",
+              "dep_utc": "17:00",
+              "arr_utc": "18:30",
+              "block": "1h30m",
+              "ac_slot": 7
+            },
+            {
+              "flight": "VLR974",
+              "direction": "inbound",
+              "dep_icao": "KIAD",
+              "arr_icao": "KBOS",
+              "dep_utc": "19:30",
+              "arr_utc": "21:00",
+              "block": "1h30m",
+              "turnaround_min": 60,
+              "ac_slot": 7
+            }
+          ]
+        },
+        {
+          "dest": "KORD",
+          "city": "Chicago O'Hare",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 981/982/983/984",
+          "note": "Midwest Hub Connector",
+          "legs": [
+            {
+              "flight": "VLR981",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KORD",
+              "dep_utc": "11:30",
+              "arr_utc": "14:00",
+              "block": "2h30m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR982",
+              "direction": "inbound",
+              "dep_icao": "KORD",
+              "arr_icao": "KBOS",
+              "dep_utc": "15:00",
+              "arr_utc": "17:30",
+              "block": "2h30m",
+              "turnaround_min": 60,
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR983",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KORD",
+              "dep_utc": "19:00",
+              "arr_utc": "21:30",
+              "block": "2h30m",
+              "ac_slot": 8
+            },
+            {
+              "flight": "VLR984",
+              "direction": "inbound",
+              "dep_icao": "KORD",
+              "arr_icao": "KBOS",
+              "dep_utc": "22:30",
+              "arr_utc": "01:00+1",
+              "block": "2h30m",
+              "turnaround_min": 60,
+              "ac_slot": 8
+            }
+          ]
+        },
+        {
+          "dest": "KMIA",
+          "city": "Miami International",
+          "aircraft": "A320",
+          "freq": "2x Daily",
+          "flight": "VLR 991/992/993/994",
+          "note": "Luxury Leisure & Latin Gateway",
+          "legs": [
+            {
+              "flight": "VLR991",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KMIA",
+              "dep_utc": "12:00",
+              "arr_utc": "15:00",
+              "block": "3h00m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR992",
+              "direction": "inbound",
+              "dep_icao": "KMIA",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:00",
+              "arr_utc": "19:00",
+              "block": "3h00m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR993",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KMIA",
+              "dep_utc": "20:30",
+              "arr_utc": "23:30",
+              "block": "3h00m",
+              "ac_slot": 9
+            },
+            {
+              "flight": "VLR994",
+              "direction": "inbound",
+              "dep_icao": "KMIA",
+              "arr_icao": "KBOS",
+              "dep_utc": "00:30+1",
+              "arr_utc": "03:30+1",
+              "block": "3h00m",
+              "turnaround_min": 60,
+              "ac_slot": 9
+            }
+          ]
+        },
+        {
+          "dest": "CYUL",
+          "city": "Montréal Trudeau",
+          "aircraft": "A319",
+          "freq": "2x Daily",
+          "flight": "VLR 901/902/903/904",
+          "note": "Franco-Canadian Corridor",
+          "legs": [
+            {
+              "flight": "VLR901",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "CYUL",
+              "dep_utc": "11:00",
+              "arr_utc": "12:10",
+              "block": "1h10m",
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR902",
+              "direction": "inbound",
+              "dep_icao": "CYUL",
+              "arr_icao": "KBOS",
+              "dep_utc": "13:00",
+              "arr_utc": "14:10",
+              "block": "1h10m",
+              "turnaround_min": 50,
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR903",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "CYUL",
+              "dep_utc": "17:30",
+              "arr_utc": "18:40",
+              "block": "1h10m",
+              "ac_slot": 10
+            },
+            {
+              "flight": "VLR904",
+              "direction": "inbound",
+              "dep_icao": "CYUL",
+              "arr_icao": "KBOS",
+              "dep_utc": "19:30",
+              "arr_utc": "20:40",
+              "block": "1h10m",
+              "turnaround_min": 50,
+              "ac_slot": 10
+            }
+          ]
+        },
+        {
+          "dest": "KDFW",
+          "city": "Dallas Fort Worth",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1001/1002",
+          "note": "Texas Business Hub",
+          "legs": [
+            {
+              "flight": "VLR1001",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KDFW",
+              "dep_utc": "12:00",
+              "arr_utc": "16:00",
+              "block": "4h00m",
+              "ac_slot": 11
+            },
+            {
+              "flight": "VLR1002",
+              "direction": "inbound",
+              "dep_icao": "KDFW",
+              "arr_icao": "KBOS",
+              "dep_utc": "17:30",
+              "arr_utc": "21:30",
+              "block": "4h00m",
+              "turnaround_min": 90,
+              "ac_slot": 11
+            }
+          ]
+        },
+        {
+          "dest": "KDEN",
+          "city": "Denver International",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1011/1012",
+          "note": "Rocky Mountain Tech & Ski Gateway",
+          "legs": [
+            {
+              "flight": "VLR1011",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KDEN",
+              "dep_utc": "13:00",
+              "arr_utc": "17:30",
+              "block": "4h30m",
+              "ac_slot": 12
+            },
+            {
+              "flight": "VLR1012",
+              "direction": "inbound",
+              "dep_icao": "KDEN",
+              "arr_icao": "KBOS",
+              "dep_utc": "19:00",
+              "arr_utc": "23:30",
+              "block": "4h30m",
+              "turnaround_min": 90,
+              "ac_slot": 12
+            }
+          ]
+        },
+        {
+          "dest": "KSEA",
+          "city": "Seattle Tacoma",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1021/1022",
+          "note": "Pacific Northwest Tech Corridor",
+          "legs": [
+            {
+              "flight": "VLR1021",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "KSEA",
+              "dep_utc": "10:00",
+              "arr_utc": "16:00",
+              "block": "6h00m",
+              "ac_slot": 13
+            },
+            {
+              "flight": "VLR1022",
+              "direction": "inbound",
+              "dep_icao": "KSEA",
+              "arr_icao": "KBOS",
+              "dep_utc": "18:00",
+              "arr_utc": "02:00+1",
+              "block": "6h00m",
+              "turnaround_min": 120,
+              "ac_slot": 13
+            }
+          ]
+        },
+        {
+          "dest": "CYVR",
+          "city": "Vancouver International",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1031/1032",
+          "note": "Canada Pacific — Asia Connecting",
+          "legs": [
+            {
+              "flight": "VLR1031",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "CYVR",
+              "dep_utc": "10:30",
+              "arr_utc": "16:45",
+              "block": "6h15m",
+              "ac_slot": 14
+            },
+            {
+              "flight": "VLR1032",
+              "direction": "inbound",
+              "dep_icao": "CYVR",
+              "arr_icao": "KBOS",
+              "dep_utc": "18:15",
+              "arr_utc": "02:30+1",
+              "block": "6h15m",
+              "turnaround_min": 90,
+              "ac_slot": 14
+            }
+          ]
+        },
+        {
+          "dest": "MMUN",
+          "city": "Cancún International",
+          "aircraft": "A320",
+          "freq": "Daily",
+          "flight": "VLR 1041/1042",
+          "note": "Caribbean Luxury Leisure",
+          "legs": [
+            {
+              "flight": "VLR1041",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "MMUN",
+              "dep_utc": "11:00",
+              "arr_utc": "15:15",
+              "block": "4h15m",
+              "ac_slot": 15
+            },
+            {
+              "flight": "VLR1042",
+              "direction": "inbound",
+              "dep_icao": "MMUN",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:15",
+              "arr_utc": "20:30",
+              "block": "4h15m",
+              "turnaround_min": 60,
+              "ac_slot": 15
+            }
+          ]
+        },
+        {
+          "dest": "MMMX",
+          "city": "Mexico City Benito Juárez",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1051/1052",
+          "note": "Mexico Corporate Hub",
+          "legs": [
+            {
+              "flight": "VLR1051",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "MMMX",
+              "dep_utc": "10:00",
+              "arr_utc": "15:30",
+              "block": "5h30m",
+              "ac_slot": 16
+            },
+            {
+              "flight": "VLR1052",
+              "direction": "inbound",
+              "dep_icao": "MMMX",
+              "arr_icao": "KBOS",
+              "dep_utc": "17:00",
+              "arr_utc": "22:30",
+              "block": "5h30m",
+              "turnaround_min": 90,
+              "ac_slot": 16
+            }
+          ]
+        },
+        {
+          "dest": "MROC",
+          "city": "San José Costa Rica",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1061/1062",
+          "note": "Central America Eco-Luxury Gateway",
+          "legs": [
+            {
+              "flight": "VLR1061",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "MROC",
+              "dep_utc": "09:00",
+              "arr_utc": "14:45",
+              "block": "5h45m",
+              "ac_slot": 17
+            },
+            {
+              "flight": "VLR1062",
+              "direction": "inbound",
+              "dep_icao": "MROC",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:00",
+              "arr_utc": "21:45",
+              "block": "5h45m",
+              "turnaround_min": 75,
+              "ac_slot": 17
+            }
+          ]
+        },
+        {
+          "dest": "SBGR",
+          "city": "São Paulo Guarulhos",
+          "aircraft": "A350-900",
+          "freq": "4x Weekly",
+          "flight": "VLR 1071/1072",
+          "note": "South America Premier Gateway",
+          "legs": [
+            {
+              "flight": "VLR1071",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "SBGR",
+              "dep_utc": "21:00",
+              "arr_utc": "07:30+1",
+              "block": "10h30m",
+              "ac_slot": 18
+            },
+            {
+              "flight": "VLR1072",
+              "direction": "inbound",
+              "dep_icao": "SBGR",
+              "arr_icao": "KBOS",
+              "dep_utc": "10:30+1",
+              "arr_utc": "22:00+1",
+              "block": "10h30m",
+              "turnaround_min": 180,
+              "ac_slot": 18
+            }
+          ]
+        },
+        {
+          "dest": "VABB",
+          "city": "Mumbai Chhatrapati Shivaji",
+          "aircraft": "A350-900",
+          "freq": "3x Weekly",
+          "flight": "VLR 1081/1082",
+          "note": "India Tech Diaspora — IIT-MIT Pipeline",
+          "legs": [
+            {
+              "flight": "VLR1081",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "VABB",
+              "dep_utc": "22:00",
+              "arr_utc": "14:30+1",
+              "block": "16h30m",
+              "ac_slot": 19
+            },
+            {
+              "flight": "VLR1082",
+              "direction": "inbound",
+              "dep_icao": "VABB",
+              "arr_icao": "KBOS",
+              "dep_utc": "16:30+1",
+              "arr_utc": "08:00+2",
+              "block": "15h30m",
+              "turnaround_min": 120,
+              "ac_slot": 19
+            }
+          ]
+        },
+        {
+          "dest": "BIKF",
+          "city": "Reykjavik Keflavik",
+          "aircraft": "A321LR",
+          "freq": "Daily",
+          "flight": "VLR 1091/1092",
+          "note": "North Atlantic Boutique — Velar Signature Route",
+          "legs": [
+            {
+              "flight": "VLR1091",
+              "direction": "outbound",
+              "dep_icao": "KBOS",
+              "arr_icao": "BIKF",
+              "dep_utc": "13:00",
+              "arr_utc": "18:30",
+              "block": "5h30m",
+              "ac_slot": 20
+            },
+            {
+              "flight": "VLR1092",
+              "direction": "inbound",
+              "dep_icao": "BIKF",
+              "arr_icao": "KBOS",
+              "dep_utc": "20:00",
+              "arr_utc": "22:30",
+              "block": "5h30m",
+              "turnaround_min": 90,
+              "ac_slot": 20
             }
           ]
         }
@@ -2648,6 +3832,692 @@
         "arrCity": "Dublino",
         "aircraft": "A320",
         "time": "10:00"
+      }
+    },
+    {
+      "name": "Susan Clark",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR951",
+        "dep": "KBOS",
+        "arr": "KJFK",
+        "depCity": "Boston",
+        "arrCity": "New York",
+        "aircraft": "A319",
+        "time": "11:00"
+      }
+    },
+    {
+      "name": "Thomas Wright",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR971",
+        "dep": "KBOS",
+        "arr": "KIAD",
+        "depCity": "Boston",
+        "arrCity": "Washington",
+        "aircraft": "A319",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Richard White",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR981",
+        "dep": "KBOS",
+        "arr": "KORD",
+        "depCity": "Boston",
+        "arrCity": "Chicago",
+        "aircraft": "A320",
+        "time": "11:30"
+      }
+    },
+    {
+      "name": "Mark Anderson",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR991",
+        "dep": "KBOS",
+        "arr": "KMIA",
+        "depCity": "Boston",
+        "arrCity": "Miami",
+        "aircraft": "A320",
+        "time": "12:00"
+      }
+    },
+    {
+      "name": "Kimberly Carter",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR901",
+        "dep": "KBOS",
+        "arr": "CYUL",
+        "depCity": "Boston",
+        "arrCity": "Montréal",
+        "aircraft": "A319",
+        "time": "11:00"
+      }
+    },
+    {
+      "name": "Edward King",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1001",
+        "dep": "KBOS",
+        "arr": "KDFW",
+        "depCity": "Boston",
+        "arrCity": "Dallas",
+        "aircraft": "A320",
+        "time": "12:00"
+      }
+    },
+    {
+      "name": "Steven Phillips",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1011",
+        "dep": "KBOS",
+        "arr": "KDEN",
+        "depCity": "Boston",
+        "arrCity": "Denver",
+        "aircraft": "A320",
+        "time": "13:00"
+      }
+    },
+    {
+      "name": "Michelle Campbell",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1021",
+        "dep": "KBOS",
+        "arr": "KSEA",
+        "depCity": "Boston",
+        "arrCity": "Seattle",
+        "aircraft": "A320",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Laura Evans",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1031",
+        "dep": "KBOS",
+        "arr": "CYVR",
+        "depCity": "Boston",
+        "arrCity": "Vancouver",
+        "aircraft": "A321LR",
+        "time": "10:30"
+      }
+    },
+    {
+      "name": "Cynthia Collins",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1041",
+        "dep": "KBOS",
+        "arr": "MMUN",
+        "depCity": "Boston",
+        "arrCity": "Cancún",
+        "aircraft": "A320",
+        "time": "11:00"
+      }
+    },
+    {
+      "name": "Kevin Stewart",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1051",
+        "dep": "KBOS",
+        "arr": "MMMX",
+        "depCity": "Boston",
+        "arrCity": "Mexico City",
+        "aircraft": "A321LR",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Brian Morris",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1061",
+        "dep": "KBOS",
+        "arr": "MROC",
+        "depCity": "Boston",
+        "arrCity": "San José CR",
+        "aircraft": "A321LR",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "Jeffrey Murphy",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1071",
+        "dep": "KBOS",
+        "arr": "SBGR",
+        "depCity": "Boston",
+        "arrCity": "São Paulo",
+        "aircraft": "A350-900",
+        "time": "21:00"
+      }
+    },
+    {
+      "name": "Melissa Cook",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1081",
+        "dep": "KBOS",
+        "arr": "VABB",
+        "depCity": "Boston",
+        "arrCity": "Mumbai",
+        "aircraft": "A350-900",
+        "time": "22:00"
+      }
+    },
+    {
+      "name": "Sakura Sato",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR1091",
+        "dep": "KBOS",
+        "arr": "BIKF",
+        "depCity": "Boston",
+        "arrCity": "Reykjavik",
+        "aircraft": "A321LR",
+        "time": "13:00"
+      }
+    },
+    {
+      "name": "Budi Santoso",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR851",
+        "dep": "WIII",
+        "arr": "WMKK",
+        "depCity": "Giacarta",
+        "arrCity": "Kuala Lumpur",
+        "aircraft": "A320",
+        "time": "04:00"
+      }
+    },
+    {
+      "name": "Hendra Kurniawan",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR871",
+        "dep": "WIII",
+        "arr": "VTBS",
+        "depCity": "Giacarta",
+        "arrCity": "Bangkok",
+        "aircraft": "A320",
+        "time": "05:00"
+      }
+    },
+    {
+      "name": "Aditya Putra",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR881",
+        "dep": "WIII",
+        "arr": "VVTS",
+        "depCity": "Giacarta",
+        "arrCity": "Ho Chi Minh",
+        "aircraft": "A320",
+        "time": "05:30"
+      }
+    },
+    {
+      "name": "Bagus Nugroho",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR891",
+        "dep": "WIII",
+        "arr": "WARR",
+        "depCity": "Giacarta",
+        "arrCity": "Surabaya",
+        "aircraft": "A320",
+        "time": "05:00"
+      }
+    },
+    {
+      "name": "Joko Widodo",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1101",
+        "dep": "WIII",
+        "arr": "WAAA",
+        "depCity": "Giacarta",
+        "arrCity": "Makassar",
+        "aircraft": "A320",
+        "time": "06:00"
+      }
+    },
+    {
+      "name": "Yanuar Abdi",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1111",
+        "dep": "WIII",
+        "arr": "WIMM",
+        "depCity": "Giacarta",
+        "arrCity": "Medan",
+        "aircraft": "A320",
+        "time": "05:30"
+      }
+    },
+    {
+      "name": "Putu Gede",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1121",
+        "dep": "WIII",
+        "arr": "YPPH",
+        "depCity": "Giacarta",
+        "arrCity": "Perth",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "George Parker",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1131",
+        "dep": "WIII",
+        "arr": "RKSI",
+        "depCity": "Giacarta",
+        "arrCity": "Seoul",
+        "aircraft": "A330neo",
+        "time": "23:00"
+      }
+    },
+    {
+      "name": "Sandra Bennett",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1141",
+        "dep": "WIII",
+        "arr": "ZSPD",
+        "depCity": "Giacarta",
+        "arrCity": "Shanghai",
+        "aircraft": "A330neo",
+        "time": "22:00"
+      }
+    },
+    {
+      "name": "Ryan Gallagher",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1151",
+        "dep": "WIII",
+        "arr": "VABB",
+        "depCity": "Giacarta",
+        "arrCity": "Mumbai",
+        "aircraft": "A321LR",
+        "time": "01:00"
+      }
+    },
+    {
+      "name": "Alice Fletcher",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1161",
+        "dep": "WIII",
+        "arr": "VCBI",
+        "depCity": "Giacarta",
+        "arrCity": "Colombo",
+        "aircraft": "A321LR",
+        "time": "02:00"
+      }
+    },
+    {
+      "name": "Ada Lovelace",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1171",
+        "dep": "WIII",
+        "arr": "EGLL",
+        "depCity": "Giacarta",
+        "arrCity": "Londra",
+        "aircraft": "A350-900",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Katherine Johnson",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1181",
+        "dep": "WIII",
+        "arr": "EHAM",
+        "depCity": "Giacarta",
+        "arrCity": "Amsterdam",
+        "aircraft": "A350-900",
+        "time": "09:00"
+      }
+    },
+    {
+      "name": "Mary Jackson",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1191",
+        "dep": "WIII",
+        "arr": "OMDB",
+        "depCity": "Giacarta",
+        "arrCity": "Dubai",
+        "aircraft": "A330neo",
+        "time": "21:00"
+      }
+    },
+    {
+      "name": "Alan Turing",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR1201",
+        "dep": "WIII",
+        "arr": "FACT",
+        "depCity": "Giacarta",
+        "arrCity": "Cape Town",
+        "aircraft": "A350-900",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Marco Vitali",
+      "rank": "Senior Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR101",
+        "dep": "LIRF",
+        "arr": "KBOS",
+        "depCity": "Roma",
+        "arrCity": "Boston",
+        "aircraft": "A350-900",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Giulia Ferrero",
+      "rank": "Senior Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR121",
+        "dep": "LIRF",
+        "arr": "KSFO",
+        "depCity": "Roma",
+        "arrCity": "San Francisco",
+        "aircraft": "A350-900",
+        "time": "11:00"
+      }
+    },
+    {
+      "name": "Andrea Conti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR211",
+        "dep": "LIRF",
+        "arr": "OMDB",
+        "depCity": "Roma",
+        "arrCity": "Dubai",
+        "aircraft": "A321LR",
+        "time": "06:00"
+      }
+    },
+    {
+      "name": "Luca Esposito",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR311",
+        "dep": "LIRF",
+        "arr": "LIML",
+        "depCity": "Roma",
+        "arrCity": "Milano",
+        "aircraft": "A320",
+        "time": "06:30"
+      }
+    },
+    {
+      "name": "Chiara Russo",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR315",
+        "dep": "LIRF",
+        "arr": "LIML",
+        "depCity": "Roma",
+        "arrCity": "Milano",
+        "aircraft": "A320",
+        "time": "17:30"
+      }
+    },
+    {
+      "name": "Marco De Santis",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR411",
+        "dep": "LIRF",
+        "arr": "EGLL",
+        "depCity": "Roma",
+        "arrCity": "Londra",
+        "aircraft": "A320",
+        "time": "07:00"
+      }
+    },
+    {
+      "name": "Valentina Greco",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR415",
+        "dep": "LIRF",
+        "arr": "EGLL",
+        "depCity": "Roma",
+        "arrCity": "Londra",
+        "aircraft": "A320",
+        "time": "19:00"
+      }
+    },
+    {
+      "name": "Stefano Ferretti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR511",
+        "dep": "LIRF",
+        "arr": "LFPG",
+        "depCity": "Roma",
+        "arrCity": "Parigi",
+        "aircraft": "A320",
+        "time": "06:00"
+      }
+    },
+    {
+      "name": "Isabella Monti",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR515",
+        "dep": "LIRF",
+        "arr": "LFPG",
+        "depCity": "Roma",
+        "arrCity": "Parigi",
+        "aircraft": "A320",
+        "time": "18:30"
+      }
+    },
+    {
+      "name": "Roberto Caruso",
+      "rank": "Senior Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR611",
+        "dep": "LIRF",
+        "arr": "LSZH",
+        "depCity": "Roma",
+        "arrCity": "Zurigo",
+        "aircraft": "A319",
+        "time": "07:30"
+      }
+    },
+    {
+      "name": "Francesca Amato",
+      "rank": "Captain",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR711",
+        "dep": "LIRF",
+        "arr": "EDDF",
+        "depCity": "Roma",
+        "arrCity": "Francoforte",
+        "aircraft": "A319",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Davide Serra",
+      "rank": "First Officer",
+      "base": "LIRF",
+      "todayFlight": {
+        "flightNumber": "VLR335",
+        "dep": "LIRF",
+        "arr": "LIRN",
+        "depCity": "Roma",
+        "arrCity": "Napoli",
+        "aircraft": "A319",
+        "time": "18:00"
+      }
+    },
+    {
+      "name": "Sari Dewi",
+      "rank": "Senior Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR811",
+        "dep": "WIII",
+        "arr": "YSSY",
+        "depCity": "Giacarta",
+        "arrCity": "Sydney",
+        "aircraft": "A330neo",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Rizal Pratama",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR825",
+        "dep": "WIII",
+        "arr": "WSSS",
+        "depCity": "Giacarta",
+        "arrCity": "Singapore",
+        "aircraft": "A320",
+        "time": "17:30"
+      }
+    },
+    {
+      "name": "Nadia Santoso",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR841",
+        "dep": "WIII",
+        "arr": "WADD",
+        "depCity": "Giacarta",
+        "arrCity": "Bali",
+        "aircraft": "A320",
+        "time": "08:00"
+      }
+    },
+    {
+      "name": "Fajar Hidayat",
+      "rank": "Captain",
+      "base": "WIII",
+      "todayFlight": {
+        "flightNumber": "VLR855",
+        "dep": "WIII",
+        "arr": "WMKK",
+        "depCity": "Giacarta",
+        "arrCity": "Kuala Lumpur",
+        "aircraft": "A320",
+        "time": "16:00"
+      }
+    },
+    {
+      "name": "James O'Brien",
+      "rank": "Senior Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR921",
+        "dep": "KBOS",
+        "arr": "KAUS",
+        "depCity": "Boston",
+        "arrCity": "Austin",
+        "aircraft": "A321LR",
+        "time": "13:00"
+      }
+    },
+    {
+      "name": "Rachel Nguyen",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR931",
+        "dep": "KBOS",
+        "arr": "CYYZ",
+        "depCity": "Boston",
+        "arrCity": "Toronto",
+        "aircraft": "A319",
+        "time": "13:00"
+      }
+    },
+    {
+      "name": "Patrick Sullivan",
+      "rank": "Captain",
+      "base": "KBOS",
+      "todayFlight": {
+        "flightNumber": "VLR955",
+        "dep": "KBOS",
+        "arr": "KJFK",
+        "depCity": "Boston",
+        "arrCity": "New York",
+        "aircraft": "A319",
+        "time": "20:00"
       }
     }
   ],
